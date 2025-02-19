@@ -1,0 +1,9 @@
+server:
+  port: 8080
+database:
+  Host: localhost
+  Port: 5432
+  User: postgres
+  Password: umbresgurgur
+  Name: eticket-api
+  Sslmode: disable
