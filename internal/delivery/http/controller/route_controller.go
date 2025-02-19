@@ -10,7 +10,7 @@ import (
 )
 
 type RouteController struct {
-	RouteUsecase *usecase.RouteUsecase
+	RouteUsecase usecase.RouteUsecase
 }
 
 // CreateRoute creates a new route

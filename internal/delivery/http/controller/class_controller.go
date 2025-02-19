@@ -10,7 +10,7 @@ import (
 )
 
 type ClassController struct {
-	ClassUsecase *usecase.ClassUsecase
+	ClassUsecase usecase.ClassUsecase
 }
 
 // CreateClass handles creating a new class
