@@ -7,10 +7,10 @@ import (
 )
 
 type ClassUsecase struct {
-	ClassRepository domain.ClassRepository
+	ClassRepository domain.ClassRepositoryInterface
 }
 
-func NewClassUsecase(classRepository domain.ClassRepository) ClassUsecase {
+func NewClassUsecase(classRepository domain.ClassRepositoryInterface) ClassUsecase {
 	return ClassUsecase{ClassRepository: classRepository}
 }
 

@@ -10,4 +10,8 @@ func Setup(router *gin.Engine, db *gorm.DB) {
 	NewTicketRouter(db, group)
 	NewRouteRouter(db, group)
 	NewClassRouter(db, group)
+	NewHarborRouter(db, group)
+	NewBookingRouter(db, group)
+	NewScheduleRouter(db, group)
+	NewShipRouter(db, group)
 }

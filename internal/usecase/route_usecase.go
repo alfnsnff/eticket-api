@@ -7,16 +7,16 @@ import (
 )
 
 type RouteUsecase struct {
-	RouteRepository domain.RouteRepository
+	RouteRepository domain.RouteRepositoryInterface
 }
 
-func NewRouteUsecase(routeRepository domain.RouteRepository) RouteUsecase {
+func NewRouteUsecase(routeRepository domain.RouteRepositoryInterface) RouteUsecase {
 	return RouteUsecase{RouteRepository: routeRepository}
 }
 
 // CreateRoute validates and creates a new Route
 func (s *RouteUsecase) CreateRoute(route *domain.Route) error {
-	if route.DepartureHarbor == "" || route.ArrivalHarbor == "" {
+	if route.DepartureHarborID == 0 || route.ArrivalHarborID == 0 {
 		return fmt.Errorf("route name cannot be empty")
 	}
 	return s.RouteRepository.Create(route)
@@ -44,7 +44,7 @@ func (s *RouteUsecase) UpdateRoute(route *domain.Route) error {
 	if route.ID == 0 {
 		return fmt.Errorf("route ID cannot be zero")
 	}
-	if route.DepartureHarbor == "" || route.ArrivalHarbor == "" {
+	if route.DepartureHarborID == 0 || route.ArrivalHarborID == 0 {
 		return fmt.Errorf("route name cannot be empty")
 	}
 	return s.RouteRepository.Update(route)

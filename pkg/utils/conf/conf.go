@@ -1,7 +1,7 @@
-package utils
+package conf
 
 // Get config path for local or docker
-func GetConfEnv(configPath string) string {
+func GetConf(configPath string) string {
 	switch configPath {
 	case "development":
 		return "./config/development-conf.yaml"

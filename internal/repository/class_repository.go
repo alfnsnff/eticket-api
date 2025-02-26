@@ -11,7 +11,7 @@ type ClassRepository struct {
 	DB *gorm.DB
 }
 
-func NewClassRepository(db *gorm.DB) domain.ClassRepository {
+func NewClassRepository(db *gorm.DB) domain.ClassRepositoryInterface {
 	return &ClassRepository{DB: db}
 }
 

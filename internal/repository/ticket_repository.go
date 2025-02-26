@@ -11,7 +11,7 @@ type TicketRepository struct {
 	DB *gorm.DB
 }
 
-func NewTicketRepository(db *gorm.DB) domain.TicketRepository {
+func NewTicketRepository(db *gorm.DB) domain.TicketRepositoryInterface {
 	return &TicketRepository{DB: db}
 }
 
@@ -24,7 +24,15 @@ func (r *TicketRepository) Create(ticket *domain.Ticket) error {
 // GetAll retrieves all tickets from the database, including the associated class
 func (r *TicketRepository) GetAll() ([]*domain.Ticket, error) {
 	var tickets []*domain.Ticket
-	result := r.DB.Preload("Class").Find(&tickets) // Preloads Class relationship
+	result := r.DB.
+		Preload("Booking.Schedule.Route.DepartureHarbor").
+		Preload("Booking.Schedule.Route.ArrivalHarbor").
+		Preload("Booking.Schedule.Ship").
+		Preload("Class.Route.DepartureHarbor"). // Preload from Class
+		Preload("Class.Route.ArrivalHarbor").   // Preload from Class
+		Preload("Class").
+		Preload("Booking").
+		Find(&tickets)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -34,7 +42,13 @@ func (r *TicketRepository) GetAll() ([]*domain.Ticket, error) {
 // GetByID retrieves a ticket by its ID, including the associated class
 func (r *TicketRepository) GetByID(id uint) (*domain.Ticket, error) {
 	var ticket domain.Ticket
-	result := r.DB.Preload("Class").First(&ticket, id) // Preloads Class and fetches by ID
+	result := r.DB.Preload("Booking.Schedule.Route.DepartureHarbor").
+		Preload("Booking.Schedule.Route.ArrivalHarbor").
+		Preload("Booking.Schedule.Ship").
+		Preload("Class.Route.DepartureHarbor"). // Preload from Class
+		Preload("Class.Route.ArrivalHarbor").   // Preload from Class
+		Preload("Class").
+		Preload("Booking").First(&ticket, id) // Preloads Class and fetches by ID
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil // Returns nil if no ticket is found
 	}

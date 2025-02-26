@@ -15,7 +15,7 @@ type Class struct {
 	Route Route `gorm:"foreignKey:RouteID" json:"route"` // Gorm will create the relationship
 }
 
-type ClassRepository interface {
+type ClassRepositoryInterface interface {
 	Create(class *Class) error
 	GetAll() ([]*Class, error)
 	GetByID(id uint) (*Class, error) // Add this method

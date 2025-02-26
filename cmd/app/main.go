@@ -5,7 +5,7 @@ import (
 	"eticket-api/internal/delivery/http/route"
 	"eticket-api/internal/domain"
 	"eticket-api/pkg/db/postgres"
-	"eticket-api/pkg/utils"
+	"eticket-api/pkg/utils/conf"
 	"log"
 	"os"
 
@@ -19,7 +19,7 @@ func main() {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
-	configPath := utils.GetConfEnv(os.Getenv("ENV"))
+	configPath := conf.GetConf(os.Getenv("ENV"))
 
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
@@ -33,7 +33,7 @@ func main() {
 	}
 
 	// Automatically migrate your models (creating tables, etc.)
-	if err := db.AutoMigrate(&domain.Route{}, &domain.Class{}, &domain.Ticket{}); err != nil {
+	if err := db.AutoMigrate(&domain.Route{}, &domain.Class{}, &domain.Schedule{}, &domain.Ship{}, &domain.Harbor{}, &domain.Booking{}, &domain.Ticket{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 

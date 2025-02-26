@@ -6,10 +6,10 @@ import (
 )
 
 type TicketUsecase struct {
-	TicketRepository domain.TicketRepository
+	TicketRepository domain.TicketRepositoryInterface
 }
 
-func NewTicketUsecase(ticketRepository domain.TicketRepository) TicketUsecase {
+func NewTicketUsecase(ticketRepository domain.TicketRepositoryInterface) TicketUsecase {
 	return TicketUsecase{TicketRepository: ticketRepository}
 }
 
