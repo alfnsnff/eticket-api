@@ -2,20 +2,20 @@ package usecase
 
 import (
 	"errors"
-	"eticket-api/internal/domain"
+	"eticket-api/internal/domain/entities"
 	"fmt"
 )
 
 type ShipUsecase struct {
-	ShipRepository domain.ShipRepositoryInterface
+	ShipRepository entities.ShipRepositoryInterface
 }
 
-func NewShipUsecase(shipRepository domain.ShipRepositoryInterface) ShipUsecase {
+func NewShipUsecase(shipRepository entities.ShipRepositoryInterface) ShipUsecase {
 	return ShipUsecase{ShipRepository: shipRepository}
 }
 
 // Createship validates and creates a new ship
-func (s *ShipUsecase) CreateShip(ship *domain.Ship) error {
+func (s *ShipUsecase) CreateShip(ship *entities.Ship) error {
 	if ship.ShipName == "" {
 		return fmt.Errorf("ship name cannot be empty")
 	}
@@ -23,12 +23,12 @@ func (s *ShipUsecase) CreateShip(ship *domain.Ship) error {
 }
 
 // GetAllshipes retrieves all ships
-func (s *ShipUsecase) GetAllShips() ([]*domain.Ship, error) {
+func (s *ShipUsecase) GetAllShips() ([]*entities.Ship, error) {
 	return s.ShipRepository.GetAll()
 }
 
 // GetshipByID retrieves a ship by its ID
-func (s *ShipUsecase) GetShipByID(id uint) (*domain.Ship, error) {
+func (s *ShipUsecase) GetShipByID(id uint) (*entities.Ship, error) {
 	ship, err := s.ShipRepository.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func (s *ShipUsecase) GetShipByID(id uint) (*domain.Ship, error) {
 }
 
 // Updateship updates an existing ship
-func (s *ShipUsecase) UpdateShip(ship *domain.Ship) error {
+func (s *ShipUsecase) UpdateShip(ship *entities.Ship) error {
 	if ship.ID == 0 {
 		return fmt.Errorf("ship ID cannot be zero")
 	}

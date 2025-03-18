@@ -1,7 +1,8 @@
 package controller
 
 import (
-	"eticket-api/internal/domain"
+	"eticket-api/internal/domain/dto"
+	"eticket-api/internal/domain/entities"
 	"eticket-api/internal/usecase"
 	"eticket-api/pkg/utils/response" // Import the response package
 	"net/http"
@@ -16,7 +17,7 @@ type RouteController struct {
 
 // CreateRoute creates a new route
 func (h *RouteController) CreateRoute(c *gin.Context) {
-	var route domain.Route
+	var route entities.Route
 	if err := c.ShouldBindJSON(&route); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
@@ -38,7 +39,8 @@ func (h *RouteController) GetAllRoutes(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSuccessResponse(routes, "Routes retrieved successfully", nil))
+	routeDTOs := dto.ToRouteDTOs(routes)
+	c.JSON(http.StatusOK, response.NewSuccessResponse(routeDTOs, "Routes retrieved successfully", nil))
 }
 
 // GetRouteByID retrieves a single route by ID
@@ -60,7 +62,8 @@ func (h *RouteController) GetRouteByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSuccessResponse(route, "Route retrieved successfully", nil))
+	routeDTO := dto.ToRouteDTO(route)
+	c.JSON(http.StatusOK, response.NewSuccessResponse(routeDTO, "Route retrieved successfully", nil))
 }
 
 // UpdateRoute updates an existing route
@@ -72,7 +75,7 @@ func (h *RouteController) UpdateRoute(c *gin.Context) {
 		return
 	}
 
-	var route domain.Route
+	var route entities.Route
 	if err := c.ShouldBindJSON(&route); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return

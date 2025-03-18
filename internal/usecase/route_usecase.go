@@ -2,20 +2,20 @@ package usecase
 
 import (
 	"errors"
-	"eticket-api/internal/domain"
+	"eticket-api/internal/domain/entities"
 	"fmt"
 )
 
 type RouteUsecase struct {
-	RouteRepository domain.RouteRepositoryInterface
+	RouteRepository entities.RouteRepositoryInterface
 }
 
-func NewRouteUsecase(routeRepository domain.RouteRepositoryInterface) RouteUsecase {
+func NewRouteUsecase(routeRepository entities.RouteRepositoryInterface) RouteUsecase {
 	return RouteUsecase{RouteRepository: routeRepository}
 }
 
 // CreateRoute validates and creates a new Route
-func (s *RouteUsecase) CreateRoute(route *domain.Route) error {
+func (s *RouteUsecase) CreateRoute(route *entities.Route) error {
 	if route.DepartureHarborID == 0 || route.ArrivalHarborID == 0 {
 		return fmt.Errorf("route name cannot be empty")
 	}
@@ -23,12 +23,12 @@ func (s *RouteUsecase) CreateRoute(route *domain.Route) error {
 }
 
 // GetAllRoutees retrieves all Routees
-func (s *RouteUsecase) GetAllRoutes() ([]*domain.Route, error) {
+func (s *RouteUsecase) GetAllRoutes() ([]*entities.Route, error) {
 	return s.RouteRepository.GetAll()
 }
 
 // GetRouteByID retrieves a Route by its ID
-func (s *RouteUsecase) GetRouteByID(id uint) (*domain.Route, error) {
+func (s *RouteUsecase) GetRouteByID(id uint) (*entities.Route, error) {
 	Route, err := s.RouteRepository.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func (s *RouteUsecase) GetRouteByID(id uint) (*domain.Route, error) {
 }
 
 // UpdateRoute updates an existing Route
-func (s *RouteUsecase) UpdateRoute(route *domain.Route) error {
+func (s *RouteUsecase) UpdateRoute(route *entities.Route) error {
 	if route.ID == 0 {
 		return fmt.Errorf("route ID cannot be zero")
 	}

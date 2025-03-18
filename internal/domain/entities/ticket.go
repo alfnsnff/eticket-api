@@ -1,4 +1,4 @@
-package domain
+package entities
 
 import "time"
 
@@ -14,7 +14,7 @@ type Ticket struct {
 	// Relationship:
 	Class Class `gorm:"foreignKey:ClassID" json:"class"`
 	// Gorm will create the relationship
-	Booking Booking `gorm:"foreignKey:BookingID" json:"booker"` // Gorm will create the relationship
+	Booking Booking `gorm:"foreignKey:BookingID" json:"booking"` // Gorm will create the relationship
 }
 
 type TicketRepositoryInterface interface {

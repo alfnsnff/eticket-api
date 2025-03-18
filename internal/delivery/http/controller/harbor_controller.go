@@ -1,7 +1,8 @@
 package controller
 
 import (
-	"eticket-api/internal/domain"
+	"eticket-api/internal/domain/dto"
+	"eticket-api/internal/domain/entities"
 	"eticket-api/internal/usecase"
 	"eticket-api/pkg/utils/response" // Import the response package
 	"net/http"
@@ -16,7 +17,7 @@ type HarborController struct {
 
 // CreateHarbor handles creating a new harbor
 func (h *HarborController) CreateHarbor(c *gin.Context) {
-	var harbor domain.Harbor
+	var harbor entities.Harbor
 	if err := c.ShouldBindJSON(&harbor); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
@@ -38,7 +39,8 @@ func (h *HarborController) GetAllHarbors(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSuccessResponse(harbors, "Harbors retrieved successfully", nil))
+	harborDTOs := dto.ToHarborDTOs(harbors)
+	c.JSON(http.StatusOK, response.NewSuccessResponse(harborDTOs, "Harbors retrieved successfully", nil))
 }
 
 // GetHarborByID handles retrieving a harbor by its ID
@@ -61,12 +63,13 @@ func (h *HarborController) GetHarborByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSuccessResponse(harbor, "Harbor retrieved successfully", nil))
+	harborDTO := dto.ToHarborDTO(harbor)
+	c.JSON(http.StatusOK, response.NewSuccessResponse(harborDTO, "Harbor retrieved successfully", nil))
 }
 
 // UpdateHarbor handles updating an existing harbor
 func (h *HarborController) UpdateHarbor(c *gin.Context) {
-	var harbor domain.Harbor
+	var harbor entities.Harbor
 	if err := c.ShouldBindJSON(&harbor); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return

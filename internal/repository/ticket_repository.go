@@ -2,7 +2,7 @@ package repository
 
 import (
 	"errors"
-	"eticket-api/internal/domain"
+	"eticket-api/internal/domain/entities"
 
 	"gorm.io/gorm"
 )
@@ -11,19 +11,19 @@ type TicketRepository struct {
 	DB *gorm.DB
 }
 
-func NewTicketRepository(db *gorm.DB) domain.TicketRepositoryInterface {
+func NewTicketRepository(db *gorm.DB) entities.TicketRepositoryInterface {
 	return &TicketRepository{DB: db}
 }
 
 // Create inserts a new ticket into the database
-func (r *TicketRepository) Create(ticket *domain.Ticket) error {
+func (r *TicketRepository) Create(ticket *entities.Ticket) error {
 	result := r.DB.Create(ticket)
 	return result.Error
 }
 
 // GetAll retrieves all tickets from the database, including the associated class
-func (r *TicketRepository) GetAll() ([]*domain.Ticket, error) {
-	var tickets []*domain.Ticket
+func (r *TicketRepository) GetAll() ([]*entities.Ticket, error) {
+	var tickets []*entities.Ticket
 	result := r.DB.
 		Preload("Booking.Schedule.Route.DepartureHarbor").
 		Preload("Booking.Schedule.Route.ArrivalHarbor").
@@ -40,8 +40,8 @@ func (r *TicketRepository) GetAll() ([]*domain.Ticket, error) {
 }
 
 // GetByID retrieves a ticket by its ID, including the associated class
-func (r *TicketRepository) GetByID(id uint) (*domain.Ticket, error) {
-	var ticket domain.Ticket
+func (r *TicketRepository) GetByID(id uint) (*entities.Ticket, error) {
+	var ticket entities.Ticket
 	result := r.DB.Preload("Booking.Schedule.Route.DepartureHarbor").
 		Preload("Booking.Schedule.Route.ArrivalHarbor").
 		Preload("Booking.Schedule.Ship").
@@ -56,7 +56,7 @@ func (r *TicketRepository) GetByID(id uint) (*domain.Ticket, error) {
 }
 
 // Update modifies an existing ticket in the database
-func (r *TicketRepository) Update(ticket *domain.Ticket) error {
+func (r *TicketRepository) Update(ticket *entities.Ticket) error {
 	// Uses Gorm's Save method to update the ticket
 	result := r.DB.Save(ticket)
 	return result.Error
@@ -64,7 +64,7 @@ func (r *TicketRepository) Update(ticket *domain.Ticket) error {
 
 // Delete removes a ticket from the database by its ID
 func (r *TicketRepository) Delete(id uint) error {
-	result := r.DB.Delete(&domain.Ticket{}, id) // Deletes the ticket by ID
+	result := r.DB.Delete(&entities.Ticket{}, id) // Deletes the ticket by ID
 	if result.Error != nil {
 		return result.Error
 	}

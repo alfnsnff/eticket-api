@@ -2,20 +2,20 @@ package usecase
 
 import (
 	"errors"
-	"eticket-api/internal/domain"
+	"eticket-api/internal/domain/entities"
 	"fmt"
 )
 
 type ClassUsecase struct {
-	ClassRepository domain.ClassRepositoryInterface
+	ClassRepository entities.ClassRepositoryInterface
 }
 
-func NewClassUsecase(classRepository domain.ClassRepositoryInterface) ClassUsecase {
+func NewClassUsecase(classRepository entities.ClassRepositoryInterface) ClassUsecase {
 	return ClassUsecase{ClassRepository: classRepository}
 }
 
 // CreateClass validates and creates a new class
-func (s *ClassUsecase) CreateClass(class *domain.Class) error {
+func (s *ClassUsecase) CreateClass(class *entities.Class) error {
 	if class.Price <= 0 {
 		return fmt.Errorf("price must be greater than zero")
 	}
@@ -26,12 +26,12 @@ func (s *ClassUsecase) CreateClass(class *domain.Class) error {
 }
 
 // GetAllClasses retrieves all classes
-func (s *ClassUsecase) GetAllClasses() ([]*domain.Class, error) {
+func (s *ClassUsecase) GetAllClasses() ([]*entities.Class, error) {
 	return s.ClassRepository.GetAll()
 }
 
 // GetClassByID retrieves a class by its ID
-func (s *ClassUsecase) GetClassByID(id uint) (*domain.Class, error) {
+func (s *ClassUsecase) GetClassByID(id uint) (*entities.Class, error) {
 	class, err := s.ClassRepository.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (s *ClassUsecase) GetClassByID(id uint) (*domain.Class, error) {
 }
 
 // UpdateClass updates an existing class
-func (s *ClassUsecase) UpdateClass(class *domain.Class) error {
+func (s *ClassUsecase) UpdateClass(class *entities.Class) error {
 	if class.ID == 0 {
 		return fmt.Errorf("class ID cannot be zero")
 	}

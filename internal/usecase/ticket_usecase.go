@@ -2,29 +2,29 @@ package usecase
 
 import (
 	"errors"
-	"eticket-api/internal/domain"
+	"eticket-api/internal/domain/entities"
 )
 
 type TicketUsecase struct {
-	TicketRepository domain.TicketRepositoryInterface
+	TicketRepository entities.TicketRepositoryInterface
 }
 
-func NewTicketUsecase(ticketRepository domain.TicketRepositoryInterface) TicketUsecase {
+func NewTicketUsecase(ticketRepository entities.TicketRepositoryInterface) TicketUsecase {
 	return TicketUsecase{TicketRepository: ticketRepository}
 }
 
 // CreateTicket creates a new ticket
-func (s *TicketUsecase) CreateTicket(ticket *domain.Ticket) error {
+func (s *TicketUsecase) CreateTicket(ticket *entities.Ticket) error {
 	return s.TicketRepository.Create(ticket)
 }
 
 // GetAllTickets retrieves all tickets
-func (s *TicketUsecase) GetAllTickets() ([]*domain.Ticket, error) {
+func (s *TicketUsecase) GetAllTickets() ([]*entities.Ticket, error) {
 	return s.TicketRepository.GetAll()
 }
 
 // GetTicketByID retrieves a ticket by its ID
-func (s *TicketUsecase) GetTicketByID(id uint) (*domain.Ticket, error) {
+func (s *TicketUsecase) GetTicketByID(id uint) (*entities.Ticket, error) {
 	ticket, err := s.TicketRepository.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func (s *TicketUsecase) GetTicketByID(id uint) (*domain.Ticket, error) {
 }
 
 // UpdateTicket updates an existing ticket
-func (s *TicketUsecase) UpdateTicket(ticket *domain.Ticket) error {
+func (s *TicketUsecase) UpdateTicket(ticket *entities.Ticket) error {
 	if ticket.ID == 0 {
 		return errors.New("ticket ID is required for update")
 	}

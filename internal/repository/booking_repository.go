@@ -2,7 +2,7 @@ package repository
 
 import (
 	"errors"
-	"eticket-api/internal/domain"
+	"eticket-api/internal/domain/entities"
 
 	"gorm.io/gorm"
 )
@@ -11,19 +11,19 @@ type BookingRepository struct {
 	DB *gorm.DB
 }
 
-func NewBookingRepository(db *gorm.DB) domain.BookingRepositoryInterface {
+func NewBookingRepository(db *gorm.DB) entities.BookingRepositoryInterface {
 	return &BookingRepository{DB: db}
 }
 
 // Create inserts a new booking into the database
-func (r *BookingRepository) Create(booking *domain.Booking) error {
+func (r *BookingRepository) Create(booking *entities.Booking) error {
 	result := r.DB.Create(booking)
 	return result.Error
 }
 
 // GetAll retrieves all bookings from the database
-func (r *BookingRepository) GetAll() ([]*domain.Booking, error) {
-	var bookings []*domain.Booking
+func (r *BookingRepository) GetAll() ([]*entities.Booking, error) {
+	var bookings []*entities.Booking
 	result := r.DB.Preload("Schedule.Route.DepartureHarbor").
 		Preload("Schedule.Route.ArrivalHarbor").
 		Preload("Schedule.Ship").
@@ -35,8 +35,8 @@ func (r *BookingRepository) GetAll() ([]*domain.Booking, error) {
 }
 
 // GetByID retrieves a booking by its ID
-func (r *BookingRepository) GetByID(id uint) (*domain.Booking, error) {
-	var booking domain.Booking
+func (r *BookingRepository) GetByID(id uint) (*entities.Booking, error) {
+	var booking entities.Booking
 	result := r.DB.Preload("Schedule.Route.DepartureHarbor").
 		Preload("Schedule.Route.ArrivalHarbor").
 		Preload("Schedule.Ship").
@@ -48,7 +48,7 @@ func (r *BookingRepository) GetByID(id uint) (*domain.Booking, error) {
 }
 
 // Update modifies an existing booking in the database
-func (r *BookingRepository) Update(booking *domain.Booking) error {
+func (r *BookingRepository) Update(booking *entities.Booking) error {
 	// Uses Gorm's Save method to update the booking
 	result := r.DB.Save(booking)
 	return result.Error
@@ -56,7 +56,7 @@ func (r *BookingRepository) Update(booking *domain.Booking) error {
 
 // Delete removes a booking from the database by its ID
 func (r *BookingRepository) Delete(id uint) error {
-	result := r.DB.Delete(&domain.Booking{}, id) // Deletes the booking by ID
+	result := r.DB.Delete(&entities.Booking{}, id) // Deletes the booking by ID
 	if result.Error != nil {
 		return result.Error
 	}

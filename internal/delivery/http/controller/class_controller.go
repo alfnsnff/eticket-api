@@ -1,7 +1,8 @@
 package controller
 
 import (
-	"eticket-api/internal/domain"
+	"eticket-api/internal/domain/dto"
+	"eticket-api/internal/domain/entities"
 	"eticket-api/internal/usecase"
 	"eticket-api/pkg/utils/response" // Import the response package
 	"net/http"
@@ -16,7 +17,7 @@ type ClassController struct {
 
 // CreateClass handles creating a new class
 func (h *ClassController) CreateClass(c *gin.Context) {
-	var class domain.Class
+	var class entities.Class
 	if err := c.ShouldBindJSON(&class); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
@@ -38,7 +39,8 @@ func (h *ClassController) GetAllClasses(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSuccessResponse(classes, "Classes retrieved successfully", nil))
+	classDTOs := dto.ToClassDTOs(classes)
+	c.JSON(http.StatusOK, response.NewSuccessResponse(classDTOs, "Classes retrieved successfully", nil))
 }
 
 // GetClassByID handles retrieving a class by its ID
@@ -61,12 +63,13 @@ func (h *ClassController) GetClassByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSuccessResponse(class, "Class retrieved successfully", nil))
+	classDTO := dto.ToClassDTO(class)
+	c.JSON(http.StatusOK, response.NewSuccessResponse(classDTO, "Class retrieved successfully", nil))
 }
 
 // UpdateClass handles updating an existing class
 func (h *ClassController) UpdateClass(c *gin.Context) {
-	var class domain.Class
+	var class entities.Class
 	if err := c.ShouldBindJSON(&class); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return

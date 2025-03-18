@@ -2,20 +2,20 @@ package usecase
 
 import (
 	"errors"
-	"eticket-api/internal/domain"
+	"eticket-api/internal/domain/entities"
 	"fmt"
 )
 
 type BookingUsecase struct {
-	BookingRepository domain.BookingRepositoryInterface
+	BookingRepository entities.BookingRepositoryInterface
 }
 
-func NewBookingUsecase(bookingRepository domain.BookingRepositoryInterface) BookingUsecase {
+func NewBookingUsecase(bookingRepository entities.BookingRepositoryInterface) BookingUsecase {
 	return BookingUsecase{BookingRepository: bookingRepository}
 }
 
 // Createbooking validates and creates a new booking
-func (s *BookingUsecase) CreateBooking(booking *domain.Booking) error {
+func (s *BookingUsecase) CreateBooking(booking *entities.Booking) error {
 	if booking.CusName == "" {
 		return fmt.Errorf("booking name cannot be empty")
 	}
@@ -23,12 +23,12 @@ func (s *BookingUsecase) CreateBooking(booking *domain.Booking) error {
 }
 
 // GetAllbookinges retrieves all bookings
-func (s *BookingUsecase) GetAllBookings() ([]*domain.Booking, error) {
+func (s *BookingUsecase) GetAllBookings() ([]*entities.Booking, error) {
 	return s.BookingRepository.GetAll()
 }
 
 // GetbookingByID retrieves a booking by its ID
-func (s *BookingUsecase) GetBookingByID(id uint) (*domain.Booking, error) {
+func (s *BookingUsecase) GetBookingByID(id uint) (*entities.Booking, error) {
 	booking, err := s.BookingRepository.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func (s *BookingUsecase) GetBookingByID(id uint) (*domain.Booking, error) {
 }
 
 // Updatebooking updates an existing booking
-func (s *BookingUsecase) UpdateBooking(booking *domain.Booking) error {
+func (s *BookingUsecase) UpdateBooking(booking *entities.Booking) error {
 	if booking.ID == 0 {
 		return fmt.Errorf("booking ID cannot be zero")
 	}

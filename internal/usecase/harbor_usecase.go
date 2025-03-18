@@ -2,20 +2,20 @@ package usecase
 
 import (
 	"errors"
-	"eticket-api/internal/domain"
+	"eticket-api/internal/domain/entities"
 	"fmt"
 )
 
 type HarborUsecase struct {
-	HarborRepository domain.HarborRepositoryInterface
+	HarborRepository entities.HarborRepositoryInterface
 }
 
-func NewHarborUsecase(harborRepository domain.HarborRepositoryInterface) HarborUsecase {
+func NewHarborUsecase(harborRepository entities.HarborRepositoryInterface) HarborUsecase {
 	return HarborUsecase{HarborRepository: harborRepository}
 }
 
 // Createharbor validates and creates a new harbor
-func (s *HarborUsecase) CreateHarbor(harbor *domain.Harbor) error {
+func (s *HarborUsecase) CreateHarbor(harbor *entities.Harbor) error {
 	if harbor.HarborName == "" {
 		return fmt.Errorf("harbor name cannot be empty")
 	}
@@ -23,12 +23,12 @@ func (s *HarborUsecase) CreateHarbor(harbor *domain.Harbor) error {
 }
 
 // GetAllharbores retrieves all harbors
-func (s *HarborUsecase) GetAllHarbors() ([]*domain.Harbor, error) {
+func (s *HarborUsecase) GetAllHarbors() ([]*entities.Harbor, error) {
 	return s.HarborRepository.GetAll()
 }
 
 // GetharborByID retrieves a harbor by its ID
-func (s *HarborUsecase) GetHarborByID(id uint) (*domain.Harbor, error) {
+func (s *HarborUsecase) GetHarborByID(id uint) (*entities.Harbor, error) {
 	harbor, err := s.HarborRepository.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func (s *HarborUsecase) GetHarborByID(id uint) (*domain.Harbor, error) {
 }
 
 // Updateharbor updates an existing harbor
-func (s *HarborUsecase) UpdateHarbor(harbor *domain.Harbor) error {
+func (s *HarborUsecase) UpdateHarbor(harbor *entities.Harbor) error {
 	if harbor.ID == 0 {
 		return fmt.Errorf("harbor ID cannot be zero")
 	}

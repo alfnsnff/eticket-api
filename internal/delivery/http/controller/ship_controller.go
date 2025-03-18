@@ -1,7 +1,8 @@
 package controller
 
 import (
-	"eticket-api/internal/domain"
+	"eticket-api/internal/domain/dto"
+	"eticket-api/internal/domain/entities"
 	"eticket-api/internal/usecase" // Import the response package
 	"eticket-api/pkg/utils/response"
 	"net/http"
@@ -16,7 +17,7 @@ type ShipController struct {
 
 // CreateShip handles creating a new Ship
 func (h *ShipController) CreateShip(c *gin.Context) {
-	var ship domain.Ship
+	var ship entities.Ship
 	if err := c.ShouldBindJSON(&ship); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
@@ -38,7 +39,8 @@ func (h *ShipController) GetAllShips(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSuccessResponse(ships, "Ships retrieved successfully", nil))
+	shipDTOs := dto.ToShipDTOs(ships)
+	c.JSON(http.StatusOK, response.NewSuccessResponse(shipDTOs, "Ships retrieved successfully", nil))
 }
 
 // GetShipByID handles retrieving a Ship by its ID
@@ -61,12 +63,13 @@ func (h *ShipController) GetShipByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSuccessResponse(ship, "Ship retrieved successfully", nil))
+	shipDTO := dto.ToShipDTO(ship)
+	c.JSON(http.StatusOK, response.NewSuccessResponse(shipDTO, "Ship retrieved successfully", nil))
 }
 
 // UpdateShip handles updating an existing Ship
 func (h *ShipController) UpdateShip(c *gin.Context) {
-	var ship domain.Ship
+	var ship entities.Ship
 	if err := c.ShouldBindJSON(&ship); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return

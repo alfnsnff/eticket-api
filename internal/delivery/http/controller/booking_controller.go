@@ -1,7 +1,8 @@
 package controller
 
 import (
-	"eticket-api/internal/domain"
+	"eticket-api/internal/domain/dto"
+	"eticket-api/internal/domain/entities"
 	"eticket-api/internal/usecase"
 	"eticket-api/pkg/utils/response" // Import the response package
 	"net/http"
@@ -16,7 +17,7 @@ type BookingController struct {
 
 // CreateBooking handles creating a new Booking
 func (h *BookingController) CreateBooking(c *gin.Context) {
-	var booking domain.Booking
+	var booking entities.Booking
 	if err := c.ShouldBindJSON(&booking); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
@@ -38,7 +39,8 @@ func (h *BookingController) GetAllBookings(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSuccessResponse(bookings, "Bookings retrieved successfully", nil))
+	bookingDTOs := dto.ToBookingDTOs(bookings)
+	c.JSON(http.StatusOK, response.NewSuccessResponse(bookingDTOs, "Bookings retrieved successfully", nil))
 }
 
 // GetBookingByID handles retrieving a Booking by its ID
@@ -61,12 +63,13 @@ func (h *BookingController) GetBookingByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSuccessResponse(booking, "Booking retrieved successfully", nil))
+	bookingDTO := dto.ToBookingDTO(booking)
+	c.JSON(http.StatusOK, response.NewSuccessResponse(bookingDTO, "Booking retrieved successfully", nil))
 }
 
 // UpdateBooking handles updating an existing Booking
 func (h *BookingController) UpdateBooking(c *gin.Context) {
-	var booking domain.Booking
+	var booking entities.Booking
 	if err := c.ShouldBindJSON(&booking); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return

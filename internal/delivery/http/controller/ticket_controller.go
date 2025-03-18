@@ -1,7 +1,8 @@
 package controller
 
 import (
-	"eticket-api/internal/domain"
+	"eticket-api/internal/domain/dto"
+	"eticket-api/internal/domain/entities"
 	"eticket-api/internal/usecase"
 	"eticket-api/pkg/utils/response" // Import the response package
 	"net/http"
@@ -16,7 +17,7 @@ type TicketController struct {
 
 // CreateTicket handles creating a new ticket
 func (h *TicketController) CreateTicket(c *gin.Context) {
-	var ticket domain.Ticket
+	var ticket entities.Ticket
 	if err := c.ShouldBindJSON(&ticket); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error())) // Use response.
 		return
@@ -38,7 +39,8 @@ func (h *TicketController) GetAllTickets(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSuccessResponse(tickets, "Tickets retrieved successfully", nil)) // Use response.
+	ticketDTOs := dto.ToTicketDTOs(tickets)
+	c.JSON(http.StatusOK, response.NewSuccessResponse(ticketDTOs, "Tickets retrieved successfully", nil)) // Use response.
 }
 
 // GetTicketByID handles retrieving a ticket by its ID
@@ -61,12 +63,13 @@ func (h *TicketController) GetTicketByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSuccessResponse(ticket, "Ticket retrieved successfully", nil)) // Use response.
+	ticketDTO := dto.ToTicketDTO(ticket)
+	c.JSON(http.StatusOK, response.NewSuccessResponse(ticketDTO, "Ticket retrieved successfully", nil))
 }
 
 // UpdateTicket handles updating an existing ticket
 func (h *TicketController) UpdateTicket(c *gin.Context) {
-	var ticket domain.Ticket
+	var ticket entities.Ticket
 	if err := c.ShouldBindJSON(&ticket); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error())) // Use response.
 		return

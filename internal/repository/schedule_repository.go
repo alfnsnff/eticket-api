@@ -2,7 +2,7 @@ package repository
 
 import (
 	"errors"
-	"eticket-api/internal/domain"
+	"eticket-api/internal/domain/entities"
 
 	"gorm.io/gorm"
 )
@@ -11,19 +11,19 @@ type ScheduleRepository struct {
 	DB *gorm.DB
 }
 
-func NewScheduleRepository(db *gorm.DB) domain.ScheduleRepositoryInterface {
+func NewScheduleRepository(db *gorm.DB) entities.ScheduleRepositoryInterface {
 	return &ScheduleRepository{DB: db}
 }
 
 // Create inserts a new schedule into the database
-func (r *ScheduleRepository) Create(schedule *domain.Schedule) error {
+func (r *ScheduleRepository) Create(schedule *entities.Schedule) error {
 	result := r.DB.Create(schedule)
 	return result.Error
 }
 
 // GetAll retrieves all schedules from the database
-func (r *ScheduleRepository) GetAll() ([]*domain.Schedule, error) {
-	var schedules []*domain.Schedule
+func (r *ScheduleRepository) GetAll() ([]*entities.Schedule, error) {
+	var schedules []*entities.Schedule
 	result := r.DB.Preload("Route").Preload("Route.DepartureHarbor").Preload("Route.ArrivalHarbor").Preload("Ship").Find(&schedules)
 	if result.Error != nil {
 		return nil, result.Error
@@ -32,8 +32,8 @@ func (r *ScheduleRepository) GetAll() ([]*domain.Schedule, error) {
 }
 
 // GetByID retrieves a schedule by its ID
-func (r *ScheduleRepository) GetByID(id uint) (*domain.Schedule, error) {
-	var schedule domain.Schedule
+func (r *ScheduleRepository) GetByID(id uint) (*entities.Schedule, error) {
+	var schedule entities.Schedule
 	result := r.DB.Preload("Route").Preload("Route.DepartureHarbor").Preload("Route.ArrivalHarbor").Preload("Ship").First(&schedule, id) // Fetches the schedule by ID
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil // Returns nil if no schedule is found
@@ -42,7 +42,7 @@ func (r *ScheduleRepository) GetByID(id uint) (*domain.Schedule, error) {
 }
 
 // Update modifies an existing schedule in the database
-func (r *ScheduleRepository) Update(schedule *domain.Schedule) error {
+func (r *ScheduleRepository) Update(schedule *entities.Schedule) error {
 	// Uses Gorm's Save method to update the schedule
 	result := r.DB.Save(schedule)
 	return result.Error
@@ -50,7 +50,7 @@ func (r *ScheduleRepository) Update(schedule *domain.Schedule) error {
 
 // Delete removes a schedule from the database by its ID
 func (r *ScheduleRepository) Delete(id uint) error {
-	result := r.DB.Delete(&domain.Schedule{}, id) // Deletes the schedule by ID
+	result := r.DB.Delete(&entities.Schedule{}, id) // Deletes the schedule by ID
 	if result.Error != nil {
 		return result.Error
 	}

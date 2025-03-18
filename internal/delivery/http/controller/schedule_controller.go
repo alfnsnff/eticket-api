@@ -1,7 +1,8 @@
 package controller
 
 import (
-	"eticket-api/internal/domain"
+	"eticket-api/internal/domain/dto"
+	"eticket-api/internal/domain/entities"
 	"eticket-api/internal/usecase"
 	"eticket-api/pkg/utils/response" // Import the response package
 	"net/http"
@@ -16,7 +17,7 @@ type ScheduleController struct {
 
 // CreateSchedule handles creating a new Schedule
 func (h *ScheduleController) CreateSchedule(c *gin.Context) {
-	var schedule domain.Schedule
+	var schedule entities.Schedule
 	if err := c.ShouldBindJSON(&schedule); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
@@ -38,7 +39,8 @@ func (h *ScheduleController) GetAllSchedules(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSuccessResponse(schedules, "Schedules retrieved successfully", nil))
+	scheduleDTOs := dto.ToScheduleDTOs(schedules)
+	c.JSON(http.StatusOK, response.NewSuccessResponse(scheduleDTOs, "Schedules retrieved successfully", nil))
 }
 
 // GetScheduleByID handles retrieving a Schedule by its ID
@@ -61,12 +63,13 @@ func (h *ScheduleController) GetScheduleByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSuccessResponse(schedule, "Schedule retrieved successfully", nil))
+	scheduleDTO := dto.ToScheduleDTO(schedule)
+	c.JSON(http.StatusOK, response.NewSuccessResponse(scheduleDTO, "Schedule retrieved successfully", nil))
 }
 
 // UpdateSchedule handles updating an existing Schedule
 func (h *ScheduleController) UpdateSchedule(c *gin.Context) {
-	var schedule domain.Schedule
+	var schedule entities.Schedule
 	if err := c.ShouldBindJSON(&schedule); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
