@@ -4,7 +4,7 @@ import "time"
 
 type Route struct {
 	ID                uint      `gorm:"primaryKey" json:"id"`
-	DepartureHarborID uint      `json:"deaprature_harbor_id"`
+	DepartureHarborID uint      `json:"departure_harbor_id"`
 	ArrivalHarborID   uint      `json:"arrival_harbor_id"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
@@ -16,6 +16,7 @@ type Route struct {
 type RouteRepositoryInterface interface {
 	Create(route *Route) error
 	GetAll() ([]*Route, error)
+	Search(departureHarborID uint, arrivalHarborID uint) (*Route, error)
 	GetByID(id uint) (*Route, error) // Add this method
 	Update(route *Route) error
 	Delete(id uint) error

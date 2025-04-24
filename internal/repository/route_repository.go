@@ -31,6 +31,18 @@ func (r *RouteRepository) GetAll() ([]*entities.Route, error) {
 	return Routes, nil
 }
 
+func (r *RouteRepository) Search(departureHarborID uint, arrivalHarborID uint) (*entities.Route, error) {
+	var route entities.Route
+
+	result := r.DB.Where("departure_harbor_id = ? AND arrival_harbor_id = ?", departureHarborID, arrivalHarborID).First(&route)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &route, nil
+}
+
 // GetByID retrieves a route by its ID
 func (r *RouteRepository) GetByID(id uint) (*entities.Route, error) {
 	var Route entities.Route

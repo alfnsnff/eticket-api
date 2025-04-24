@@ -24,14 +24,13 @@ func (r *TicketRepository) Create(ticket *entities.Ticket) error {
 // GetAll retrieves all tickets from the database, including the associated class
 func (r *TicketRepository) GetAll() ([]*entities.Ticket, error) {
 	var tickets []*entities.Ticket
-	result := r.DB.
-		Preload("Booking.Schedule.Route.DepartureHarbor").
-		Preload("Booking.Schedule.Route.ArrivalHarbor").
-		Preload("Booking.Schedule.Ship").
-		Preload("Class.Route.DepartureHarbor"). // Preload from Class
-		Preload("Class.Route.ArrivalHarbor").   // Preload from Class
-		Preload("Class").
+	result := r.DB.Preload("Schedule.Route.DepartureHarbor").
+		Preload("Schedule.Route.ArrivalHarbor").
+		Preload("Schedule.Ship").
 		Preload("Booking").
+		Preload("Price.ShipClass.Class").
+		Preload("Price.ShipClass").
+		Preload("Price").
 		Find(&tickets)
 	if result.Error != nil {
 		return nil, result.Error
@@ -42,17 +41,31 @@ func (r *TicketRepository) GetAll() ([]*entities.Ticket, error) {
 // GetByID retrieves a ticket by its ID, including the associated class
 func (r *TicketRepository) GetByID(id uint) (*entities.Ticket, error) {
 	var ticket entities.Ticket
-	result := r.DB.Preload("Booking.Schedule.Route.DepartureHarbor").
-		Preload("Booking.Schedule.Route.ArrivalHarbor").
-		Preload("Booking.Schedule.Ship").
-		Preload("Class.Route.DepartureHarbor"). // Preload from Class
-		Preload("Class.Route.ArrivalHarbor").   // Preload from Class
-		Preload("Class").
-		Preload("Booking").First(&ticket, id) // Preloads Class and fetches by ID
+	result := r.DB.Preload("Schedule.Route.DepartureHarbor").
+		Preload("Schedule.Route.ArrivalHarbor").
+		Preload("Schedule.Ship").
+		Preload("Price.ShipClass.Class").
+		Preload("Price.ShipClass").
+		Preload("Price").
+		Preload("Booking").
+		First(&ticket, id) // Preloads Class and fetches by ID
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil // Returns nil if no ticket is found
 	}
 	return &ticket, result.Error
+}
+
+func (r *TicketRepository) GetBookedCount(scheduleID uint, priceID uint) (int, error) {
+	var count int64
+	err := r.DB.Table("ticket").
+		Where("schedule_id = ? AND price_id = ?", scheduleID, priceID).
+		Count(&count).Error
+
+	if err != nil {
+		return 0, err
+	}
+
+	return int(count), nil
 }
 
 // Update modifies an existing ticket in the database

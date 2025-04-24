@@ -16,7 +16,7 @@ func NewShipUsecase(shipRepository entities.ShipRepositoryInterface) ShipUsecase
 
 // Createship validates and creates a new ship
 func (s *ShipUsecase) CreateShip(ship *entities.Ship) error {
-	if ship.ShipName == "" {
+	if ship.Name == "" {
 		return fmt.Errorf("ship name cannot be empty")
 	}
 	return s.ShipRepository.Create(ship)
@@ -40,11 +40,13 @@ func (s *ShipUsecase) GetShipByID(id uint) (*entities.Ship, error) {
 }
 
 // Updateship updates an existing ship
-func (s *ShipUsecase) UpdateShip(ship *entities.Ship) error {
+func (s *ShipUsecase) UpdateShip(id uint, ship *entities.Ship) error {
+	ship.ID = id
+
 	if ship.ID == 0 {
 		return fmt.Errorf("ship ID cannot be zero")
 	}
-	if ship.ShipName == "" {
+	if ship.Name == "" {
 		return fmt.Errorf("ship name cannot be empty")
 	}
 	return s.ShipRepository.Update(ship)

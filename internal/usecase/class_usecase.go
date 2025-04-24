@@ -16,10 +16,7 @@ func NewClassUsecase(classRepository entities.ClassRepositoryInterface) ClassUse
 
 // CreateClass validates and creates a new class
 func (s *ClassUsecase) CreateClass(class *entities.Class) error {
-	if class.Price <= 0 {
-		return fmt.Errorf("price must be greater than zero")
-	}
-	if class.ClassName == "" {
+	if class.Name == "" {
 		return fmt.Errorf("class name cannot be empty")
 	}
 	return s.ClassRepository.Create(class)
@@ -43,14 +40,13 @@ func (s *ClassUsecase) GetClassByID(id uint) (*entities.Class, error) {
 }
 
 // UpdateClass updates an existing class
-func (s *ClassUsecase) UpdateClass(class *entities.Class) error {
+func (s *ClassUsecase) UpdateClass(id uint, class *entities.Class) error {
+	class.ID = id
+
 	if class.ID == 0 {
 		return fmt.Errorf("class ID cannot be zero")
 	}
-	if class.Price <= 0 {
-		return fmt.Errorf("price must be greater than zero")
-	}
-	if class.ClassName == "" {
+	if class.Name == "" {
 		return fmt.Errorf("class name cannot be empty")
 	}
 	return s.ClassRepository.Update(class)

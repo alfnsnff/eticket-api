@@ -2,7 +2,6 @@ package controller
 
 import (
 	"eticket-api/internal/domain/dto"
-	"eticket-api/internal/domain/entities"
 	"eticket-api/internal/usecase" // Import the response package
 	"eticket-api/pkg/utils/response"
 	"net/http"
@@ -17,11 +16,13 @@ type ShipController struct {
 
 // CreateShip handles creating a new Ship
 func (h *ShipController) CreateShip(c *gin.Context) {
-	var ship entities.Ship
-	if err := c.ShouldBindJSON(&ship); err != nil {
+	var shipCreate dto.ShipCreate
+	if err := c.ShouldBindJSON(&shipCreate); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
+
+	ship := dto.ToShipEntity(&shipCreate)
 
 	if err := h.ShipUsecase.CreateShip(&ship); err != nil {
 		c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create ship", err.Error()))
@@ -45,8 +46,7 @@ func (h *ShipController) GetAllShips(c *gin.Context) {
 
 // GetShipByID handles retrieving a Ship by its ID
 func (h *ShipController) GetShipByID(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
 		return
@@ -69,18 +69,23 @@ func (h *ShipController) GetShipByID(c *gin.Context) {
 
 // UpdateShip handles updating an existing Ship
 func (h *ShipController) UpdateShip(c *gin.Context) {
-	var ship entities.Ship
-	if err := c.ShouldBindJSON(&ship); err != nil {
+	var shipUpdate dto.ShipCreate
+
+	id, _ := strconv.Atoi(c.Param("id"))
+
+	if err := c.ShouldBindJSON(&shipUpdate); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	if ship.ID == 0 {
+	if id == 0 {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Ship ID is required", nil))
 		return
 	}
 
-	if err := h.ShipUsecase.UpdateShip(&ship); err != nil {
+	ship := dto.ToShipEntity(&shipUpdate)
+
+	if err := h.ShipUsecase.UpdateShip(uint(id), &ship); err != nil {
 		c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update ship", err.Error()))
 		return
 	}
@@ -90,8 +95,7 @@ func (h *ShipController) UpdateShip(c *gin.Context) {
 
 // DeleteShip handles deleting a Ship by its ID
 func (h *ShipController) DeleteShip(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
 		return

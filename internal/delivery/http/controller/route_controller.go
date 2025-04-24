@@ -2,7 +2,6 @@ package controller
 
 import (
 	"eticket-api/internal/domain/dto"
-	"eticket-api/internal/domain/entities"
 	"eticket-api/internal/usecase"
 	"eticket-api/pkg/utils/response" // Import the response package
 	"net/http"
@@ -17,11 +16,13 @@ type RouteController struct {
 
 // CreateRoute creates a new route
 func (h *RouteController) CreateRoute(c *gin.Context) {
-	var route entities.Route
-	if err := c.ShouldBindJSON(&route); err != nil {
+	var routeCreate dto.RouteCreate
+	if err := c.ShouldBindJSON(&routeCreate); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
+
+	route := dto.ToRouteEntity(&routeCreate)
 
 	if err := h.RouteUsecase.CreateRoute(&route); err != nil {
 		c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create route", err.Error()))
@@ -34,6 +35,7 @@ func (h *RouteController) CreateRoute(c *gin.Context) {
 // GetAllRoutes retrieves all routes
 func (h *RouteController) GetAllRoutes(c *gin.Context) {
 	routes, err := h.RouteUsecase.GetAllRoutes()
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve routes", err.Error()))
 		return
@@ -45,14 +47,15 @@ func (h *RouteController) GetAllRoutes(c *gin.Context) {
 
 // GetRouteByID retrieves a single route by ID
 func (h *RouteController) GetRouteByID(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
+	id, err := strconv.Atoi(c.Param("id"))
+
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid route ID", err.Error()))
 		return
 	}
 
 	route, err := h.RouteUsecase.GetRouteByID(uint(id))
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve route", err.Error())) // More specific error
 		return
@@ -68,21 +71,23 @@ func (h *RouteController) GetRouteByID(c *gin.Context) {
 
 // UpdateRoute updates an existing route
 func (h *RouteController) UpdateRoute(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid route ID", err.Error()))
-		return
-	}
+	var routeUpdate dto.RouteCreate
 
-	var route entities.Route
-	if err := c.ShouldBindJSON(&route); err != nil {
+	id, _ := strconv.Atoi(c.Param("id"))
+
+	if err := c.ShouldBindJSON(&routeUpdate); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	route.ID = uint(id) // Ensure the ID is set for updating
-	if err := h.RouteUsecase.UpdateRoute(&route); err != nil {
+	if id == 0 {
+		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Route ID is required", nil))
+		return
+	}
+
+	route := dto.ToRouteEntity(&routeUpdate)
+
+	if err := h.RouteUsecase.UpdateRoute(uint(id), &route); err != nil {
 		c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update route", err.Error()))
 		return
 	}
@@ -92,8 +97,7 @@ func (h *RouteController) UpdateRoute(c *gin.Context) {
 
 // DeleteRoute deletes a route by ID
 func (h *RouteController) DeleteRoute(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid route ID", err.Error()))
 		return

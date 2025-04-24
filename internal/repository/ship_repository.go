@@ -24,7 +24,7 @@ func (r *ShipRepository) Create(ship *entities.Ship) error {
 // GetAll retrieves all ships from the database
 func (r *ShipRepository) GetAll() ([]*entities.Ship, error) {
 	var ships []*entities.Ship
-	result := r.DB.Find(&ships)
+	result := r.DB.Preload("ShipClasses").Find(&ships)
 	if result.Error != nil {
 		return nil, result.Error
 	}

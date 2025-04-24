@@ -2,7 +2,6 @@ package controller
 
 import (
 	"eticket-api/internal/domain/dto"
-	"eticket-api/internal/domain/entities"
 	"eticket-api/internal/usecase"
 	"eticket-api/pkg/utils/response" // Import the response package
 	"net/http"
@@ -17,11 +16,14 @@ type ClassController struct {
 
 // CreateClass handles creating a new class
 func (h *ClassController) CreateClass(c *gin.Context) {
-	var class entities.Class
-	if err := c.ShouldBindJSON(&class); err != nil {
+	var classCreate dto.ClassCreate
+
+	if err := c.ShouldBindJSON(&classCreate); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
+
+	class := dto.ToClassEntity(&classCreate)
 
 	if err := h.ClassUsecase.CreateClass(&class); err != nil {
 		c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create class", err.Error()))
@@ -45,8 +47,8 @@ func (h *ClassController) GetAllClasses(c *gin.Context) {
 
 // GetClassByID handles retrieving a class by its ID
 func (h *ClassController) GetClassByID(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
+	id, err := strconv.Atoi(c.Param("id"))
+
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid class ID", err.Error()))
 		return
@@ -69,18 +71,23 @@ func (h *ClassController) GetClassByID(c *gin.Context) {
 
 // UpdateClass handles updating an existing class
 func (h *ClassController) UpdateClass(c *gin.Context) {
-	var class entities.Class
-	if err := c.ShouldBindJSON(&class); err != nil {
+	var classUpdate dto.ClassCreate
+
+	id, _ := strconv.Atoi(c.Param("id"))
+
+	if err := c.ShouldBindJSON(&classUpdate); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	if class.ID == 0 {
+	if id == 0 {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Class ID is required", nil))
 		return
 	}
 
-	if err := h.ClassUsecase.UpdateClass(&class); err != nil {
+	class := dto.ToClassEntity(&classUpdate)
+
+	if err := h.ClassUsecase.UpdateClass(uint(id), &class); err != nil {
 		c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update class", err.Error()))
 		return
 	}
@@ -90,8 +97,7 @@ func (h *ClassController) UpdateClass(c *gin.Context) {
 
 // DeleteClass handles deleting a class by its ID
 func (h *ClassController) DeleteClass(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid class ID", err.Error()))
 		return

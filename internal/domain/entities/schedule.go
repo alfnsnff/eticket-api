@@ -17,7 +17,8 @@ type Schedule struct {
 type ScheduleRepositoryInterface interface {
 	Create(schedule *Schedule) error
 	GetAll() ([]*Schedule, error)
-	GetByID(id uint) (*Schedule, error) // Add this method
+	GetByID(id uint) (*Schedule, error)                                   // Add this method
+	Search(routeID uint, date time.Time, shipID *uint) (*Schedule, error) // Add this method
 	Update(schedule *Schedule) error
 	Delete(id uint) error
 }

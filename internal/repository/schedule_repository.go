@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"eticket-api/internal/domain/entities"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -31,7 +32,7 @@ func (r *ScheduleRepository) GetAll() ([]*entities.Schedule, error) {
 	return schedules, nil
 }
 
-// GetByID retrieves a schedule by its ID
+// GetByID implements entities.ScheduleRepositoryInterface.
 func (r *ScheduleRepository) GetByID(id uint) (*entities.Schedule, error) {
 	var schedule entities.Schedule
 	result := r.DB.Preload("Route").Preload("Route.DepartureHarbor").Preload("Route.ArrivalHarbor").Preload("Ship").First(&schedule, id) // Fetches the schedule by ID
@@ -39,6 +40,24 @@ func (r *ScheduleRepository) GetByID(id uint) (*entities.Schedule, error) {
 		return nil, nil // Returns nil if no schedule is found
 	}
 	return &schedule, result.Error
+}
+
+func (r *ScheduleRepository) Search(routeID uint, date time.Time, shipID *uint) (*entities.Schedule, error) {
+	var schedule *entities.Schedule
+
+	query := r.DB.
+		Preload("Route.DepartureHarbor").
+		Preload("Route.ArrivalHarbor").
+		Preload("Ship").
+		Where("route_id = ?", routeID).
+		Where("DATE(datetime) = ?", date.Format("2006-01-02"))
+
+	if shipID != nil {
+		query = query.Where("ship_id = ?", *shipID)
+	}
+
+	result := query.Find(&schedule)
+	return schedule, result.Error
 }
 
 // Update modifies an existing schedule in the database

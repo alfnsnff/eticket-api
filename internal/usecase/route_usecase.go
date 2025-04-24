@@ -17,7 +17,7 @@ func NewRouteUsecase(routeRepository entities.RouteRepositoryInterface) RouteUse
 // CreateRoute validates and creates a new Route
 func (s *RouteUsecase) CreateRoute(route *entities.Route) error {
 	if route.DepartureHarborID == 0 || route.ArrivalHarborID == 0 {
-		return fmt.Errorf("route name cannot be empty")
+		return fmt.Errorf("harbor ID cannot be empty")
 	}
 	return s.RouteRepository.Create(route)
 }
@@ -40,7 +40,9 @@ func (s *RouteUsecase) GetRouteByID(id uint) (*entities.Route, error) {
 }
 
 // UpdateRoute updates an existing Route
-func (s *RouteUsecase) UpdateRoute(route *entities.Route) error {
+func (s *RouteUsecase) UpdateRoute(id uint, route *entities.Route) error {
+	route.ID = id
+
 	if route.ID == 0 {
 		return fmt.Errorf("route ID cannot be zero")
 	}

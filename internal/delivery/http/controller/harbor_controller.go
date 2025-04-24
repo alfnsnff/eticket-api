@@ -2,7 +2,6 @@ package controller
 
 import (
 	"eticket-api/internal/domain/dto"
-	"eticket-api/internal/domain/entities"
 	"eticket-api/internal/usecase"
 	"eticket-api/pkg/utils/response" // Import the response package
 	"net/http"
@@ -17,11 +16,13 @@ type HarborController struct {
 
 // CreateHarbor handles creating a new harbor
 func (h *HarborController) CreateHarbor(c *gin.Context) {
-	var harbor entities.Harbor
-	if err := c.ShouldBindJSON(&harbor); err != nil {
+	var harborCreate dto.HarborCreate
+	if err := c.ShouldBindJSON(&harborCreate); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
+
+	harbor := dto.ToHarborEntity(&harborCreate)
 
 	if err := h.HarborUsecase.CreateHarbor(&harbor); err != nil {
 		c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create harbor", err.Error()))
@@ -45,8 +46,7 @@ func (h *HarborController) GetAllHarbors(c *gin.Context) {
 
 // GetHarborByID handles retrieving a harbor by its ID
 func (h *HarborController) GetHarborByID(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid harbor ID", err.Error()))
 		return
@@ -69,17 +69,23 @@ func (h *HarborController) GetHarborByID(c *gin.Context) {
 
 // UpdateHarbor handles updating an existing harbor
 func (h *HarborController) UpdateHarbor(c *gin.Context) {
-	var harbor entities.Harbor
-	if err := c.ShouldBindJSON(&harbor); err != nil {
+	var harborUpdate dto.HarborCreate
+
+	id, _ := strconv.Atoi(c.Param("id"))
+
+	if err := c.ShouldBindJSON(&harborUpdate); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	if harbor.ID == 0 {
+	if id == 0 {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Harbor ID is required", nil))
 		return
 	}
-	if err := h.HarborUsecase.UpdateHarbor(&harbor); err != nil {
+
+	harbor := dto.ToHarborEntity(&harborUpdate)
+
+	if err := h.HarborUsecase.UpdateHarbor(uint(id), &harbor); err != nil {
 		c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update harbor", err.Error()))
 		return
 	}
@@ -89,8 +95,7 @@ func (h *HarborController) UpdateHarbor(c *gin.Context) {
 
 // DeleteHarbor handles deleting a harbor by its ID
 func (h *HarborController) DeleteHarbor(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid harbor ID", err.Error()))
 		return

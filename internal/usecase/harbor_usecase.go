@@ -16,7 +16,7 @@ func NewHarborUsecase(harborRepository entities.HarborRepositoryInterface) Harbo
 
 // Createharbor validates and creates a new harbor
 func (s *HarborUsecase) CreateHarbor(harbor *entities.Harbor) error {
-	if harbor.HarborName == "" {
+	if harbor.Name == "" {
 		return fmt.Errorf("harbor name cannot be empty")
 	}
 	return s.HarborRepository.Create(harbor)
@@ -40,11 +40,13 @@ func (s *HarborUsecase) GetHarborByID(id uint) (*entities.Harbor, error) {
 }
 
 // Updateharbor updates an existing harbor
-func (s *HarborUsecase) UpdateHarbor(harbor *entities.Harbor) error {
+func (s *HarborUsecase) UpdateHarbor(id uint, harbor *entities.Harbor) error {
+	harbor.ID = id
+
 	if harbor.ID == 0 {
 		return fmt.Errorf("harbor ID cannot be zero")
 	}
-	if harbor.HarborName == "" {
+	if harbor.Name == "" {
 		return fmt.Errorf("harbor name cannot be empty")
 	}
 	return s.HarborRepository.Update(harbor)

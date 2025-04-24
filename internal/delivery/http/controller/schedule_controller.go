@@ -2,7 +2,6 @@ package controller
 
 import (
 	"eticket-api/internal/domain/dto"
-	"eticket-api/internal/domain/entities"
 	"eticket-api/internal/usecase"
 	"eticket-api/pkg/utils/response" // Import the response package
 	"net/http"
@@ -17,11 +16,13 @@ type ScheduleController struct {
 
 // CreateSchedule handles creating a new Schedule
 func (h *ScheduleController) CreateSchedule(c *gin.Context) {
-	var schedule entities.Schedule
-	if err := c.ShouldBindJSON(&schedule); err != nil {
+	var scheduleCreate dto.ScheduleCreate
+	if err := c.ShouldBindJSON(&scheduleCreate); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
+
+	schedule := dto.ToScheduleEntity(&scheduleCreate)
 
 	if err := h.ScheduleUsecase.CreateSchedule(&schedule); err != nil {
 		c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create schedule", err.Error()))
@@ -45,8 +46,7 @@ func (h *ScheduleController) GetAllSchedules(c *gin.Context) {
 
 // GetScheduleByID handles retrieving a Schedule by its ID
 func (h *ScheduleController) GetScheduleByID(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid schedule ID", err.Error()))
 		return
@@ -67,20 +67,61 @@ func (h *ScheduleController) GetScheduleByID(c *gin.Context) {
 	c.JSON(http.StatusOK, response.NewSuccessResponse(scheduleDTO, "Schedule retrieved successfully", nil))
 }
 
+func (h *ScheduleController) GetPricesWithQuota(c *gin.Context) {
+	scheduleIDParam := c.Param("id")
+	scheduleID, err := strconv.ParseUint(scheduleIDParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid schedule ID"})
+		return
+	}
+
+	data, err := h.ScheduleUsecase.GetPricesWithQuotaBySchedule(uint(scheduleID))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid schedule ID", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, response.NewSuccessResponse(data, "Schedule retrieved successfully", nil))
+}
+
+func (h *ScheduleController) SearchSchedule(c *gin.Context) {
+	var req dto.ScheduleSearchRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	schedule, err := h.ScheduleUsecase.SearchSchedule(req)
+
+	scheduleDTO := dto.ToScheduleDTO(schedule)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response.NewSuccessResponse(scheduleDTO, "Schedule retrieved successfully", nil))
+}
+
 // UpdateSchedule handles updating an existing Schedule
 func (h *ScheduleController) UpdateSchedule(c *gin.Context) {
-	var schedule entities.Schedule
-	if err := c.ShouldBindJSON(&schedule); err != nil {
+	var scheduleUpdate dto.ScheduleCreate
+
+	id, _ := strconv.Atoi(c.Param("id"))
+
+	if err := c.ShouldBindJSON(&scheduleUpdate); err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	if schedule.ID == 0 {
+	if id == 0 {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Schedule ID is required", nil))
 		return
 	}
 
-	if err := h.ScheduleUsecase.UpdateSchedule(&schedule); err != nil {
+	schedule := dto.ToScheduleEntity(&scheduleUpdate)
+
+	if err := h.ScheduleUsecase.UpdateSchedule(uint(id), &schedule); err != nil {
 		c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update schedule", err.Error()))
 		return
 	}
@@ -90,8 +131,7 @@ func (h *ScheduleController) UpdateSchedule(c *gin.Context) {
 
 // DeleteSchedule handles deleting a Schedule by its ID
 func (h *ScheduleController) DeleteSchedule(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid schedule ID", err.Error()))
 		return

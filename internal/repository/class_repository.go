@@ -24,7 +24,7 @@ func (r *ClassRepository) Create(class *entities.Class) error {
 // GetAll retrieves all classes from the database
 func (r *ClassRepository) GetAll() ([]*entities.Class, error) {
 	var classes []*entities.Class
-	result := r.DB.Preload("Route.DepartureHarbor").Preload("Route.ArrivalHarbor").Preload("Route").Find(&classes) // Preloads Class relationship
+	result := r.DB.Find(&classes) // Preloads Class relationship
 	// result := r.DB.Find(&classes)
 	if result.Error != nil {
 		return nil, result.Error
@@ -35,7 +35,7 @@ func (r *ClassRepository) GetAll() ([]*entities.Class, error) {
 // GetByID retrieves a class by its ID
 func (r *ClassRepository) GetByID(id uint) (*entities.Class, error) {
 	var class entities.Class
-	result := r.DB.Preload("Route.DepartureHarbor").Preload("Route.ArrivalHarbor").Preload("Route").First(&class, id) // Preloads Class and fetches by ID
+	result := r.DB.First(&class, id) // Preloads Class and fetches by ID
 	// result := r.DB.First(&class, id) // Fetches the class by ID
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil // Returns nil if no class is found

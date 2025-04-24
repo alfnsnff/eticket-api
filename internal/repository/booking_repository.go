@@ -15,10 +15,12 @@ func NewBookingRepository(db *gorm.DB) entities.BookingRepositoryInterface {
 	return &BookingRepository{DB: db}
 }
 
-// Create inserts a new booking into the database
 func (r *BookingRepository) Create(booking *entities.Booking) error {
-	result := r.DB.Create(booking)
-	return result.Error
+	result := r.DB.Create(booking) // GORM automatically assigns ID after insert
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
 }
 
 // GetAll retrieves all bookings from the database
@@ -27,7 +29,12 @@ func (r *BookingRepository) GetAll() ([]*entities.Booking, error) {
 	result := r.DB.Preload("Schedule.Route.DepartureHarbor").
 		Preload("Schedule.Route.ArrivalHarbor").
 		Preload("Schedule.Ship").
-		Preload("Schedule").Find(&bookings)
+		Preload("Schedule").
+		Preload("Tickets").
+		Preload("Tickets.Price.ShipClass.Class").
+		Preload("Tickets.Price.ShipClass").
+		Preload("Tickets.Price").
+		Find(&bookings)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -40,7 +47,12 @@ func (r *BookingRepository) GetByID(id uint) (*entities.Booking, error) {
 	result := r.DB.Preload("Schedule.Route.DepartureHarbor").
 		Preload("Schedule.Route.ArrivalHarbor").
 		Preload("Schedule.Ship").
-		Preload("Schedule").First(&booking, id) // Fetches the booking by ID
+		Preload("Schedule").
+		Preload("Tickets").
+		Preload("Tickets.Price.ShipClass.Class").
+		Preload("Tickets.Price.ShipClass").
+		Preload("Tickets.Price").
+		First(&booking, id) // Fetches the booking by ID
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil // Returns nil if no booking is found
 	}
