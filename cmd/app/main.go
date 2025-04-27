@@ -44,7 +44,7 @@ func main() {
 	route.Setup(router, db)
 
 	// Run the server
-	if err := router.Run(":8080"); err != nil {
+	if err := router.Run(":80"); err != nil {
 		log.Fatalf("Failed to run server: %v", err)
 	}
 }
