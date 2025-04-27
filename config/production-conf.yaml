@@ -1,9 +1,9 @@
 server:
   port: 8080
 database:
-  host: db.mqndkrbhxtgiugwipvlx.supabase.co
+  host: db.dnhjxuwlhfwxbkbbhrwq.supabase.co
   port: 5432
   name: postgres
   user: postgres
-  password: umbresgurgur
+  password: UmbresGurgur1
   sslmode: disable
