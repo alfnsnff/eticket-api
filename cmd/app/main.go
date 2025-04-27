@@ -10,14 +10,14 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 )
 
 func main() {
+
 	// Load .env file
-	if err := godotenv.Load(); err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-	}
+	// if err := godotenv.Load(); err != nil {
+	// 	log.Fatalf("Error loading ENVIRONMENT value: %v", err)
+	// }
 
 	configPath := conf.GetConf(os.Getenv("ENV"))
 
