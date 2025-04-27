@@ -21,19 +21,16 @@ jobs:
         run: |
           az acr login --name ${{ secrets.ACR_NAME }}
 
-      - name: Build Docker Image
+      - name: Build and Push Docker Image
         run: |
           docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest .
-
-      - name: Push Docker Image to ACR
-        run: |
           docker push ${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest
 
       - name: Deploy to Azure Container App
         uses: azure/container-apps-deploy-action@v1
         with:
-          appName: ${{ secrets.CONTAINER_APP_NAME }}
+          containerAppName: ${{ secrets.CONTAINER_APP_NAME }}
           resourceGroup: ${{ secrets.RESOURCE_GROUP }}
-          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest\
+          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest
           environmentVariables: |
             ENV=${{ secrets.ENV }}
