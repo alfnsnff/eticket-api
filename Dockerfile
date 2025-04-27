@@ -28,9 +28,6 @@ COPY --from=builder /app/main .
 # Copy the config folder too (for config files at runtime)
 COPY --from=builder /app/config ./config
 
-# Copy the .env file into the container (make sure the .env file exists in your project directory)
-COPY --from=builder /app/.env ./.env
-
 # Expose application port
 EXPOSE 8080
 
