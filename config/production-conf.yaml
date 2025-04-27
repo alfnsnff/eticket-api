@@ -1,9 +1,9 @@
 server:
   port: 8080
 database:
-  host: localhost
+  host: db.mqndkrbhxtgiugwipvlx.supabase.co
   port: 5432
+  name: postgres
   user: postgres
   password: umbresgurgur
-  name: eticket-api
   sslmode: disable
