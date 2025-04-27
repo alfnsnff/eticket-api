@@ -3,7 +3,7 @@ name: Deploy to Azure Container Apps
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   build-and-deploy:
@@ -17,9 +17,17 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Build and Push Docker Image to ACR
+      - name: Azure ACR Login
         run: |
-          az acr build --registry ${{ secrets.ACR_NAME }} --image myapp:latest .
+          az acr login --name ${{ secrets.ACR_NAME }}
+
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest .
+
+      - name: Push Docker Image to ACR
+        run: |
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest
 
       - name: Deploy to Azure Container App
         uses: azure/container-apps-deploy-action@v1
