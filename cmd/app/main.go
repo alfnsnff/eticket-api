@@ -39,12 +39,14 @@ func main() {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
+	gin.SetMode(gin.ReleaseMode)
+
 	// Set up Gin router and routes
-	router := gin.Default()
+	router := gin.New()
 	route.Setup(router, db)
 
 	// Run the server
-	if err := router.Run(":80"); err != nil {
+	if err := router.Run(":8080"); err != nil {
 		log.Fatalf("Failed to run server: %v", err)
 	}
 }
