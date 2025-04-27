@@ -34,3 +34,8 @@ jobs:
           imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest
           environmentVariables: |
             ENV=${{ secrets.ENV }}
+
+          # Use the secure secrets here
+          registryUrl: ${{ secrets.ACR_NAME }}.azurecr.io
+          registryUsername: ${{ secrets.ACR_USERNAME }} 
+          registryPassword: ${{ secrets.ACR_PASSWORD }} 
