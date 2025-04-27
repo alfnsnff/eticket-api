@@ -10,14 +10,16 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-
 	// Load .env file
-	// if err := godotenv.Load(); err != nil {
-	// 	log.Fatalf("Error loading ENVIRONMENT value: %v", err)
-	// }
+	if err := godotenv.Load(); err != nil {
+		// Log a non-fatal message. This is expected in environments
+		// where a .env file is not used (e.g., production in Azure).
+		log.Printf("INFO: Could not load .env file. Assuming environment variables are set externally: %v", err)
+	}
 
 	configPath := conf.GetConf(os.Getenv("ENV"))
 
