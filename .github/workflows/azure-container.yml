@@ -34,4 +34,6 @@ jobs:
         with:
           appName: ${{ secrets.CONTAINER_APP_NAME }}
           resourceGroup: ${{ secrets.RESOURCE_GROUP }}
-          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest
+          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest\
+          environmentVariables: |
+            ENV=${{ secrets.ENV }}
