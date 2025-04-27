@@ -31,6 +31,7 @@ jobs:
         with:
           containerAppName: ${{ secrets.CONTAINER_APP_NAME }}
           resourceGroup: ${{ secrets.RESOURCE_GROUP }}
+          location: southeastasia  
           imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest
           environmentVariables: |
             ENV=${{ secrets.ENV }}
