@@ -11,20 +11,20 @@ type TicketRepository struct {
 	DB *gorm.DB
 }
 
-func NewTicketRepository(db *gorm.DB) *TicketRepository {
-	return &TicketRepository{DB: db}
+func NewTicketRepository() *TicketRepository {
+	return &TicketRepository{}
 }
 
 // Create inserts a new ticket into the database
-func (r *TicketRepository) Create(ticket *entities.Ticket) error {
-	result := r.DB.Create(ticket)
+func (r *TicketRepository) Create(db *gorm.DB, ticket *entities.Ticket) error {
+	result := db.Create(ticket)
 	return result.Error
 }
 
 // GetAll retrieves all tickets from the database, including the associated class
-func (r *TicketRepository) GetAll() ([]*entities.Ticket, error) {
+func (r *TicketRepository) GetAll(db *gorm.DB) ([]*entities.Ticket, error) {
 	var tickets []*entities.Ticket
-	result := r.DB.Preload("Schedule.Route.DepartureHarbor").
+	result := db.Preload("Schedule.Route.DepartureHarbor").
 		Preload("Schedule.Route.ArrivalHarbor").
 		Preload("Schedule.Ship").
 		Preload("Booking").
@@ -39,9 +39,9 @@ func (r *TicketRepository) GetAll() ([]*entities.Ticket, error) {
 }
 
 // GetByID retrieves a ticket by its ID, including the associated class
-func (r *TicketRepository) GetByID(id uint) (*entities.Ticket, error) {
+func (r *TicketRepository) GetByID(db *gorm.DB, id uint) (*entities.Ticket, error) {
 	var ticket entities.Ticket
-	result := r.DB.Preload("Schedule.Route.DepartureHarbor").
+	result := db.Preload("Schedule.Route.DepartureHarbor").
 		Preload("Schedule.Route.ArrivalHarbor").
 		Preload("Schedule.Ship").
 		Preload("Price.ShipClass.Class").
@@ -55,9 +55,9 @@ func (r *TicketRepository) GetByID(id uint) (*entities.Ticket, error) {
 	return &ticket, result.Error
 }
 
-func (r *TicketRepository) GetBookedCount(scheduleID uint, priceID uint) (int, error) {
+func (r *TicketRepository) GetBookedCount(db *gorm.DB, scheduleID uint, priceID uint) (int, error) {
 	var count int64
-	err := r.DB.Table("ticket").
+	err := db.Table("ticket").
 		Where("schedule_id = ? AND price_id = ?", scheduleID, priceID).
 		Count(&count).Error
 
@@ -69,15 +69,15 @@ func (r *TicketRepository) GetBookedCount(scheduleID uint, priceID uint) (int, e
 }
 
 // Update modifies an existing ticket in the database
-func (r *TicketRepository) Update(ticket *entities.Ticket) error {
+func (r *TicketRepository) Update(db *gorm.DB, ticket *entities.Ticket) error {
 	// Uses Gorm's Save method to update the ticket
-	result := r.DB.Save(ticket)
+	result := db.Save(ticket)
 	return result.Error
 }
 
 // Delete removes a ticket from the database by its ID
-func (r *TicketRepository) Delete(id uint) error {
-	result := r.DB.Delete(&entities.Ticket{}, id) // Deletes the ticket by ID
+func (r *TicketRepository) Delete(db *gorm.DB, id uint) error {
+	result := db.Delete(&entities.Ticket{}, id) // Deletes the ticket by ID
 	if result.Error != nil {
 		return result.Error
 	}

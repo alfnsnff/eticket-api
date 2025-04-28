@@ -10,9 +10,9 @@ import (
 )
 
 func NewHarborRouter(db *gorm.DB, group *gin.RouterGroup) {
-	hr := repository.NewHarborRepository(db)
+	hr := repository.NewHarborRepository()
 	hc := &controller.HarborController{
-		HarborUsecase: usecase.NewHarborUsecase(hr),
+		HarborUsecase: usecase.NewHarborUsecase(db, hr),
 	}
 	group.POST("/harbor", hc.CreateHarbor)
 	group.GET("/harbors", hc.GetAllHarbors)

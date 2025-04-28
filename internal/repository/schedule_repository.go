@@ -12,20 +12,20 @@ type ScheduleRepository struct {
 	DB *gorm.DB
 }
 
-func NewScheduleRepository(db *gorm.DB) *ScheduleRepository {
-	return &ScheduleRepository{DB: db}
+func NewScheduleRepository() *ScheduleRepository {
+	return &ScheduleRepository{}
 }
 
 // Create inserts a new schedule into the database
-func (r *ScheduleRepository) Create(schedule *entities.Schedule) error {
-	result := r.DB.Create(schedule)
+func (r *ScheduleRepository) Create(db *gorm.DB, schedule *entities.Schedule) error {
+	result := db.Create(schedule)
 	return result.Error
 }
 
 // GetAll retrieves all schedules from the database
-func (r *ScheduleRepository) GetAll() ([]*entities.Schedule, error) {
+func (r *ScheduleRepository) GetAll(db *gorm.DB) ([]*entities.Schedule, error) {
 	var schedules []*entities.Schedule
-	result := r.DB.Preload("Route").Preload("Route.DepartureHarbor").Preload("Route.ArrivalHarbor").Preload("Ship").Find(&schedules)
+	result := db.Preload("Route").Preload("Route.DepartureHarbor").Preload("Route.ArrivalHarbor").Preload("Ship").Find(&schedules)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -33,19 +33,19 @@ func (r *ScheduleRepository) GetAll() ([]*entities.Schedule, error) {
 }
 
 // GetByID implements entities.ScheduleRepositoryInterface.
-func (r *ScheduleRepository) GetByID(id uint) (*entities.Schedule, error) {
+func (r *ScheduleRepository) GetByID(db *gorm.DB, id uint) (*entities.Schedule, error) {
 	var schedule entities.Schedule
-	result := r.DB.Preload("Route").Preload("Route.DepartureHarbor").Preload("Route.ArrivalHarbor").Preload("Ship").First(&schedule, id) // Fetches the schedule by ID
+	result := db.Preload("Route").Preload("Route.DepartureHarbor").Preload("Route.ArrivalHarbor").Preload("Ship").First(&schedule, id) // Fetches the schedule by ID
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil // Returns nil if no schedule is found
 	}
 	return &schedule, result.Error
 }
 
-func (r *ScheduleRepository) Search(routeID uint, date time.Time, shipID *uint) (*entities.Schedule, error) {
+func (r *ScheduleRepository) Search(db *gorm.DB, routeID uint, date time.Time, shipID *uint) (*entities.Schedule, error) {
 	var schedule *entities.Schedule
 
-	query := r.DB.
+	query := db.
 		Preload("Route.DepartureHarbor").
 		Preload("Route.ArrivalHarbor").
 		Preload("Ship").
@@ -61,15 +61,15 @@ func (r *ScheduleRepository) Search(routeID uint, date time.Time, shipID *uint) 
 }
 
 // Update modifies an existing schedule in the database
-func (r *ScheduleRepository) Update(schedule *entities.Schedule) error {
+func (r *ScheduleRepository) Update(db *gorm.DB, schedule *entities.Schedule) error {
 	// Uses Gorm's Save method to update the schedule
-	result := r.DB.Save(schedule)
+	result := db.Save(schedule)
 	return result.Error
 }
 
 // Delete removes a schedule from the database by its ID
-func (r *ScheduleRepository) Delete(id uint) error {
-	result := r.DB.Delete(&entities.Schedule{}, id) // Deletes the schedule by ID
+func (r *ScheduleRepository) Delete(db *gorm.DB, id uint) error {
+	result := db.Delete(&entities.Schedule{}, id) // Deletes the schedule by ID
 	if result.Error != nil {
 		return result.Error
 	}

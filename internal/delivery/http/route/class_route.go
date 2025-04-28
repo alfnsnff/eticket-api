@@ -10,9 +10,9 @@ import (
 )
 
 func NewClassRouter(db *gorm.DB, group *gin.RouterGroup) {
-	cr := repository.NewClassRepository(db)
+	cr := repository.NewClassRepository()
 	cc := &controller.ClassController{
-		ClassUsecase: usecase.NewClassUsecase(cr),
+		ClassUsecase: usecase.NewClassUsecase(db, cr),
 	}
 	group.POST("/class", cc.CreateClass)
 	group.GET("/classes", cc.GetAllClasses)

@@ -1,22 +1,30 @@
 package usecase
 
 import (
+	"context"
 	"errors"
 	"eticket-api/internal/domain/entities"
 	"eticket-api/internal/repository"
+	tx "eticket-api/pkg/utils/helper"
 	"fmt"
+
+	"gorm.io/gorm"
 )
 
 type PriceUsecase struct {
+	DB              *gorm.DB
 	PriceRepository *repository.PriceRepository
 }
 
-func NewPriceUsecase(priceRepository *repository.PriceRepository) PriceUsecase {
-	return PriceUsecase{PriceRepository: priceRepository}
+func NewPriceUsecase(db *gorm.DB, priceRepository *repository.PriceRepository) *PriceUsecase {
+	return &PriceUsecase{
+		DB:              db,
+		PriceRepository: priceRepository,
+	}
 }
 
-// Createship validates and creates a new ship
-func (s *PriceUsecase) CreatePrice(price *entities.Price) error {
+// CreatePrice validates and creates a new price
+func (s *PriceUsecase) CreatePrice(ctx context.Context, price *entities.Price) error {
 	if price.RouteID == 0 {
 		return fmt.Errorf("route ID cannot be zero")
 	}
@@ -26,40 +34,73 @@ func (s *PriceUsecase) CreatePrice(price *entities.Price) error {
 	if price.Price == 0 {
 		return fmt.Errorf("price cannot be zero")
 	}
-	return s.PriceRepository.Create(price)
+
+	return tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
+		return s.PriceRepository.Create(txDB, price)
+	})
 }
 
-// GetAllshipes retrieves all ships
-func (s *PriceUsecase) GetAllPrices() ([]*entities.Price, error) {
-	return s.PriceRepository.GetAll()
-}
+// GetAllPrices retrieves all prices
+func (s *PriceUsecase) GetAllPrices(ctx context.Context) ([]*entities.Price, error) {
+	var prices []*entities.Price
 
-// GetshipByID retrieves a ship by its ID
-func (s *PriceUsecase) GetPriceByID(id uint) (*entities.Price, error) {
-	ship, err := s.PriceRepository.GetByID(id)
+	err := tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
+		var err error
+		prices, err = s.PriceRepository.GetAll(txDB)
+		return err
+	})
+
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get all prices: %w", err)
 	}
-	if ship == nil {
+
+	return prices, nil
+}
+
+// GetPriceByID retrieves a price by its ID
+func (s *PriceUsecase) GetPriceByID(ctx context.Context, id uint) (*entities.Price, error) {
+	var price *entities.Price
+
+	err := tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
+		var err error
+		price, err = s.PriceRepository.GetByID(txDB, id)
+		return err
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get price by ID: %w", err)
+	}
+
+	if price == nil {
 		return nil, errors.New("price not found")
 	}
-	return ship, nil
+
+	return price, nil
 }
 
-// GetshipByID retrieves a ship by its ID
-func (s *PriceUsecase) GetPriceByRouteID(id uint) ([]*entities.Price, error) {
-	ship, err := s.PriceRepository.GetByRouteID(id)
+// GetPriceByRouteID retrieves prices by route ID
+func (s *PriceUsecase) GetPriceByRouteID(ctx context.Context, routeID uint) ([]*entities.Price, error) {
+	var prices []*entities.Price
+
+	err := tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
+		var err error
+		prices, err = s.PriceRepository.GetByRouteID(txDB, routeID)
+		return err
+	})
+
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get price by route ID: %w", err)
 	}
-	if ship == nil {
-		return nil, errors.New("price not found")
+
+	if prices == nil {
+		return nil, errors.New("prices not found for this route")
 	}
-	return ship, nil
+
+	return prices, nil
 }
 
-// Updateship updates an existing ship
-func (s *PriceUsecase) UpdatePrice(id uint, price *entities.Price) error {
+// UpdatePrice updates an existing price
+func (s *PriceUsecase) UpdatePrice(ctx context.Context, id uint, price *entities.Price) error {
 	price.ID = id
 
 	if price.ID == 0 {
@@ -74,17 +115,22 @@ func (s *PriceUsecase) UpdatePrice(id uint, price *entities.Price) error {
 	if price.Price == 0 {
 		return fmt.Errorf("price cannot be zero")
 	}
-	return s.PriceRepository.Update(price)
+
+	return tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
+		return s.PriceRepository.Update(txDB, price)
+	})
 }
 
-// Deleteship deletes a ship by its ID
-func (s *PriceUsecase) DeletePrice(id uint) error {
-	ship, err := s.PriceRepository.GetByID(id)
-	if err != nil {
-		return err
-	}
-	if ship == nil {
-		return errors.New("price not found")
-	}
-	return s.PriceRepository.Delete(id)
+// DeletePrice deletes a price by its ID
+func (s *PriceUsecase) DeletePrice(ctx context.Context, id uint) error {
+	return tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
+		price, err := s.PriceRepository.GetByID(txDB, id)
+		if err != nil {
+			return err
+		}
+		if price == nil {
+			return errors.New("price not found")
+		}
+		return s.PriceRepository.Delete(txDB, id)
+	})
 }

@@ -11,20 +11,20 @@ type ClassRepository struct {
 	DB *gorm.DB
 }
 
-func NewClassRepository(db *gorm.DB) *ClassRepository {
-	return &ClassRepository{DB: db}
+func NewClassRepository() *ClassRepository {
+	return &ClassRepository{}
 }
 
 // Create inserts a new class into the database
-func (r *ClassRepository) Create(class *entities.Class) error {
-	result := r.DB.Create(class)
+func (r *ClassRepository) Create(db *gorm.DB, class *entities.Class) error {
+	result := db.Create(class)
 	return result.Error
 }
 
 // GetAll retrieves all classes from the database
-func (r *ClassRepository) GetAll() ([]*entities.Class, error) {
+func (r *ClassRepository) GetAll(db *gorm.DB) ([]*entities.Class, error) {
 	var classes []*entities.Class
-	result := r.DB.Find(&classes) // Preloads Class relationship
+	result := db.Find(&classes) // Preloads Class relationship
 	// result := r.DB.Find(&classes)
 	if result.Error != nil {
 		return nil, result.Error
@@ -33,9 +33,9 @@ func (r *ClassRepository) GetAll() ([]*entities.Class, error) {
 }
 
 // GetByID retrieves a class by its ID
-func (r *ClassRepository) GetByID(id uint) (*entities.Class, error) {
+func (r *ClassRepository) GetByID(db *gorm.DB, id uint) (*entities.Class, error) {
 	var class entities.Class
-	result := r.DB.First(&class, id) // Preloads Class and fetches by ID
+	result := db.First(&class, id) // Preloads Class and fetches by ID
 	// result := r.DB.First(&class, id) // Fetches the class by ID
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil // Returns nil if no class is found
@@ -44,15 +44,15 @@ func (r *ClassRepository) GetByID(id uint) (*entities.Class, error) {
 }
 
 // Update modifies an existing class in the database
-func (r *ClassRepository) Update(class *entities.Class) error {
+func (r *ClassRepository) Update(db *gorm.DB, class *entities.Class) error {
 	// Uses Gorm's Save method to update the class
-	result := r.DB.Save(class)
+	result := db.Save(class)
 	return result.Error
 }
 
 // Delete removes a class from the database by its ID
-func (r *ClassRepository) Delete(id uint) error {
-	result := r.DB.Delete(&entities.Class{}, id) // Deletes the class by ID
+func (r *ClassRepository) Delete(db *gorm.DB, id uint) error {
+	result := db.Delete(&entities.Class{}, id) // Deletes the class by ID
 	if result.Error != nil {
 		return result.Error
 	}

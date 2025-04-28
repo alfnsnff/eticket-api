@@ -10,9 +10,9 @@ import (
 )
 
 func NewShipClassRouter(db *gorm.DB, group *gin.RouterGroup) {
-	hr := repository.NewShipClassRepository(db)
+	hr := repository.NewShipClassRepository()
 	hc := &controller.ShipClassController{
-		ShipClassUsecase: usecase.NewShipClassUsecase(hr),
+		ShipClassUsecase: usecase.NewShipClassUsecase(db, hr),
 	}
 	group.POST("/shipClass", hc.CreateShipClass)
 	group.GET("/shipClasses", hc.GetAllShipClasses)

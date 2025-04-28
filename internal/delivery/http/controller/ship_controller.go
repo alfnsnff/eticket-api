@@ -11,105 +11,105 @@ import (
 )
 
 type ShipController struct {
-	ShipUsecase usecase.ShipUsecase
+	ShipUsecase *usecase.ShipUsecase
+}
+
+// NewShipController creates a new ShipController instance.  Important!
+func NewShipController(shipUsecase *usecase.ShipUsecase) *ShipController {
+	return &ShipController{ShipUsecase: shipUsecase}
 }
 
 // CreateShip handles creating a new Ship
-func (h *ShipController) CreateShip(c *gin.Context) {
+func (h *ShipController) CreateShip(ctx *gin.Context) {
 	var shipCreate dto.ShipCreate
-	if err := c.ShouldBindJSON(&shipCreate); err != nil {
-		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+	if err := ctx.ShouldBindJSON(&shipCreate); err != nil {
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
 	ship := dto.ToShipEntity(&shipCreate)
 
-	if err := h.ShipUsecase.CreateShip(&ship); err != nil {
-		c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create ship", err.Error()))
+	if err := h.ShipUsecase.CreateShip(ctx, &ship); err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create ship", err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Ship created successfully", nil))
+	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Ship created successfully", nil))
 }
 
 // GetAllShips handles retrieving all Ships
-func (h *ShipController) GetAllShips(c *gin.Context) {
-	ships, err := h.ShipUsecase.GetAllShips()
+func (h *ShipController) GetAllShips(ctx *gin.Context) {
+	ships, err := h.ShipUsecase.GetAllShips(ctx)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ships", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ships", err.Error()))
 		return
 	}
 
 	shipDTOs := dto.ToShipDTOs(ships)
-	c.JSON(http.StatusOK, response.NewSuccessResponse(shipDTOs, "Ships retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(shipDTOs, "Ships retrieved successfully", nil))
 }
 
 // GetShipByID handles retrieving a Ship by its ID
-func (h *ShipController) GetShipByID(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
+func (h *ShipController) GetShipByID(ctx *gin.Context) {
+	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
 		return
 	}
 
-	ship, err := h.ShipUsecase.GetShipByID(uint(id))
+	ship, err := h.ShipUsecase.GetShipByID(ctx, uint(id))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ship", err.Error()))
 		return
 	}
 
 	if ship == nil {
-		c.JSON(http.StatusNotFound, response.NewErrorResponse("Ship not found", nil))
+		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Ship not found", nil))
 		return
 	}
 
 	shipDTO := dto.ToShipDTO(ship)
-	c.JSON(http.StatusOK, response.NewSuccessResponse(shipDTO, "Ship retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(shipDTO, "Ship retrieved successfully", nil))
 }
 
 // UpdateShip handles updating an existing Ship
-func (h *ShipController) UpdateShip(c *gin.Context) {
+func (h *ShipController) UpdateShip(ctx *gin.Context) {
 	var shipUpdate dto.ShipCreate
 
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, _ := strconv.Atoi(ctx.Param("id"))
 
-	if err := c.ShouldBindJSON(&shipUpdate); err != nil {
-		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+	if err := ctx.ShouldBindJSON(&shipUpdate); err != nil {
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
 	if id == 0 {
-		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Ship ID is required", nil))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Ship ID is required", nil))
 		return
 	}
 
 	ship := dto.ToShipEntity(&shipUpdate)
 
-	if err := h.ShipUsecase.UpdateShip(uint(id), &ship); err != nil {
-		c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update ship", err.Error()))
+	if err := h.ShipUsecase.UpdateShip(ctx, uint(id), &ship); err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update ship", err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ship updated successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ship updated successfully", nil))
 }
 
 // DeleteShip handles deleting a Ship by its ID
-func (h *ShipController) DeleteShip(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
+func (h *ShipController) DeleteShip(ctx *gin.Context) {
+	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
 		return
 	}
 
-	if err := h.ShipUsecase.DeleteShip(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete ship", err.Error()))
+	if err := h.ShipUsecase.DeleteShip(ctx, uint(id)); err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete ship", err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ship deleted successfully", nil))
-}
-
-// NewShipController creates a new ShipController instance.  Important!
-func NewShipController(shipUsecase usecase.ShipUsecase) *ShipController {
-	return &ShipController{ShipUsecase: shipUsecase}
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ship deleted successfully", nil))
 }

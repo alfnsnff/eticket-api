@@ -10,9 +10,9 @@ import (
 )
 
 func NewPriceRouter(db *gorm.DB, group *gin.RouterGroup) {
-	rr := repository.NewPriceRepository(db)
+	rr := repository.NewPriceRepository()
 	rc := &controller.PriceController{
-		PriceUsecase: usecase.NewPriceUsecase(rr),
+		PriceUsecase: usecase.NewPriceUsecase(db, rr),
 	}
 	group.POST("/price", rc.CreatePrice)
 	group.GET("/prices", rc.GetAllPrices)
