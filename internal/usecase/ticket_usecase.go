@@ -4,21 +4,22 @@ import (
 	"errors"
 	"eticket-api/internal/domain/dto"
 	"eticket-api/internal/domain/entities"
+	"eticket-api/internal/repository"
 	"fmt"
 	"time"
 )
 
 type TicketUsecase struct {
-	TicketRepository    entities.TicketRepositoryInterface
-	ScheduleRepository  entities.ScheduleRepositoryInterface
-	ShipClassRepository entities.ShipClassRepositoryInterface
-	PriceRepository     entities.PriceRepositoryInterface
+	TicketRepository    *repository.TicketRepository
+	ScheduleRepository  *repository.ScheduleRepository
+	ShipClassRepository *repository.ShipClassRepository
+	PriceRepository     *repository.PriceRepository
 }
 
-func NewTicketUsecase(ticketRepository entities.TicketRepositoryInterface,
-	scheduleRepository entities.ScheduleRepositoryInterface,
-	shipClassRepository entities.ShipClassRepositoryInterface,
-	priceRepository entities.PriceRepositoryInterface) TicketUsecase {
+func NewTicketUsecase(ticketRepository *repository.TicketRepository,
+	scheduleRepository *repository.ScheduleRepository,
+	shipClassRepository *repository.ShipClassRepository,
+	priceRepository *repository.PriceRepository) TicketUsecase {
 	return TicketUsecase{TicketRepository: ticketRepository,
 		ScheduleRepository:  scheduleRepository,
 		ShipClassRepository: shipClassRepository,

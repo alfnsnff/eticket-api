@@ -2,7 +2,7 @@ package route
 
 import (
 	"eticket-api/internal/delivery/http/controller"
-	"eticket-api/internal/repository"
+	// "eticket-api/internal/repository"
 	"eticket-api/internal/usecase"
 
 	"github.com/gin-gonic/gin"
@@ -10,9 +10,8 @@ import (
 )
 
 func NewRouteRouter(db *gorm.DB, group *gin.RouterGroup) {
-	rr := repository.NewRouteRepository(db)
 	rc := &controller.RouteController{
-		RouteUsecase: usecase.NewRouteUsecase(rr),
+		RouteUsecase: usecase.RouteUsecase{},
 	}
 	group.POST("/route", rc.CreateRoute)
 	group.GET("/routes", rc.GetAllRoutes)

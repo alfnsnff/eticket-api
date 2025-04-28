@@ -11,7 +11,7 @@ type PriceRepository struct {
 	DB *gorm.DB
 }
 
-func NewPriceRepository(db *gorm.DB) entities.PriceRepositoryInterface {
+func NewPriceRepository(db *gorm.DB) *PriceRepository {
 	return &PriceRepository{DB: db}
 }
 

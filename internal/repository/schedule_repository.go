@@ -12,7 +12,7 @@ type ScheduleRepository struct {
 	DB *gorm.DB
 }
 
-func NewScheduleRepository(db *gorm.DB) entities.ScheduleRepositoryInterface {
+func NewScheduleRepository(db *gorm.DB) *ScheduleRepository {
 	return &ScheduleRepository{DB: db}
 }
 

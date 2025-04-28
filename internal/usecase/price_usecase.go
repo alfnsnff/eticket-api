@@ -3,14 +3,15 @@ package usecase
 import (
 	"errors"
 	"eticket-api/internal/domain/entities"
+	"eticket-api/internal/repository"
 	"fmt"
 )
 
 type PriceUsecase struct {
-	PriceRepository entities.PriceRepositoryInterface
+	PriceRepository *repository.PriceRepository
 }
 
-func NewPriceUsecase(priceRepository entities.PriceRepositoryInterface) PriceUsecase {
+func NewPriceUsecase(priceRepository *repository.PriceRepository) PriceUsecase {
 	return PriceUsecase{PriceRepository: priceRepository}
 }
 

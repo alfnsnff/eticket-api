@@ -11,7 +11,7 @@ type HarborRepository struct {
 	DB *gorm.DB
 }
 
-func NewHarborRepository(db *gorm.DB) entities.HarborRepositoryInterface {
+func NewHarborRepository(db *gorm.DB) *HarborRepository {
 	return &HarborRepository{DB: db}
 }
 

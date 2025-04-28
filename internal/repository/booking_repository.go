@@ -11,7 +11,7 @@ type BookingRepository struct {
 	DB *gorm.DB
 }
 
-func NewBookingRepository(db *gorm.DB) entities.BookingRepositoryInterface {
+func NewBookingRepository(db *gorm.DB) *BookingRepository {
 	return &BookingRepository{DB: db}
 }
 

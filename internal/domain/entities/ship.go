@@ -10,11 +10,3 @@ type Ship struct {
 
 	ShipClasses []ShipClass `gorm:"foreignKey:ShipID" json:"Classes"`
 }
-
-type ShipRepositoryInterface interface {
-	Create(ship *Ship) error
-	GetAll() ([]*Ship, error)
-	GetByID(id uint) (*Ship, error) // Add this method
-	Update(ship *Ship) error
-	Delete(id uint) error
-}

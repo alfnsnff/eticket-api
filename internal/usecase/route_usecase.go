@@ -3,14 +3,15 @@ package usecase
 import (
 	"errors"
 	"eticket-api/internal/domain/entities"
+	"eticket-api/internal/repository"
 	"fmt"
 )
 
 type RouteUsecase struct {
-	RouteRepository entities.RouteRepositoryInterface
+	RouteRepository *repository.RouteRepository
 }
 
-func NewRouteUsecase(routeRepository entities.RouteRepositoryInterface) RouteUsecase {
+func NewRouteUsecase(routeRepository *repository.RouteRepository) RouteUsecase {
 	return RouteUsecase{RouteRepository: routeRepository}
 }
 

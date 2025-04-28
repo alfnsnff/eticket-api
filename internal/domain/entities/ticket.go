@@ -17,12 +17,3 @@ type Ticket struct {
 	Booking  Booking  `gorm:"foreignKey:BookingID" json:"booking"` // Gorm will create the relationship
 	Schedule Schedule `gorm:"foreignKey:ScheduleID" json:"schedule"`
 }
-
-type TicketRepositoryInterface interface {
-	Create(ticket *Ticket) error
-	GetAll() ([]*Ticket, error)
-	GetByID(id uint) (*Ticket, error) // Add this method
-	GetBookedCount(scheduleID uint, priceID uint) (int, error)
-	Update(ticket *Ticket) error
-	Delete(id uint) error
-}

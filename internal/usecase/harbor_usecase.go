@@ -3,14 +3,15 @@ package usecase
 import (
 	"errors"
 	"eticket-api/internal/domain/entities"
+	"eticket-api/internal/repository"
 	"fmt"
 )
 
 type HarborUsecase struct {
-	HarborRepository entities.HarborRepositoryInterface
+	HarborRepository *repository.HarborRepository
 }
 
-func NewHarborUsecase(harborRepository entities.HarborRepositoryInterface) HarborUsecase {
+func NewHarborUsecase(harborRepository *repository.HarborRepository) HarborUsecase {
 	return HarborUsecase{HarborRepository: harborRepository}
 }
 

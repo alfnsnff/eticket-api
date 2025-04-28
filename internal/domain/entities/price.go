@@ -12,13 +12,3 @@ type Price struct {
 
 	ShipClass ShipClass `gorm:"foreignKey:ShipClassID" json:"ship_class"`
 }
-
-type PriceRepositoryInterface interface {
-	Create(price *Price) error
-	GetAll() ([]*Price, error)
-	GetByID(id uint) (*Price, error) // Add this method
-	GetByIDs(priceIDs []uint) ([]*Price, error)
-	GetByRouteID(routeID uint) ([]*Price, error)
-	Update(price *Price) error
-	Delete(id uint) error
-}

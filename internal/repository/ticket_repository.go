@@ -11,7 +11,7 @@ type TicketRepository struct {
 	DB *gorm.DB
 }
 
-func NewTicketRepository(db *gorm.DB) entities.TicketRepositoryInterface {
+func NewTicketRepository(db *gorm.DB) *TicketRepository {
 	return &TicketRepository{DB: db}
 }
 

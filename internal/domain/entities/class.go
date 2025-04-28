@@ -8,11 +8,3 @@ type Class struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
-
-type ClassRepositoryInterface interface {
-	Create(class *Class) error
-	GetAll() ([]*Class, error)
-	GetByID(id uint) (*Class, error) // Add this method
-	Update(class *Class) error
-	Delete(id uint) error
-}

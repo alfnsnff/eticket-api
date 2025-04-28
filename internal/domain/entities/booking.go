@@ -17,12 +17,3 @@ type Booking struct {
 	Tickets  []Ticket `gorm:"foreignKey:BookingID" json:"tickets"` // ✅ Correct reference
 
 }
-
-// BookingRepositoryInterface defines repository methods
-type BookingRepositoryInterface interface {
-	Create(booking *Booking) error
-	GetAll() ([]*Booking, error)
-	GetByID(id uint) (*Booking, error)
-	Update(booking *Booking) error
-	Delete(id uint) error
-}

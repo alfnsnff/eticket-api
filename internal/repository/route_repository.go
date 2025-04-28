@@ -11,7 +11,7 @@ type RouteRepository struct {
 	DB *gorm.DB
 }
 
-func NewRouteRepository(db *gorm.DB) entities.RouteRepositoryInterface {
+func NewRouteRepository(db *gorm.DB) *RouteRepository {
 	return &RouteRepository{DB: db}
 }
 

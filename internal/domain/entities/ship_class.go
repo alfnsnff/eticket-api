@@ -13,14 +13,3 @@ type ShipClass struct {
 	Ship  Ship  `gorm:"foreignKey:ShipID" json:"ship"`
 	Class Class `gorm:"foreignKey:ClassID" json:"class"`
 }
-
-type ShipClassRepositoryInterface interface {
-	Create(shipClass *ShipClass) error
-	GetAll() ([]*ShipClass, error)
-	GetByShipAndClass(shipID, classID uint) (*ShipClass, error)
-	GetByID(id uint) (*ShipClass, error) // Add this method
-	GetByIDs(ids []uint) ([]*ShipClass, error)
-	GetByShipID(shipID uint) ([]*ShipClass, error)
-	Update(shipClass *ShipClass) error
-	Delete(id uint) error
-}

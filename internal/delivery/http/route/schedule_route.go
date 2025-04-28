@@ -2,7 +2,7 @@ package route
 
 import (
 	"eticket-api/internal/delivery/http/controller"
-	"eticket-api/internal/repository"
+	// "eticket-api/internal/repository"
 	"eticket-api/internal/usecase"
 
 	"github.com/gin-gonic/gin"
@@ -10,12 +10,11 @@ import (
 )
 
 func NewScheduleRouter(db *gorm.DB, group *gin.RouterGroup) {
-	hs := repository.NewScheduleRepository(db)
-	hr := repository.NewRouteRepository(db)
-	hp := repository.NewPriceRepository(db)
-	ht := repository.NewTicketRepository(db)
+	// hs := repository.NewScheduleRepository(db)
+	// hp := repository.NewPriceRepository(db)
+	// ht := repository.NewTicketRepository(db)
 	hc := &controller.ScheduleController{
-		ScheduleUsecase: usecase.NewScheduleUsecase(hs, hr, hp, ht),
+		ScheduleUsecase: usecase.ScheduleUsecase{},
 	}
 	group.POST("/schedule", hc.CreateSchedule)
 	group.POST("/schedule/search", hc.SearchSchedule)

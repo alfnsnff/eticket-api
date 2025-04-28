@@ -3,17 +3,18 @@ package usecase
 import (
 	"errors"
 	"eticket-api/internal/domain/entities"
+	"eticket-api/internal/repository"
 	"fmt"
 )
 
 type BookingUsecase struct {
-	BookingRepository entities.BookingRepositoryInterface
-	TicketRepository  entities.TicketRepositoryInterface
+	BookingRepository *repository.BookingRepository
+	TicketRepository  *repository.TicketRepository
 }
 
 func NewBookingUsecase(
-	bookingRepository entities.BookingRepositoryInterface,
-	ticketRepository entities.TicketRepositoryInterface,
+	bookingRepository *repository.BookingRepository,
+	ticketRepository *repository.TicketRepository,
 ) BookingUsecase {
 	return BookingUsecase{
 		BookingRepository: bookingRepository,

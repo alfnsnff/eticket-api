@@ -3,14 +3,15 @@ package usecase
 import (
 	"errors"
 	"eticket-api/internal/domain/entities"
+	"eticket-api/internal/repository"
 	"fmt"
 )
 
 type ClassUsecase struct {
-	ClassRepository entities.ClassRepositoryInterface
+	ClassRepository *repository.ClassRepository
 }
 
-func NewClassUsecase(classRepository entities.ClassRepositoryInterface) ClassUsecase {
+func NewClassUsecase(classRepository *repository.ClassRepository) ClassUsecase {
 	return ClassUsecase{ClassRepository: classRepository}
 }
 

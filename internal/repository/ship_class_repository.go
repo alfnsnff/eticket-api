@@ -11,7 +11,7 @@ type ShipClassRepository struct {
 	DB *gorm.DB
 }
 
-func NewShipClassRepository(db *gorm.DB) entities.ShipClassRepositoryInterface {
+func NewShipClassRepository(db *gorm.DB) *ShipClassRepository {
 	return &ShipClassRepository{DB: db}
 }
 

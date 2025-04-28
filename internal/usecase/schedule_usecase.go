@@ -4,21 +4,22 @@ import (
 	"errors"
 	"eticket-api/internal/domain/dto"
 	"eticket-api/internal/domain/entities"
+	"eticket-api/internal/repository"
 	"fmt"
 )
 
 type ScheduleUsecase struct {
-	ScheduleRepository entities.ScheduleRepositoryInterface
-	RouteRepository    entities.RouteRepositoryInterface
-	PriceRepository    entities.PriceRepositoryInterface
-	TicketRepository   entities.TicketRepositoryInterface
+	ScheduleRepository *repository.ScheduleRepository
+	RouteRepository    *repository.RouteRepository
+	PriceRepository    *repository.PriceRepository
+	TicketRepository   *repository.TicketRepository
 }
 
 func NewScheduleUsecase(
-	scheduleRepository entities.ScheduleRepositoryInterface,
-	routeRepository entities.RouteRepositoryInterface,
-	priceRepository entities.PriceRepositoryInterface,
-	ticketRepository entities.TicketRepositoryInterface) ScheduleUsecase {
+	scheduleRepository *repository.ScheduleRepository,
+	routeRepository *repository.RouteRepository,
+	priceRepository *repository.PriceRepository,
+	ticketRepository *repository.TicketRepository) ScheduleUsecase {
 	return ScheduleUsecase{
 		ScheduleRepository: scheduleRepository,
 		RouteRepository:    routeRepository,

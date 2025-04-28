@@ -12,12 +12,3 @@ type Route struct {
 	DepartureHarbor Harbor `gorm:"foreignKey:DepartureHarborID" json:"departure_harbor"` // Gorm will create the relationship
 	ArrivalHarbor   Harbor `gorm:"foreignKey:ArrivalHarborID" json:"arrival_harbor"`     // Gorm will create the relationship
 }
-
-type RouteRepositoryInterface interface {
-	Create(route *Route) error
-	GetAll() ([]*Route, error)
-	Search(departureHarborID uint, arrivalHarborID uint) (*Route, error)
-	GetByID(id uint) (*Route, error) // Add this method
-	Update(route *Route) error
-	Delete(id uint) error
-}
