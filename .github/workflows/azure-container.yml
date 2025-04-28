@@ -22,9 +22,11 @@ jobs:
           az acr login --name ${{ secrets.ACR_NAME }}
 
       - name: Build and Push Docker Image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest .
-          docker push ${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest
+          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/myapp:${IMAGE_TAG} .
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/myapp:${IMAGE_TAG}
 
       - name: Deploy to Azure Container App
         uses: azure/container-apps-deploy-action@v1
@@ -32,7 +34,7 @@ jobs:
           containerAppName: ${{ secrets.CONTAINER_APP_NAME }}
           resourceGroup: ${{ secrets.RESOURCE_GROUP }}
           location: southeastasia  
-          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest
+          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/myapp:${{ github.sha }}
           environmentVariables: |
             ENV=${{ secrets.ENV }}
 
