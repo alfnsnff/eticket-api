@@ -41,9 +41,8 @@ func main() {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
-	gin.SetMode(gin.ReleaseMode)
-
 	// Set up Gin router and routes
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 	route.Setup(router, db)
 	// router.Use(cors.Default())
