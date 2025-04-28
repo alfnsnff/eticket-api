@@ -7,14 +7,24 @@ import (
 	"github.com/jinzhu/copier"
 )
 
+type ShiClassClass struct {
+	ID   uint   `json:"id"`
+	Name string `json:"name"`
+}
+
+type ShipClassShip struct {
+	ID   uint   `json:"id"`
+	Name string `json:"name"`
+}
+
 // ShipDTO represents a Ship.
 type ShipClassRead struct {
-	ID        uint      `json:"id"`
-	ShipID    uint      `json:"ship_id"`
-	ClassID   uint      `json:"class_id"`
-	Capacity  int       `json:"capacity"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        uint          `json:"id"`
+	Class     ShiClassClass `json:"class"`
+	Ship      ShipClassShip `json:"ship"`
+	Capacity  int           `json:"capacity"`
+	CreatedAt time.Time     `json:"created_at"`
+	UpdatedAt time.Time     `json:"updated_at"`
 }
 
 // ShipDTO represents a Ship.

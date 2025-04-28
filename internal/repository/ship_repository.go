@@ -24,7 +24,7 @@ func (r *ShipRepository) Create(ship *entities.Ship) error {
 // GetAll retrieves all ships from the database
 func (r *ShipRepository) GetAll() ([]*entities.Ship, error) {
 	var ships []*entities.Ship
-	result := r.DB.Preload("ShipClasses").Find(&ships)
+	result := r.DB.Preload("ShipClasses").Preload("ShipClasses.Class").Preload("ShipClasses.Ship").Find(&ships)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -34,7 +34,7 @@ func (r *ShipRepository) GetAll() ([]*entities.Ship, error) {
 // GetByID retrieves a ship by its ID
 func (r *ShipRepository) GetByID(id uint) (*entities.Ship, error) {
 	var ship entities.Ship
-	result := r.DB.First(&ship, id) // Fetches the ship by ID
+	result := r.DB.Preload("ShipClasses").Preload("ShipClasses.Class").Preload("ShipClasses.Ship").First(&ship, id) // Fetches the ship by ID
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil // Returns nil if no ship is found
 	}
