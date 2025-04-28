@@ -17,7 +17,7 @@ type HarborRead struct {
 
 // HarborDTO represents a harbor.
 type HarborCreate struct {
-	HarborName string `json:"harbor_name"`
+	Name string `json:"name"`
 }
 
 func ToHarborDTO(harbor *entities.Harbor) HarborRead {

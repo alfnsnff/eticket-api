@@ -18,7 +18,7 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		// Log a non-fatal message. This is expected in environments
 		// where a .env file is not used (e.g., production in Azure).
-		log.Printf("INFO: Could not load .env file. Assuming environment variables are set externally: %v", err)
+		log.Printf("INFO: Could not load .env file: %v", err)
 	}
 
 	configPath := conf.GetConf(os.Getenv("ENV"))
@@ -42,7 +42,7 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 
 	// Set up Gin router and routes
-	router := gin.New()
+	router := gin.Default()
 	route.Setup(router, db)
 
 	// Run the server
