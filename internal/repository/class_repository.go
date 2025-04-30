@@ -8,17 +8,11 @@ import (
 )
 
 type ClassRepository struct {
-	DB *gorm.DB
+	Repository[entities.Class]
 }
 
 func NewClassRepository() *ClassRepository {
 	return &ClassRepository{}
-}
-
-// Create inserts a new class into the database
-func (r *ClassRepository) Create(db *gorm.DB, class *entities.Class) error {
-	result := db.Create(class)
-	return result.Error
 }
 
 // GetAll retrieves all classes from the database
@@ -41,23 +35,4 @@ func (r *ClassRepository) GetByID(db *gorm.DB, id uint) (*entities.Class, error)
 		return nil, nil // Returns nil if no class is found
 	}
 	return &class, result.Error
-}
-
-// Update modifies an existing class in the database
-func (r *ClassRepository) Update(db *gorm.DB, class *entities.Class) error {
-	// Uses Gorm's Save method to update the class
-	result := db.Save(class)
-	return result.Error
-}
-
-// Delete removes a class from the database by its ID
-func (r *ClassRepository) Delete(db *gorm.DB, id uint) error {
-	result := db.Delete(&entities.Class{}, id) // Deletes the class by ID
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return errors.New("no class found to delete") // Custom error for non-existent ID
-	}
-	return nil
 }

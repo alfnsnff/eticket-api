@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"eticket-api/internal/domain/entities"
+	"eticket-api/internal/model"
+	"eticket-api/internal/model/mapper"
 	"eticket-api/internal/repository"
 	tx "eticket-api/pkg/utils/helper"
 	"fmt"
@@ -16,29 +18,31 @@ type ShipUsecase struct {
 	ShipRepository *repository.ShipRepository
 }
 
-func NewShipUsecase(db *gorm.DB, shipRepository *repository.ShipRepository) *ShipUsecase {
-	return &ShipUsecase{DB: db, ShipRepository: shipRepository}
+func NewShipUsecase(db *gorm.DB, ship_repository *repository.ShipRepository) *ShipUsecase {
+	return &ShipUsecase{DB: db, ShipRepository: ship_repository}
 }
 
 // Createship validates and creates a new ship
-func (s *ShipUsecase) CreateShip(ctx context.Context, ship *entities.Ship) error {
+func (s *ShipUsecase) CreateShip(ctx context.Context, request *model.WriteShipRequest) error {
+	ship := mapper.ToShipEntity(request)
+
 	if ship.Name == "" {
 		return fmt.Errorf("ship name cannot be empty")
 	}
 
-	return tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		return s.ShipRepository.Create(txDB, ship)
+	return tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
+		return s.ShipRepository.Create(tx, ship)
 	})
 }
 
 // GetAllshipes retrieves all ships
-func (s *ShipUsecase) GetAllShips(ctx context.Context) ([]*entities.Ship, error) {
+func (s *ShipUsecase) GetAllShips(ctx context.Context) ([]*model.ReadShipResponse, error) {
 
-	var ships []*entities.Ship
+	ships := []*entities.Ship{}
 
-	err := tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
+	err := tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
 		var err error
-		ships, err = s.ShipRepository.GetAll(txDB)
+		ships, err = s.ShipRepository.GetAll(tx)
 		return err
 	})
 
@@ -46,17 +50,17 @@ func (s *ShipUsecase) GetAllShips(ctx context.Context) ([]*entities.Ship, error)
 		return nil, fmt.Errorf("failed to get all books: %w", err)
 	}
 
-	return ships, nil
+	return mapper.ToShipsModel(ships), nil
 }
 
 // GetshipByID retrieves a ship by its ID
-func (s *ShipUsecase) GetShipByID(ctx context.Context, id uint) (*entities.Ship, error) {
+func (s *ShipUsecase) GetShipByID(ctx context.Context, id uint) (*model.ReadShipResponse, error) {
 
-	var ship *entities.Ship
+	ship := new(entities.Ship)
 
-	err := tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
+	err := tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
 		var err error
-		ship, err = s.ShipRepository.GetByID(txDB, id)
+		ship, err = s.ShipRepository.GetByID(tx, id)
 		return err
 	})
 
@@ -67,11 +71,12 @@ func (s *ShipUsecase) GetShipByID(ctx context.Context, id uint) (*entities.Ship,
 		return nil, errors.New("ship not found")
 	}
 
-	return ship, nil
+	return mapper.ToShipModel(ship), nil
 }
 
 // Updateship updates an existing ship
-func (s *ShipUsecase) UpdateShip(ctx context.Context, id uint, ship *entities.Ship) error {
+func (s *ShipUsecase) UpdateShip(ctx context.Context, id uint, request *model.WriteShipRequest) error {
+	ship := mapper.ToShipEntity(request)
 	ship.ID = id
 
 	if ship.ID == 0 {
@@ -82,22 +87,22 @@ func (s *ShipUsecase) UpdateShip(ctx context.Context, id uint, ship *entities.Sh
 		return fmt.Errorf("ship name cannot be empty")
 	}
 
-	return tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		return s.ShipRepository.Update(txDB, ship)
+	return tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
+		return s.ShipRepository.Update(tx, ship)
 	})
 
 }
 
 // Deleteship deletes a ship by its ID
 func (s *ShipUsecase) DeleteShip(ctx context.Context, id uint) error {
-	return tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		ship, err := s.ShipRepository.GetByID(txDB, id)
+	return tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
+		ship, err := s.ShipRepository.GetByID(tx, id)
 		if err != nil {
 			return err
 		}
 		if ship == nil {
 			return errors.New("route not found")
 		}
-		return s.ShipRepository.Delete(txDB, id)
+		return s.ShipRepository.Delete(tx, ship)
 	})
 }

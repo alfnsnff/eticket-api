@@ -8,19 +8,11 @@ import (
 )
 
 type BookingRepository struct {
-	DB *gorm.DB
+	Repository[entities.Booking]
 }
 
 func NewBookingRepository() *BookingRepository {
 	return &BookingRepository{}
-}
-
-func (r *BookingRepository) Create(db *gorm.DB, booking *entities.Booking) error {
-	result := db.Create(booking) // GORM automatically assigns ID after insert
-	if result.Error != nil {
-		return result.Error
-	}
-	return nil
 }
 
 // GetAll retrieves all bookings from the database
@@ -31,9 +23,9 @@ func (r *BookingRepository) GetAll(db *gorm.DB) ([]*entities.Booking, error) {
 		Preload("Schedule.Ship").
 		Preload("Schedule").
 		Preload("Tickets").
-		Preload("Tickets.Price.ShipClass.Class").
-		Preload("Tickets.Price.ShipClass").
-		Preload("Tickets.Price").
+		Preload("Tickets.Fare.Manifest.Class").
+		Preload("Tickets.Fare.Manifest").
+		Preload("Tickets.Fare").
 		Find(&bookings)
 	if result.Error != nil {
 		return nil, result.Error
@@ -49,31 +41,12 @@ func (r *BookingRepository) GetByID(db *gorm.DB, id uint) (*entities.Booking, er
 		Preload("Schedule.Ship").
 		Preload("Schedule").
 		Preload("Tickets").
-		Preload("Tickets.Price.ShipClass.Class").
-		Preload("Tickets.Price.ShipClass").
-		Preload("Tickets.Price").
+		Preload("Tickets.Fare.Manifest.Class").
+		Preload("Tickets.Fare.Manifest").
+		Preload("Tickets.Fare").
 		First(&booking, id) // Fetches the booking by ID
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil // Returns nil if no booking is found
 	}
 	return &booking, result.Error
-}
-
-// Update modifies an existing booking in the database
-func (r *BookingRepository) Update(db *gorm.DB, booking *entities.Booking) error {
-	// Uses Gorm's Save method to update the booking
-	result := db.Save(booking)
-	return result.Error
-}
-
-// Delete removes a booking from the database by its ID
-func (r *BookingRepository) Delete(db *gorm.DB, id uint) error {
-	result := db.Delete(&entities.Booking{}, id) // Deletes the booking by ID
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return errors.New("no booking found to delete") // Custom error for non-existent ID
-	}
-	return nil
 }

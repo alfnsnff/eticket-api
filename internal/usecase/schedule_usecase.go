@@ -3,8 +3,9 @@ package usecase
 import (
 	"context"
 	"errors"
-	"eticket-api/internal/domain/dto"
 	"eticket-api/internal/domain/entities"
+	"eticket-api/internal/model"
+	"eticket-api/internal/model/mapper"
 	"eticket-api/internal/repository"
 	tx "eticket-api/pkg/utils/helper"
 	"fmt"
@@ -16,43 +17,44 @@ type ScheduleUsecase struct {
 	DB                 *gorm.DB
 	ScheduleRepository *repository.ScheduleRepository
 	RouteRepository    *repository.RouteRepository
-	PriceRepository    *repository.PriceRepository
+	PriceRepository    *repository.FareRepository
 	TicketRepository   *repository.TicketRepository
 }
 
 func NewScheduleUsecase(
 	db *gorm.DB,
-	scheduleRepository *repository.ScheduleRepository,
-	routeRepository *repository.RouteRepository,
-	priceRepository *repository.PriceRepository,
-	ticketRepository *repository.TicketRepository,
+	schedule_repository *repository.ScheduleRepository,
+	route_repository *repository.RouteRepository,
+	fare_repository *repository.FareRepository,
+	ticket_repository *repository.TicketRepository,
 ) *ScheduleUsecase {
 	return &ScheduleUsecase{
 		DB:                 db,
-		ScheduleRepository: scheduleRepository,
-		RouteRepository:    routeRepository,
-		PriceRepository:    priceRepository,
-		TicketRepository:   ticketRepository,
+		ScheduleRepository: schedule_repository,
+		RouteRepository:    route_repository,
+		PriceRepository:    fare_repository,
+		TicketRepository:   ticket_repository,
 	}
 }
 
 // CreateSchedule validates and creates a new schedule
-func (s *ScheduleUsecase) CreateSchedule(ctx context.Context, schedule *entities.Schedule) error {
+func (s *ScheduleUsecase) CreateSchedule(ctx context.Context, request *model.WriteScheduleRequest) error {
+	schedule := mapper.ToScheduleEntity(request)
 	if schedule.Datetime.IsZero() {
 		return fmt.Errorf("schedule datetime cannot be empty")
 	}
 
-	return tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		return s.ScheduleRepository.Create(txDB, schedule)
+	return tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
+		return s.ScheduleRepository.Create(tx, schedule)
 	})
 }
 
 // GetPricesWithQuotaBySchedule retrieves ticket prices and remaining quota for a schedule
-func (s *ScheduleUsecase) GetPricesWithQuotaBySchedule(ctx context.Context, scheduleID uint) ([]dto.ScheduleQuotaResponse, error) {
-	var results []dto.ScheduleQuotaResponse
+func (s *ScheduleUsecase) GetPricesWithQuotaBySchedule(ctx context.Context, scheduleID uint) ([]model.ScheduleQuotaResponse, error) {
+	var results []model.ScheduleQuotaResponse
 
-	err := tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		schedule, err := s.ScheduleRepository.GetByID(txDB, scheduleID)
+	err := tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
+		schedule, err := s.ScheduleRepository.GetByID(tx, scheduleID)
 		if err != nil {
 			return err
 		}
@@ -60,24 +62,24 @@ func (s *ScheduleUsecase) GetPricesWithQuotaBySchedule(ctx context.Context, sche
 			return fmt.Errorf("schedule with ID %d not found", scheduleID)
 		}
 
-		prices, err := s.PriceRepository.GetByRouteID(txDB, schedule.RouteID)
+		prices, err := s.PriceRepository.GetByRouteID(tx, schedule.RouteID)
 		if err != nil {
 			return err
 		}
 
 		for _, price := range prices {
-			booked, err := s.TicketRepository.GetBookedCount(txDB, scheduleID, price.ID)
+			booked, err := s.TicketRepository.GetBookedCount(tx, scheduleID, price.ID)
 			if err != nil {
 				return err
 			}
 
-			available := price.ShipClass.Capacity - booked
+			available := price.Manifest.Capacity - booked
 
-			results = append(results, dto.ScheduleQuotaResponse{
+			results = append(results, model.ScheduleQuotaResponse{
 				PriceID:   price.ID,
-				ClassName: price.ShipClass.Class.Name,
+				ClassName: price.Manifest.Class.Name,
 				Price:     price.Price,
-				Capacity:  price.ShipClass.Capacity,
+				Capacity:  price.Manifest.Capacity,
 				Booked:    booked,
 				Available: available,
 			})
@@ -94,12 +96,12 @@ func (s *ScheduleUsecase) GetPricesWithQuotaBySchedule(ctx context.Context, sche
 }
 
 // GetAllSchedules retrieves all schedules
-func (s *ScheduleUsecase) GetAllSchedules(ctx context.Context) ([]*entities.Schedule, error) {
-	var schedules []*entities.Schedule
+func (s *ScheduleUsecase) GetAllSchedules(ctx context.Context) ([]*model.ReadScheduleResponse, error) {
+	schedules := []*entities.Schedule{}
 
-	err := tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
+	err := tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
 		var err error
-		schedules, err = s.ScheduleRepository.GetAll(txDB)
+		schedules, err = s.ScheduleRepository.GetAll(tx)
 		return err
 	})
 
@@ -107,16 +109,16 @@ func (s *ScheduleUsecase) GetAllSchedules(ctx context.Context) ([]*entities.Sche
 		return nil, fmt.Errorf("failed to get all schedules: %w", err)
 	}
 
-	return schedules, nil
+	return mapper.ToSchedulesModel(schedules), nil
 }
 
 // GetScheduleByID retrieves a schedule by its ID
-func (s *ScheduleUsecase) GetScheduleByID(ctx context.Context, id uint) (*entities.Schedule, error) {
-	var schedule *entities.Schedule
+func (s *ScheduleUsecase) GetScheduleByID(ctx context.Context, id uint) (*model.ReadScheduleResponse, error) {
+	schedule := new(entities.Schedule)
 
-	err := tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
+	err := tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
 		var err error
-		schedule, err = s.ScheduleRepository.GetByID(txDB, id)
+		schedule, err = s.ScheduleRepository.GetByID(tx, id)
 		return err
 	})
 
@@ -128,20 +130,20 @@ func (s *ScheduleUsecase) GetScheduleByID(ctx context.Context, id uint) (*entiti
 		return nil, errors.New("schedule not found")
 	}
 
-	return schedule, nil
+	return mapper.ToScheduleModel(schedule), nil
 }
 
 // SearchSchedule searches a schedule by departure, arrival, and date
-func (s *ScheduleUsecase) SearchSchedule(ctx context.Context, req dto.ScheduleSearchRequest) (*entities.Schedule, error) {
-	var schedule *entities.Schedule
+func (s *ScheduleUsecase) SearchSchedule(ctx context.Context, request *model.SearchScheduleRequest) (*model.ReadScheduleResponse, error) {
+	schedule := new(entities.Schedule)
 
-	err := tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		route, err := s.RouteRepository.Search(txDB, req.DepartureHarborID, req.ArrivalHarborID)
+	err := tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
+		route, err := s.RouteRepository.Search(tx, request.DepartureHarborID, request.ArrivalHarborID)
 		if err != nil {
 			return err
 		}
 
-		schedule, err = s.ScheduleRepository.Search(txDB, route.ID, req.Date, req.ShipID)
+		schedule, err = s.ScheduleRepository.Search(tx, route.ID, request.Date, request.ShipID)
 		return err
 	})
 
@@ -149,35 +151,37 @@ func (s *ScheduleUsecase) SearchSchedule(ctx context.Context, req dto.ScheduleSe
 		return nil, fmt.Errorf("failed to search schedule: %w", err)
 	}
 
-	return schedule, nil
+	return mapper.ToScheduleModel(schedule), nil
 }
 
 // UpdateSchedule updates an existing schedule
-func (s *ScheduleUsecase) UpdateSchedule(ctx context.Context, id uint, schedule *entities.Schedule) error {
-	if id == 0 {
+func (s *ScheduleUsecase) UpdateSchedule(ctx context.Context, id uint, request *model.WriteScheduleRequest) error {
+	schedule := mapper.ToScheduleEntity(request)
+	schedule.ID = id
+
+	if schedule.ID == 0 {
 		return fmt.Errorf("schedule ID cannot be zero")
 	}
+
 	if schedule.Datetime.IsZero() {
 		return fmt.Errorf("schedule datetime cannot be empty")
 	}
 
-	schedule.ID = id
-
-	return tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		return s.ScheduleRepository.Update(txDB, schedule)
+	return tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
+		return s.ScheduleRepository.Update(tx, schedule)
 	})
 }
 
 // DeleteSchedule deletes a schedule by its ID
 func (s *ScheduleUsecase) DeleteSchedule(ctx context.Context, id uint) error {
-	return tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		schedule, err := s.ScheduleRepository.GetByID(txDB, id)
+	return tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
+		schedule, err := s.ScheduleRepository.GetByID(tx, id)
 		if err != nil {
 			return err
 		}
 		if schedule == nil {
 			return errors.New("schedule not found")
 		}
-		return s.ScheduleRepository.Delete(txDB, id)
+		return s.ScheduleRepository.Delete(tx, schedule)
 	})
 }

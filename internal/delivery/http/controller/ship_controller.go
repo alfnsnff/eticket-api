@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"eticket-api/internal/domain/dto"
+	"eticket-api/internal/model"
 	"eticket-api/internal/usecase" // Import the response package
 	"eticket-api/pkg/utils/response"
 	"net/http"
@@ -15,21 +15,21 @@ type ShipController struct {
 }
 
 // NewShipController creates a new ShipController instance.  Important!
-func NewShipController(shipUsecase *usecase.ShipUsecase) *ShipController {
-	return &ShipController{ShipUsecase: shipUsecase}
+func NewShipController(ship_usecase *usecase.ShipUsecase) *ShipController {
+	return &ShipController{ShipUsecase: ship_usecase}
 }
 
 // CreateShip handles creating a new Ship
 func (h *ShipController) CreateShip(ctx *gin.Context) {
-	var shipCreate dto.ShipCreate
-	if err := ctx.ShouldBindJSON(&shipCreate); err != nil {
+	request := new(model.WriteShipRequest)
+	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	ship := dto.ToShipEntity(&shipCreate)
+	// ship := dto.ToShipEntity(&shipCreate)
 
-	if err := h.ShipUsecase.CreateShip(ctx, &ship); err != nil {
+	if err := h.ShipUsecase.CreateShip(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create ship", err.Error()))
 		return
 	}
@@ -39,14 +39,14 @@ func (h *ShipController) CreateShip(ctx *gin.Context) {
 
 // GetAllShips handles retrieving all Ships
 func (h *ShipController) GetAllShips(ctx *gin.Context) {
-	ships, err := h.ShipUsecase.GetAllShips(ctx)
+	datas, err := h.ShipUsecase.GetAllShips(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ships", err.Error()))
 		return
 	}
 
-	shipDTOs := dto.ToShipDTOs(ships)
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(shipDTOs, "Ships retrieved successfully", nil))
+	// shipDTOs := dto.ToShipDTOs(ships)
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Ships retrieved successfully", nil))
 }
 
 // GetShipByID handles retrieving a Ship by its ID
@@ -57,28 +57,27 @@ func (h *ShipController) GetShipByID(ctx *gin.Context) {
 		return
 	}
 
-	ship, err := h.ShipUsecase.GetShipByID(ctx, uint(id))
+	data, err := h.ShipUsecase.GetShipByID(ctx, uint(id))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ship", err.Error()))
 		return
 	}
 
-	if ship == nil {
+	if data == nil {
 		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Ship not found", nil))
 		return
 	}
 
-	shipDTO := dto.ToShipDTO(ship)
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(shipDTO, "Ship retrieved successfully", nil))
+	// shipDTO := dto.ToShipDTO(ship)
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Ship retrieved successfully", nil))
 }
 
 // UpdateShip handles updating an existing Ship
 func (h *ShipController) UpdateShip(ctx *gin.Context) {
-	var shipUpdate dto.ShipCreate
-
+	request := new(model.WriteShipRequest)
 	id, _ := strconv.Atoi(ctx.Param("id"))
 
-	if err := ctx.ShouldBindJSON(&shipUpdate); err != nil {
+	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
@@ -88,9 +87,9 @@ func (h *ShipController) UpdateShip(ctx *gin.Context) {
 		return
 	}
 
-	ship := dto.ToShipEntity(&shipUpdate)
+	// ship := dto.ToShipEntity(&shipUpdate)
 
-	if err := h.ShipUsecase.UpdateShip(ctx, uint(id), &ship); err != nil {
+	if err := h.ShipUsecase.UpdateShip(ctx, uint(id), request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update ship", err.Error()))
 		return
 	}

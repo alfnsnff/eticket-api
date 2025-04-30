@@ -8,5 +8,5 @@ type Ship struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 
-	ShipClasses []ShipClass `gorm:"foreignKey:ShipID" json:"Classes"`
+	Manifests []Manifest `gorm:"foreignKey:ShipID" json:"Classes"`
 }

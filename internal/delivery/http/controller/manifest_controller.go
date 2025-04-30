@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"eticket-api/internal/domain/dto"
+	"eticket-api/internal/model"
 	"eticket-api/internal/usecase" // Import the response package
 	"eticket-api/pkg/utils/response"
 	"net/http"
@@ -10,26 +10,27 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type PriceController struct {
-	PriceUsecase *usecase.PriceUsecase
+type ManifestController struct {
+	ManifestUsecase *usecase.ManifestUsecase
 }
 
-// PriceController creates a new PriceController instance.  Important!
-func NewPriceController(priceUsecase *usecase.PriceUsecase) *PriceController {
-	return &PriceController{PriceUsecase: priceUsecase}
+// NewManifestController creates a new ManifestController instance.  Important!
+func NewManifestController(manifest_usecase *usecase.ManifestUsecase) *ManifestController {
+	return &ManifestController{ManifestUsecase: manifest_usecase}
 }
 
 // CreateShip handles creating a new Ship
-func (h *PriceController) CreatePrice(ctx *gin.Context) {
-	var priceCreate dto.PriceCreate
-	if err := ctx.ShouldBindJSON(&priceCreate); err != nil {
+func (h *ManifestController) CreateManifest(ctx *gin.Context) {
+	// var shipClassCreate dto.ShipClassCreate
+	request := new(model.WriteManifestRequest)
+	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	price := dto.ToPriceEntity(&priceCreate)
+	// shipClass := dto.ToShipClassEntity(&shipClassCreate)
 
-	if err := h.PriceUsecase.CreatePrice(ctx, &price); err != nil {
+	if err := h.ManifestUsecase.CreateManifest(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create ship", err.Error()))
 		return
 	}
@@ -38,69 +39,69 @@ func (h *PriceController) CreatePrice(ctx *gin.Context) {
 }
 
 // GetAllShips handles retrieving all Ships
-func (h *PriceController) GetAllPrices(ctx *gin.Context) {
-	prices, err := h.PriceUsecase.GetAllPrices(ctx)
+func (h *ManifestController) GetAllManifests(ctx *gin.Context) {
+	datas, err := h.ManifestUsecase.GetAllManifests(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ships", err.Error()))
 		return
 	}
 
-	priceDTOs := dto.ToPriceDTOs(prices)
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(priceDTOs, "Ships retrieved successfully", nil))
+	// shipClassDTOs := dto.ToShipClassDTOs(shipClasses)
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Ships retrieved successfully", nil))
 }
 
 // GetShipByID handles retrieving a Ship by its ID
-func (h *PriceController) GetPriceByID(ctx *gin.Context) {
+func (h *ManifestController) GetManifestByID(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
 		return
 	}
 
-	price, err := h.PriceUsecase.GetPriceByID(ctx, uint(id))
+	data, err := h.ManifestUsecase.GetManifestByID(ctx, uint(id))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ship", err.Error()))
 		return
 	}
 
-	if price == nil {
+	if data == nil {
 		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Ship not found", nil))
 		return
 	}
 
-	priceDTO := dto.ToPriceDTO(price)
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(priceDTO, "Ship retrieved successfully", nil))
+	// shipDTO := dto.ToShipClassDTO(shipClass)
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Ship retrieved successfully", nil))
 }
 
-func (h *PriceController) GetPriceByRouteID(ctx *gin.Context) {
+// GetShipByID handles retrieving a Ship by its ID
+func (h *ManifestController) GetManifestsByShipID(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
 		return
 	}
 
-	price, err := h.PriceUsecase.GetPriceByRouteID(ctx, uint(id))
+	capacities, err := h.ManifestUsecase.GetManifestsByShipID(ctx, uint(id))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ship", err.Error()))
 		return
 	}
 
-	if price == nil {
-		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Ship not found", nil))
+	if capacities == nil {
+		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Ship Class not found", nil))
 		return
 	}
 
-	priceDTO := dto.ToPriceDTOs(price)
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(priceDTO, "Ship retrieved successfully", nil))
+	// shipClassDTOs := dto.ToShipClassDTOs(shipClasses)
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(capacities, "Ship retrieved successfully", nil))
 }
 
 // UpdateShip handles updating an existing Ship
-func (h *PriceController) UpdatePrice(ctx *gin.Context) {
-	var priceUpdate dto.PriceCreate
-
+func (h *ManifestController) UpdateManifest(ctx *gin.Context) {
+	request := new(model.WriteManifestRequest)
 	id, _ := strconv.Atoi(ctx.Param("id"))
 
-	if err := ctx.ShouldBindJSON(&priceUpdate); err != nil {
+	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
@@ -110,25 +111,25 @@ func (h *PriceController) UpdatePrice(ctx *gin.Context) {
 		return
 	}
 
-	price := dto.ToPriceEntity(&priceUpdate)
+	// shipClass := dto.ToShipClassEntity(&shipClassUpdate)
 
-	if err := h.PriceUsecase.UpdatePrice(ctx, uint(id), &price); err != nil {
+	if err := h.ManifestUsecase.UpdateManifest(ctx, uint(id), request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update ship", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Price updated successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ship updated successfully", nil))
 }
 
 // DeleteShip handles deleting a Ship by its ID
-func (h *PriceController) DeletePrice(ctx *gin.Context) {
+func (h *ManifestController) DeleteManifest(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
 		return
 	}
 
-	if err := h.PriceUsecase.DeletePrice(ctx, uint(id)); err != nil {
+	if err := h.ManifestUsecase.DeleteManifest(ctx, uint(id)); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete ship", err.Error()))
 		return
 	}

@@ -9,17 +9,11 @@ import (
 )
 
 type ScheduleRepository struct {
-	DB *gorm.DB
+	Repository[entities.Schedule]
 }
 
 func NewScheduleRepository() *ScheduleRepository {
 	return &ScheduleRepository{}
-}
-
-// Create inserts a new schedule into the database
-func (r *ScheduleRepository) Create(db *gorm.DB, schedule *entities.Schedule) error {
-	result := db.Create(schedule)
-	return result.Error
 }
 
 // GetAll retrieves all schedules from the database
@@ -58,23 +52,4 @@ func (r *ScheduleRepository) Search(db *gorm.DB, routeID uint, date time.Time, s
 
 	result := query.Find(&schedule)
 	return schedule, result.Error
-}
-
-// Update modifies an existing schedule in the database
-func (r *ScheduleRepository) Update(db *gorm.DB, schedule *entities.Schedule) error {
-	// Uses Gorm's Save method to update the schedule
-	result := db.Save(schedule)
-	return result.Error
-}
-
-// Delete removes a schedule from the database by its ID
-func (r *ScheduleRepository) Delete(db *gorm.DB, id uint) error {
-	result := db.Delete(&entities.Schedule{}, id) // Deletes the schedule by ID
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return errors.New("no schedule found to delete") // Custom error for non-existent ID
-	}
-	return nil
 }

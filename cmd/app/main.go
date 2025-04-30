@@ -37,7 +37,7 @@ func main() {
 	}
 
 	// Automatically migrate your models (creating tables, etc.)
-	if err := db.AutoMigrate(&entities.Route{}, &entities.Class{}, &entities.Schedule{}, &entities.Ship{}, &entities.Harbor{}, &entities.Booking{}, &entities.Ticket{}, &entities.ShipClass{}, &entities.Price{}); err != nil {
+	if err := db.AutoMigrate(&entities.Route{}, &entities.Class{}, &entities.Schedule{}, &entities.Ship{}, &entities.Harbor{}, &entities.Booking{}, &entities.Ticket{}, &entities.Manifest{}, &entities.Fare{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 

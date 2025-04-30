@@ -12,7 +12,7 @@ import (
 func NewScheduleRouter(db *gorm.DB, group *gin.RouterGroup) {
 	hs := repository.NewScheduleRepository()
 	hr := repository.NewRouteRepository()
-	hp := repository.NewPriceRepository()
+	hp := repository.NewFareRepository()
 	ht := repository.NewTicketRepository()
 	hc := &controller.ScheduleController{
 		ScheduleUsecase: usecase.NewScheduleUsecase(db, hs, hr, hp, ht),

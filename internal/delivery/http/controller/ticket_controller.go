@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"eticket-api/internal/domain/dto"
+	"eticket-api/internal/model"
 	"eticket-api/internal/usecase"
 	"eticket-api/pkg/utils/response" // Import the response package
 	"net/http"
@@ -15,18 +15,18 @@ type TicketController struct {
 }
 
 // NewTicketController creates a new instance of TicketController.
-func NewTicketController(ticketUsecase *usecase.TicketUsecase) *TicketController {
-	return &TicketController{TicketUsecase: ticketUsecase}
+func NewTicketController(ticket_usecase *usecase.TicketUsecase) *TicketController {
+	return &TicketController{TicketUsecase: ticket_usecase}
 }
 
 func (h *TicketController) ValidateTicket(ctx *gin.Context) {
-	var req dto.TicketSelectionRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+	request := new(model.TicketSelectionRequest)
+	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	res, err := h.TicketUsecase.ValidateTicketSelection(ctx, &req)
+	res, err := h.TicketUsecase.ValidateTicketSelection(ctx, request)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
@@ -36,31 +36,31 @@ func (h *TicketController) ValidateTicket(ctx *gin.Context) {
 }
 
 func (h *TicketController) GetBookedCount(ctx *gin.Context) {
-	var req dto.TicketBookedCount
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+	request := new(model.CountBookedTicketRequest)
+	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
-	res, err := h.TicketUsecase.GetBookedCount(ctx, req.ScheduleID, req.PriceID)
+	data, err := h.TicketUsecase.GetBookedCount(ctx, request)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(res, "Ticket availability counted", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Ticket availability counted", nil))
 }
 
 // CreateTicket handles creating a new ticket
 func (h *TicketController) CreateTicket(ctx *gin.Context) {
-	var ticketCreate dto.TicketCreate
-	if err := ctx.ShouldBindJSON(&ticketCreate); err != nil {
+	request := new(model.WriteTicketRequest)
+	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error())) // Use response.
 		return
 	}
 
-	ticket := dto.ToTicketEntity(&ticketCreate)
+	// ticket := dto.ToTicketEntity(&ticketCreate)
 
-	if err := h.TicketUsecase.CreateTicket(ctx, &ticket); err != nil {
+	if err := h.TicketUsecase.CreateTicket(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create ticket", err.Error())) // Use response.
 		return
 	}
@@ -70,14 +70,14 @@ func (h *TicketController) CreateTicket(ctx *gin.Context) {
 
 // GetAllTickets handles retrieving all tickets
 func (h *TicketController) GetAllTickets(ctx *gin.Context) {
-	tickets, err := h.TicketUsecase.GetAllTickets(ctx)
+	datas, err := h.TicketUsecase.GetAllTickets(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve tickets", err.Error())) // Use response.
 		return
 	}
 
-	ticketDTOs := dto.ToTicketDTOs(tickets)
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(ticketDTOs, "Tickets retrieved successfully", nil)) // Use response.
+	// ticketDTOs := dto.ToTicketDTOs(tickets)
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Tickets retrieved successfully", nil)) // Use response.
 }
 
 // GetTicketByID handles retrieving a ticket by its ID
@@ -88,28 +88,27 @@ func (h *TicketController) GetTicketByID(ctx *gin.Context) {
 		return
 	}
 
-	ticket, err := h.TicketUsecase.GetTicketByID(ctx, uint(id))
+	data, err := h.TicketUsecase.GetTicketByID(ctx, uint(id))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ticket", err.Error())) // Use response.
 		return
 	}
 
-	if ticket == nil {
+	if data == nil {
 		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Ticket not found", nil)) // Use response.
 		return
 	}
 
-	ticketDTO := dto.ToTicketDTO(ticket)
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(ticketDTO, "Ticket retrieved successfully", nil))
+	// ticketDTO := dto.ToTicketDTO(ticket)
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Ticket retrieved successfully", nil))
 }
 
 // UpdateTicket handles updating an existing ticket
 func (h *TicketController) UpdateTicket(ctx *gin.Context) {
-	var ticketUpdate dto.TicketCreate
-
+	request := new(model.WriteTicketRequest)
 	id, _ := strconv.Atoi(ctx.Param("id"))
 
-	if err := ctx.ShouldBindJSON(&ticketUpdate); err != nil {
+	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error())) // Use response.
 		return
 	}
@@ -119,9 +118,9 @@ func (h *TicketController) UpdateTicket(ctx *gin.Context) {
 		return
 	}
 
-	ticket := dto.ToTicketEntity(&ticketUpdate)
+	// ticket := dto.ToTicketEntity(&ticketUpdate)
 
-	if err := h.TicketUsecase.UpdateTicket(ctx, uint(id), &ticket); err != nil {
+	if err := h.TicketUsecase.UpdateTicket(ctx, uint(id), request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update ticket", err.Error())) // Use response.
 		return
 	}

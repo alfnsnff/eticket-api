@@ -3,8 +3,9 @@ package usecase
 import (
 	"context"
 	"errors"
-	"eticket-api/internal/domain/dto"
 	"eticket-api/internal/domain/entities"
+	"eticket-api/internal/model"
+	"eticket-api/internal/model/mapper"
 	"eticket-api/internal/repository"
 	tx "eticket-api/pkg/utils/helper"
 	"fmt"
@@ -14,91 +15,88 @@ import (
 )
 
 type TicketUsecase struct {
-	DB                  *gorm.DB
-	TicketRepository    *repository.TicketRepository
-	ScheduleRepository  *repository.ScheduleRepository
-	ShipClassRepository *repository.ShipClassRepository
-	PriceRepository     *repository.PriceRepository
+	DB                 *gorm.DB
+	TicketRepository   *repository.TicketRepository
+	ScheduleRepository *repository.ScheduleRepository
+	FareRepository     *repository.FareRepository
 }
 
 func NewTicketUsecase(
 	db *gorm.DB,
-	ticketRepository *repository.TicketRepository,
-	scheduleRepository *repository.ScheduleRepository,
-	shipClassRepository *repository.ShipClassRepository,
-	priceRepository *repository.PriceRepository,
+	ticket_repository *repository.TicketRepository,
+	schedule_repository *repository.ScheduleRepository,
+	fare_repository *repository.FareRepository,
 ) *TicketUsecase {
 	return &TicketUsecase{
-		DB:                  db,
-		TicketRepository:    ticketRepository,
-		ScheduleRepository:  scheduleRepository,
-		ShipClassRepository: shipClassRepository,
-		PriceRepository:     priceRepository,
+		DB:                 db,
+		TicketRepository:   ticket_repository,
+		ScheduleRepository: schedule_repository,
+		FareRepository:     fare_repository,
 	}
 }
 
-func (s *TicketUsecase) ValidateTicketSelection(ctx context.Context, req *dto.TicketSelectionRequest) (*dto.TicketSelectionResponse, error) {
-	var result *dto.TicketSelectionResponse
+func (s *TicketUsecase) ValidateTicketSelection(ctx context.Context, req *model.TicketSelectionRequest) (*model.TicketSelectionResponse, error) {
+	var result *model.TicketSelectionResponse
 
-	err := tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		schedule, err := s.ScheduleRepository.GetByID(txDB, req.ScheduleID)
+	err := tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
+		schedule, err := s.ScheduleRepository.GetByID(tx, req.ScheduleID)
 		if err != nil || schedule == nil {
 			return errors.New("schedule not found")
 		}
 
-		var priceIDs []uint
+		var fareIDs []uint
 		for _, t := range req.Tickets {
-			priceIDs = append(priceIDs, t.PriceID)
+			fareIDs = append(fareIDs, t.FareID)
 		}
 
-		prices, err := s.PriceRepository.GetByIDs(txDB, priceIDs)
+		fares, err := s.FareRepository.GetByIDs(tx, fareIDs)
 		if err != nil {
 			return err
 		}
 
-		priceMap := make(map[uint]*entities.Price)
-		for _, p := range prices {
-			priceMap[p.ID] = p
+		fareMap := make(map[uint]*entities.Fare)
+		for _, f := range fares {
+			fareMap[f.ID] = f
 		}
 
 		var total float32
-		var ticketDetails []dto.TicketClassDetailResponse
+		var ticketDetails []model.TicketClassDetailResponse
 
 		for _, t := range req.Tickets {
-			price, ok := priceMap[t.PriceID]
+			fare, ok := fareMap[t.FareID]
 			if !ok {
-				return fmt.Errorf("invalid price ID: %d", t.PriceID)
+				return fmt.Errorf("invalid price ID: %d", t.FareID)
 			}
 
-			shipClass := price.ShipClass
+			manifest := fare.Manifest
 			className := ""
-			if shipClass.Class.ID != 0 {
-				className = shipClass.Class.Name
+			if manifest.Class.ID != 0 {
+				className = manifest.Class.Name
 			}
 
-			booked, err := s.TicketRepository.GetBookedCount(txDB, req.ScheduleID, price.ID)
+			booked, err := s.TicketRepository.GetBookedCount(tx, req.ScheduleID, fare.ID)
 			if err != nil {
 				return err
 			}
 
-			available := shipClass.Capacity - booked
+			available := manifest.Capacity - booked
 			if t.Quantity > available {
 				return fmt.Errorf("quota exceeded for class: %s", className)
 			}
 
-			subtotal := price.Price * float32(t.Quantity)
+			subtotal := fare.Price * float32(t.Quantity)
 			total += subtotal
 
-			ticketDetails = append(ticketDetails, dto.TicketClassDetailResponse{
+			ticketDetails = append(ticketDetails, model.TicketClassDetailResponse{
 				ClassName: className,
-				PriceID:   price.ID,
-				Price:     price.Price,
+				FareID:    fare.ID,
+				Price:     fare.Price,
 				Quantity:  t.Quantity,
 				Subtotal:  subtotal,
 			})
 		}
 
-		result = &dto.TicketSelectionResponse{
+		result = &model.TicketSelectionResponse{
 			ScheduleID: req.ScheduleID,
 			ShipName:   schedule.Ship.Name,
 			Datetime:   schedule.Datetime.Format(time.RFC3339),
@@ -115,18 +113,28 @@ func (s *TicketUsecase) ValidateTicketSelection(ctx context.Context, req *dto.Ti
 	return result, nil
 }
 
-func (s *TicketUsecase) CreateTicket(ctx context.Context, ticket *entities.Ticket) error {
-	return tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		return s.TicketRepository.Create(txDB, ticket)
+func (s *TicketUsecase) CreateTicket(ctx context.Context, request *model.WriteTicketRequest) error {
+	ticket := mapper.ToTicketEntity(request)
+
+	if ticket.BookingID == 0 {
+		return fmt.Errorf("booking ID cannot be zero")
+	}
+
+	if ticket.PassengerName == "" {
+		return fmt.Errorf("class name cannot be empty")
+	}
+
+	return tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
+		return s.TicketRepository.Create(tx, ticket)
 	})
 }
 
-func (s *TicketUsecase) GetAllTickets(ctx context.Context) ([]*entities.Ticket, error) {
-	var tickets []*entities.Ticket
+func (s *TicketUsecase) GetAllTickets(ctx context.Context) ([]*model.ReadTicketResponse, error) {
+	tickets := []*entities.Ticket{}
 
-	err := tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
+	err := tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
 		var err error
-		tickets, err = s.TicketRepository.GetAll(txDB)
+		tickets, err = s.TicketRepository.GetAll(tx)
 		return err
 	})
 
@@ -134,14 +142,14 @@ func (s *TicketUsecase) GetAllTickets(ctx context.Context) ([]*entities.Ticket, 
 		return nil, fmt.Errorf("failed to get all tickets: %w", err)
 	}
 
-	return tickets, nil
+	return mapper.ToTicketsModel(tickets), nil
 }
 
-func (s *TicketUsecase) GetBookedCount(ctx context.Context, scheduleID uint, priceID uint) (int, error) {
+func (s *TicketUsecase) GetBookedCount(ctx context.Context, request *model.CountBookedTicketRequest) (int, error) {
 	var count int
 
-	err := tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		schedule, err := s.ScheduleRepository.GetByID(txDB, scheduleID)
+	err := tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
+		schedule, err := s.ScheduleRepository.GetByID(tx, request.ScheduleID)
 		if err != nil {
 			return err
 		}
@@ -149,7 +157,7 @@ func (s *TicketUsecase) GetBookedCount(ctx context.Context, scheduleID uint, pri
 			return errors.New("schedule not found")
 		}
 
-		price, err := s.PriceRepository.GetByID(txDB, priceID)
+		price, err := s.FareRepository.GetByID(tx, request.FareID)
 		if err != nil {
 			return err
 		}
@@ -157,7 +165,7 @@ func (s *TicketUsecase) GetBookedCount(ctx context.Context, scheduleID uint, pri
 			return errors.New("price not found")
 		}
 
-		count, err = s.TicketRepository.GetBookedCount(txDB, scheduleID, priceID)
+		count, err = s.TicketRepository.GetBookedCount(tx, request.ScheduleID, request.FareID)
 		return err
 	})
 
@@ -168,12 +176,12 @@ func (s *TicketUsecase) GetBookedCount(ctx context.Context, scheduleID uint, pri
 	return count, nil
 }
 
-func (s *TicketUsecase) GetTicketByID(ctx context.Context, id uint) (*entities.Ticket, error) {
-	var ticket *entities.Ticket
+func (s *TicketUsecase) GetTicketByID(ctx context.Context, id uint) (*model.ReadTicketResponse, error) {
+	ticket := new(entities.Ticket)
 
-	err := tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
+	err := tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
 		var err error
-		ticket, err = s.TicketRepository.GetByID(txDB, id)
+		ticket, err = s.TicketRepository.GetByID(tx, id)
 		return err
 	})
 
@@ -185,10 +193,12 @@ func (s *TicketUsecase) GetTicketByID(ctx context.Context, id uint) (*entities.T
 		return nil, errors.New("ticket not found")
 	}
 
-	return ticket, nil
+	return mapper.ToTicketModel(ticket), nil
 }
 
-func (s *TicketUsecase) UpdateTicket(ctx context.Context, id uint, ticket *entities.Ticket) error {
+func (s *TicketUsecase) UpdateTicket(ctx context.Context, id uint, request *model.WriteTicketRequest) error {
+
+	ticket := mapper.ToTicketEntity(request)
 	ticket.ID = id
 
 	if ticket.ID == 0 {
@@ -198,20 +208,20 @@ func (s *TicketUsecase) UpdateTicket(ctx context.Context, id uint, ticket *entit
 		return fmt.Errorf("passenger name cannot be empty")
 	}
 
-	return tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		return s.TicketRepository.Update(txDB, ticket)
+	return tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
+		return s.TicketRepository.Update(tx, ticket)
 	})
 }
 
 func (s *TicketUsecase) DeleteTicket(ctx context.Context, id uint) error {
-	return tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		ticket, err := s.TicketRepository.GetByID(txDB, id)
+	return tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
+		ticket, err := s.TicketRepository.GetByID(tx, id)
 		if err != nil {
 			return err
 		}
 		if ticket == nil {
 			return errors.New("ticket not found")
 		}
-		return s.TicketRepository.Delete(txDB, id)
+		return s.TicketRepository.Delete(tx, ticket)
 	})
 }

@@ -1,0 +1,28 @@
+package model
+
+import (
+	"time"
+)
+
+// ShipDTO represents a Ship.
+type ReadFareResponse struct {
+	ID         uint      `json:"id"`
+	RouteID    uint      `json:"route_id"`
+	ManifestID uint      `json:"manifest_id"`
+	Price      float32   `json:"price"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+type WriteFareRequest struct {
+	ID         uint    `json:"id"`
+	RouteID    uint    `json:"route_id"`
+	ManifestID uint    `json:"manifest_id"`
+	Price      float32 `json:"price"`
+}
+
+type CountFareRequest struct {
+	ID         uint `json:"id"`
+	RouteID    uint `json:"route_id"`
+	ManifestID uint `json:"manifest_id"`
+}

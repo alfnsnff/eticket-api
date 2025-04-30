@@ -2,7 +2,7 @@ package entities
 
 import "time"
 
-type ShipClass struct {
+type Manifest struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
 	ShipID    uint      `gorm:"not null" json:"ship_id"`
 	ClassID   uint      `gorm:"not null" json:"class_id"`

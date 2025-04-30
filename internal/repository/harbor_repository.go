@@ -8,17 +8,11 @@ import (
 )
 
 type HarborRepository struct {
-	DB *gorm.DB
+	Repository[entities.Harbor]
 }
 
 func NewHarborRepository() *HarborRepository {
 	return &HarborRepository{}
-}
-
-// Create inserts a new harbor into the database
-func (r *HarborRepository) Create(db *gorm.DB, harbor *entities.Harbor) error {
-	result := db.Create(harbor)
-	return result.Error
 }
 
 // GetAll retrieves all harbor from the database
@@ -41,23 +35,4 @@ func (r *HarborRepository) GetByID(db *gorm.DB, id uint) (*entities.Harbor, erro
 		return nil, nil // Returns nil if no harbor is found
 	}
 	return &harbor, result.Error
-}
-
-// Update modifies an existing harbor in the database
-func (r *HarborRepository) Update(db *gorm.DB, harbor *entities.Harbor) error {
-	// Uses Gorm's Save method to update the harbor
-	result := db.Save(harbor)
-	return result.Error
-}
-
-// Delete removes a harbor from the database by its ID
-func (r *HarborRepository) Delete(db *gorm.DB, id uint) error {
-	result := db.Delete(&entities.Harbor{}, id) // Deletes the harbor by ID
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return errors.New("no harbor found to delete") // Custom error for non-existent ID
-	}
-	return nil
 }

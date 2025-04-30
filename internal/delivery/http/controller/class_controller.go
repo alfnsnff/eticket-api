@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"eticket-api/internal/domain/dto"
+	"eticket-api/internal/model"
 	"eticket-api/internal/usecase"
 	"eticket-api/pkg/utils/response" // Import the response package
 	"net/http"
@@ -15,22 +15,21 @@ type ClassController struct {
 }
 
 // NewClassController creates a new instance of the ClassController.
-func NewClassController(classUsecase *usecase.ClassUsecase) *ClassController {
-	return &ClassController{ClassUsecase: classUsecase}
+func NewClassController(class_usecase *usecase.ClassUsecase) *ClassController {
+	return &ClassController{ClassUsecase: class_usecase}
 }
 
 // CreateClass handles creating a new class
 func (h *ClassController) CreateClass(ctx *gin.Context) {
-	var classCreate dto.ClassCreate
-
-	if err := ctx.ShouldBindJSON(&classCreate); err != nil {
+	request := new(model.WriteClassRequest)
+	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	class := dto.ToClassEntity(&classCreate)
+	// class := dto.ToClassEntity(request)
 
-	if err := h.ClassUsecase.CreateClass(ctx, &class); err != nil {
+	if err := h.ClassUsecase.CreateClass(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create class", err.Error()))
 		return
 	}
@@ -40,14 +39,14 @@ func (h *ClassController) CreateClass(ctx *gin.Context) {
 
 // GetAllClasses handles retrieving all classes
 func (h *ClassController) GetAllClasses(ctx *gin.Context) {
-	classes, err := h.ClassUsecase.GetAllClasses(ctx)
+	datas, err := h.ClassUsecase.GetAllClasses(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve classes", err.Error()))
 		return
 	}
 
-	classDTOs := dto.ToClassDTOs(classes)
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(classDTOs, "Classes retrieved successfully", nil))
+	// classDTOs := dto.ToClassDTOs(classes)
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Classes retrieved successfully", nil))
 }
 
 // GetClassByID handles retrieving a class by its ID
@@ -59,28 +58,27 @@ func (h *ClassController) GetClassByID(ctx *gin.Context) {
 		return
 	}
 
-	class, err := h.ClassUsecase.GetClassByID(ctx, uint(id))
+	data, err := h.ClassUsecase.GetClassByID(ctx, uint(id))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve class", err.Error()))
 		return
 	}
 
-	if class == nil {
+	if data == nil {
 		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Class not found", nil))
 		return
 	}
 
-	classDTO := dto.ToClassDTO(class)
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(classDTO, "Class retrieved successfully", nil))
+	// classDTO := dto.ToClassDTO(class)
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Class retrieved successfully", nil))
 }
 
 // UpdateClass handles updating an existing class
 func (h *ClassController) UpdateClass(ctx *gin.Context) {
-	var classUpdate dto.ClassCreate
-
+	request := new(model.WriteClassRequest)
 	id, _ := strconv.Atoi(ctx.Param("id"))
 
-	if err := ctx.ShouldBindJSON(&classUpdate); err != nil {
+	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
@@ -90,9 +88,9 @@ func (h *ClassController) UpdateClass(ctx *gin.Context) {
 		return
 	}
 
-	class := dto.ToClassEntity(&classUpdate)
+	// class := dto.ToClassEntity(request)
 
-	if err := h.ClassUsecase.UpdateClass(ctx, uint(id), &class); err != nil {
+	if err := h.ClassUsecase.UpdateClass(ctx, uint(id), request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update class", err.Error()))
 		return
 	}
