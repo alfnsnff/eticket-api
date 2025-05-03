@@ -2,63 +2,42 @@ package repository
 
 import (
 	"errors"
-	"eticket-api/internal/domain/entities"
+	"eticket-api/internal/domain/entity"
 
 	"gorm.io/gorm"
 )
 
 type FareRepository struct {
-	Repository[entities.Fare]
+	Repository[entity.Fare]
 }
 
 func NewFareRepository() *FareRepository {
 	return &FareRepository{}
 }
 
-// GetAll retrieves all routes from the database
-func (p *FareRepository) GetAll(db *gorm.DB) ([]*entities.Fare, error) {
-	var fares []*entities.Fare
-	result := db.Find(&fares) // Corrected Preload
+func (fr *FareRepository) GetAll(db *gorm.DB) ([]*entity.Fare, error) {
+	fares := []*entity.Fare{}
+	result := db.Find(&fares)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 	return fares, nil
 }
 
-// GetByID retrieves a route by its ID
-func (p *FareRepository) GetByID(db *gorm.DB, id uint) (*entities.Fare, error) {
-	var fare entities.Fare
-	result := db.First(&fare, id) // Fetches the route by ID
+func (fr *FareRepository) GetByID(db *gorm.DB, id uint) (*entity.Fare, error) {
+	fare := new(entity.Fare)
+	result := db.First(&fare, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil // Returns nil if no Route is found
+		return nil, nil
 	}
-	return &fare, result.Error
+	return fare, result.Error
 }
 
-// GetByID retrieves a route by its ID
-func (p *FareRepository) GetByIDs(db *gorm.DB, ids []uint) ([]*entities.Fare, error) {
-	var fares []*entities.Fare
-
-	result := db.Where("id IN ?", ids).Preload("Manifest").
-		Preload("Manifest.Class").Find(&fares) // Fetches the route by ID
-
+func (fr *FareRepository) GetByManifestAndRoute(ctx *gorm.DB, manifestID uint, routeID uint) (*entity.Fare, error) {
+	fare := new(entity.Fare)
+	result := ctx.Where("manifest_id = ? AND route_id = ?", manifestID, routeID).First(fare)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil // Returns nil if no Route is found
+		return nil, nil
 	}
-	return fares, result.Error
-}
-
-// FareRepository.go
-func (r *FareRepository) GetByRouteID(db *gorm.DB, routeID uint) ([]*entities.Fare, error) {
-	var fares []*entities.Fare
-	result := db.
-		Preload("Manifest").
-		Preload("Manifest.Class"). // for ClassName
-		Where("route_id = ?", routeID).
-		Find(&fares)
-
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil // Returns nil if no Route is found
-	}
-	return fares, result.Error
+	return fare, result.Error
 }

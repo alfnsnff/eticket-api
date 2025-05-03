@@ -17,7 +17,6 @@ func NewFareRouter(db *gorm.DB, group *gin.RouterGroup) {
 	group.POST("/fare", rc.CreateFare)
 	group.GET("/fares", rc.GetAllFares)
 	group.GET("/fare/:id", rc.GetFareByID)
-	group.GET("/fares/route/:id", rc.GetFareByRouteID)
 	group.PUT("/fare/:id", rc.UpdateFare)
 	group.DELETE("/fare/:id", rc.DeleteFare)
 }

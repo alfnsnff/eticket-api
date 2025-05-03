@@ -2,37 +2,33 @@ package repository
 
 import (
 	"errors"
-	"eticket-api/internal/domain/entities"
+	"eticket-api/internal/domain/entity"
 
 	"gorm.io/gorm"
 )
 
 type ClassRepository struct {
-	Repository[entities.Class]
+	Repository[entity.Class]
 }
 
 func NewClassRepository() *ClassRepository {
 	return &ClassRepository{}
 }
 
-// GetAll retrieves all classes from the database
-func (r *ClassRepository) GetAll(db *gorm.DB) ([]*entities.Class, error) {
-	var classes []*entities.Class
-	result := db.Find(&classes) // Preloads Class relationship
-	// result := r.DB.Find(&classes)
+func (cr *ClassRepository) GetAll(db *gorm.DB) ([]*entity.Class, error) {
+	classes := []*entity.Class{}
+	result := db.Find(&classes)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 	return classes, nil
 }
 
-// GetByID retrieves a class by its ID
-func (r *ClassRepository) GetByID(db *gorm.DB, id uint) (*entities.Class, error) {
-	var class entities.Class
-	result := db.First(&class, id) // Preloads Class and fetches by ID
-	// result := r.DB.First(&class, id) // Fetches the class by ID
+func (cr *ClassRepository) GetByID(db *gorm.DB, id uint) (*entity.Class, error) {
+	class := new(entity.Class)
+	result := db.First(&class, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil // Returns nil if no class is found
+		return nil, nil
 	}
-	return &class, result.Error
+	return class, result.Error
 }

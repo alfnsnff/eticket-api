@@ -3,7 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
-	"eticket-api/internal/domain/entities"
+	"eticket-api/internal/domain/entity"
 	"eticket-api/internal/model"
 	"eticket-api/internal/model/mapper"
 	"eticket-api/internal/repository"
@@ -25,9 +25,8 @@ func NewFareUsecase(db *gorm.DB, fare_repository *repository.FareRepository) *Fa
 	}
 }
 
-// CreateFare validates and creates a new Fare
-func (s *FareUsecase) CreateFare(ctx context.Context, request *model.WriteFareRequest) error {
-	fare := mapper.ToFareEntity(request)
+func (f *FareUsecase) CreateFare(ctx context.Context, request *model.WriteFareRequest) error {
+	fare := mapper.FareMapper.FromWrite(request)
 
 	if fare.RouteID == 0 {
 		return fmt.Errorf("route ID cannot be zero")
@@ -36,21 +35,20 @@ func (s *FareUsecase) CreateFare(ctx context.Context, request *model.WriteFareRe
 		return fmt.Errorf("ship class ID cannot be zero")
 	}
 	if fare.Price == 0 {
-		return fmt.Errorf("Fare cannot be zero")
+		return fmt.Errorf("fare cannot be zero")
 	}
 
-	return tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
-		return s.FareRepository.Create(tx, fare)
+	return tx.Execute(ctx, f.DB, func(tx *gorm.DB) error {
+		return f.FareRepository.Create(tx, fare)
 	})
 }
 
-// GetAllFares retrieves all Fares
-func (s *FareUsecase) GetAllFares(ctx context.Context) ([]*model.ReadFareResponse, error) {
-	fares := []*entities.Fare{}
+func (f *FareUsecase) GetAllFares(ctx context.Context) ([]*model.ReadFareResponse, error) {
+	fares := []*entity.Fare{}
 
-	err := tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
+	err := tx.Execute(ctx, f.DB, func(tx *gorm.DB) error {
 		var err error
-		fares, err = s.FareRepository.GetAll(tx)
+		fares, err = f.FareRepository.GetAll(tx)
 		return err
 	})
 
@@ -58,16 +56,15 @@ func (s *FareUsecase) GetAllFares(ctx context.Context) ([]*model.ReadFareRespons
 		return nil, fmt.Errorf("failed to get all Fares: %w", err)
 	}
 
-	return mapper.ToFaresModel(fares), nil
+	return mapper.FareMapper.ToModels(fares), nil
 }
 
-// GetFareByID retrieves a Fare by its ID
-func (s *FareUsecase) GetFareByID(ctx context.Context, id uint) (*model.ReadFareResponse, error) {
-	fare := new(entities.Fare)
+func (f *FareUsecase) GetFareByID(ctx context.Context, id uint) (*model.ReadFareResponse, error) {
+	fare := new(entity.Fare)
 
-	err := tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
+	err := tx.Execute(ctx, f.DB, func(tx *gorm.DB) error {
 		var err error
-		fare, err = s.FareRepository.GetByID(tx, id)
+		fare, err = f.FareRepository.GetByID(tx, id)
 		return err
 	})
 
@@ -76,37 +73,14 @@ func (s *FareUsecase) GetFareByID(ctx context.Context, id uint) (*model.ReadFare
 	}
 
 	if fare == nil {
-		return nil, errors.New("Fare not found")
+		return nil, errors.New("fare not found")
 	}
 
-	return mapper.ToFareModel(fare), nil
+	return mapper.FareMapper.ToModel(fare), nil
 }
 
-// GetFareByRouteID retrieves Fares by route ID
-func (s *FareUsecase) GetFareByRouteID(ctx context.Context, routeID uint) ([]*model.ReadFareResponse, error) {
-	fares := []*entities.Fare{}
-
-	err := tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
-		var err error
-		fares, err = s.FareRepository.GetByRouteID(tx, routeID)
-		return err
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Fare by route ID: %w", err)
-	}
-
-	if fares == nil {
-		return nil, errors.New("Fares not found for this route")
-	}
-
-	return mapper.ToFaresModel(fares), nil
-}
-
-// UpdateFare updates an existing Fare
-func (s *FareUsecase) UpdateFare(ctx context.Context, id uint, request *model.WriteFareRequest) error {
-	fare := mapper.ToFareEntity(request)
-
+func (f *FareUsecase) UpdateFare(ctx context.Context, id uint, request *model.UpdateFareRequest) error {
+	fare := mapper.FareMapper.FromUpdate(request)
 	fare.ID = id
 
 	if fare.ID == 0 {
@@ -119,24 +93,25 @@ func (s *FareUsecase) UpdateFare(ctx context.Context, id uint, request *model.Wr
 		return fmt.Errorf("manifest ID cannot be zero")
 	}
 	if fare.Price == 0 {
-		return fmt.Errorf("Fare cannot be zero")
+		return fmt.Errorf("fare cannot be zero")
 	}
 
-	return tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
-		return s.FareRepository.Update(tx, fare)
+	return tx.Execute(ctx, f.DB, func(tx *gorm.DB) error {
+		return f.FareRepository.Update(tx, fare)
 	})
 }
 
-// DeleteFare deletes a Fare by its ID
-func (s *FareUsecase) DeleteFare(ctx context.Context, id uint) error {
-	return tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
-		Fare, err := s.FareRepository.GetByID(tx, id)
+func (f *FareUsecase) DeleteFare(ctx context.Context, id uint) error {
+
+	return tx.Execute(ctx, f.DB, func(tx *gorm.DB) error {
+		fare, err := f.FareRepository.GetByID(tx, id)
 		if err != nil {
 			return err
 		}
-		if Fare == nil {
-			return errors.New("Fare not found")
+		if fare == nil {
+			return errors.New("fare not found")
 		}
-		return s.FareRepository.Delete(tx, Fare)
+		return f.FareRepository.Delete(tx, fare)
 	})
+
 }

@@ -1,0 +1,53 @@
+package repository
+
+import (
+	"errors"
+	"eticket-api/internal/domain/entity"
+
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+)
+
+type AllocationRepository struct {
+	Repository[entity.Allocation]
+}
+
+func NewAllocationRepository() *AllocationRepository {
+	return &AllocationRepository{}
+}
+
+func (scr *AllocationRepository) GetAll(db *gorm.DB) ([]*entity.Allocation, error) {
+	allocations := []*entity.Allocation{}
+	result := db.Find(&allocations)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return allocations, nil
+}
+
+func (scr *AllocationRepository) GetByID(db *gorm.DB, id uint) (*entity.Allocation, error) {
+	allocation := new(entity.Allocation)
+	result := db.First(&allocation, id)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return allocation, result.Error
+}
+
+func (scr *AllocationRepository) LockBySchedlueAndClass(db *gorm.DB, scheduleID uint, classID uint) (*entity.Allocation, error) {
+	allocation := new(entity.Allocation)
+	result := db.Where("schedule_id = ? AND class_id = ?", scheduleID, classID).Clauses(clause.Locking{Strength: "UPDATE"}).First(allocation)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return allocation, result.Error
+}
+
+func (scr *AllocationRepository) GetBySchedlueAndClass(db *gorm.DB, scheduleID uint, classID uint) (*entity.Allocation, error) {
+	allocation := new(entity.Allocation)
+	result := db.Where("schedule_id = ? AND class_id = ?", scheduleID, classID).First(allocation)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return allocation, result.Error
+}

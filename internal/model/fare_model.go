@@ -4,6 +4,12 @@ import (
 	"time"
 )
 
+type CountFareRequest struct {
+	ID         uint `json:"id"`
+	RouteID    uint `json:"route_id"`
+	ManifestID uint `json:"manifest_id"`
+}
+
 // ShipDTO represents a Ship.
 type ReadFareResponse struct {
 	ID         uint      `json:"id"`
@@ -15,14 +21,14 @@ type ReadFareResponse struct {
 }
 
 type WriteFareRequest struct {
-	ID         uint    `json:"id"`
 	RouteID    uint    `json:"route_id"`
 	ManifestID uint    `json:"manifest_id"`
 	Price      float32 `json:"price"`
 }
 
-type CountFareRequest struct {
-	ID         uint `json:"id"`
-	RouteID    uint `json:"route_id"`
-	ManifestID uint `json:"manifest_id"`
+type UpdateFareRequest struct {
+	ID         uint    `json:"id"`
+	RouteID    uint    `json:"route_id"`
+	ManifestID uint    `json:"manifest_id"`
+	Price      float32 `json:"price"`
 }

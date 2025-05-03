@@ -10,23 +10,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type FareController struct {
-	FareUsecase *usecase.FareUsecase
+type AllocationController struct {
+	AllocationUsecase *usecase.AllocationUsecase
 }
 
-func NewFareController(Fare_usecase *usecase.FareUsecase) *FareController {
-	return &FareController{FareUsecase: Fare_usecase}
+func NewAllocationController(allocation_usecase *usecase.AllocationUsecase) *AllocationController {
+	return &AllocationController{AllocationUsecase: allocation_usecase}
 }
 
-func (fc *FareController) CreateFare(ctx *gin.Context) {
-	request := new(model.WriteFareRequest)
+func (mc *AllocationController) CreateAllocation(ctx *gin.Context) {
+	request := new(model.WriteAllocationRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	if err := fc.FareUsecase.CreateFare(ctx, request); err != nil {
+	if err := mc.AllocationUsecase.CreateAllocation(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create ship", err.Error()))
 		return
 	}
@@ -34,8 +34,8 @@ func (fc *FareController) CreateFare(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Ship created successfully", nil))
 }
 
-func (fc *FareController) GetAllFares(ctx *gin.Context) {
-	datas, err := fc.FareUsecase.GetAllFares(ctx)
+func (mc *AllocationController) GetAllAllocations(ctx *gin.Context) {
+	datas, err := mc.AllocationUsecase.GetAllAllocations(ctx)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ships", err.Error()))
@@ -45,7 +45,7 @@ func (fc *FareController) GetAllFares(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Ships retrieved successfully", nil))
 }
 
-func (fc *FareController) GetFareByID(ctx *gin.Context) {
+func (mc *AllocationController) GetAllocationByID(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
@@ -53,7 +53,7 @@ func (fc *FareController) GetFareByID(ctx *gin.Context) {
 		return
 	}
 
-	data, err := fc.FareUsecase.GetFareByID(ctx, uint(id))
+	data, err := mc.AllocationUsecase.GetAllocationByID(ctx, uint(id))
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ship", err.Error()))
@@ -68,8 +68,8 @@ func (fc *FareController) GetFareByID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Ship retrieved successfully", nil))
 }
 
-func (fc *FareController) UpdateFare(ctx *gin.Context) {
-	request := new(model.UpdateFareRequest)
+func (mc *AllocationController) UpdateAllocation(ctx *gin.Context) {
+	request := new(model.UpdateAllocationRequest)
 	id, _ := strconv.Atoi(ctx.Param("id"))
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
@@ -82,15 +82,15 @@ func (fc *FareController) UpdateFare(ctx *gin.Context) {
 		return
 	}
 
-	if err := fc.FareUsecase.UpdateFare(ctx, uint(id), request); err != nil {
+	if err := mc.AllocationUsecase.UpdateAllocation(ctx, uint(id), request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update ship", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Fare updated successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ship updated successfully", nil))
 }
 
-func (fc *FareController) DeleteFare(ctx *gin.Context) {
+func (mc *AllocationController) DeleteAllocation(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
@@ -98,7 +98,7 @@ func (fc *FareController) DeleteFare(ctx *gin.Context) {
 		return
 	}
 
-	if err := fc.FareUsecase.DeleteFare(ctx, uint(id)); err != nil {
+	if err := mc.AllocationUsecase.DeleteAllocation(ctx, uint(id)); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete ship", err.Error()))
 		return
 	}

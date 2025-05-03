@@ -18,8 +18,6 @@ func NewScheduleRouter(db *gorm.DB, group *gin.RouterGroup) {
 		ScheduleUsecase: usecase.NewScheduleUsecase(db, hs, hr, hp, ht),
 	}
 	group.POST("/schedule", hc.CreateSchedule)
-	group.POST("/schedule/search", hc.SearchSchedule)
-	group.GET("/schedule/quota/schedule/:id", hc.GetPricesWithQuota)
 	group.GET("/schedules", hc.GetAllSchedules)
 	group.GET("/schedule/:id", hc.GetScheduleByID)
 	group.PUT("/schedule/:id", hc.UpdateSchedule)

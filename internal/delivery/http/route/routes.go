@@ -16,4 +16,6 @@ func Setup(router *gin.Engine, db *gorm.DB) {
 	NewShipRouter(db, group)
 	NewCapacityRouter(db, group)
 	NewFareRouter(db, group)
+	NewPrebookRouter(db, group)
+	NewAllocationRouter(db, group)
 }

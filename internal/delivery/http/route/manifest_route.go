@@ -16,7 +16,6 @@ func NewCapacityRouter(db *gorm.DB, group *gin.RouterGroup) {
 	}
 	group.POST("/manifest", hc.CreateManifest)
 	group.GET("/manifests", hc.GetAllManifests)
-	group.GET("/manifests/ship/:id", hc.GetManifestsByShipID)
 	group.GET("/manifest/:id", hc.GetManifestByID)
 	group.PUT("/manifest/:id", hc.UpdateManifest)
 	group.DELETE("/manifest/:id", hc.DeleteManifest)

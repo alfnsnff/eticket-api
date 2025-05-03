@@ -14,13 +14,11 @@ type HarborController struct {
 	HarborUsecase *usecase.HarborUsecase
 }
 
-// NewHarborController creates a new HarborController instance.
 func NewHarborController(harbor_usecase *usecase.HarborUsecase) *HarborController {
 	return &HarborController{HarborUsecase: harbor_usecase}
 }
 
-// CreateHarbor handles creating a new harbor
-func (h *HarborController) CreateHarbor(ctx *gin.Context) {
+func (hc *HarborController) CreateHarbor(ctx *gin.Context) {
 	request := new(model.WriteHarborRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
@@ -28,9 +26,7 @@ func (h *HarborController) CreateHarbor(ctx *gin.Context) {
 		return
 	}
 
-	// harbor := dto.ToHarborEntity(request)
-
-	if err := h.HarborUsecase.CreateHarbor(ctx, request); err != nil {
+	if err := hc.HarborUsecase.CreateHarbor(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create harbor", err.Error()))
 		return
 	}
@@ -38,27 +34,27 @@ func (h *HarborController) CreateHarbor(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Harbor created successfully", nil))
 }
 
-// GetAllHarbors handles retrieving all harbors
-func (h *HarborController) GetAllHarbors(ctx *gin.Context) {
-	datas, err := h.HarborUsecase.GetAllHarbors(ctx)
+func (hc *HarborController) GetAllHarbors(ctx *gin.Context) {
+	datas, err := hc.HarborUsecase.GetAllHarbors(ctx)
+
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve harbors", err.Error()))
 		return
 	}
 
-	// harborDTOs := dto.ToHarborDTOs(harbors)
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Harbors retrieved successfully", nil))
 }
 
-// GetHarborByID handles retrieving a harbor by its ID
-func (h *HarborController) GetHarborByID(ctx *gin.Context) {
+func (hc *HarborController) GetHarborByID(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
+
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid harbor ID", err.Error()))
 		return
 	}
 
-	data, err := h.HarborUsecase.GetHarborByID(ctx, uint(id))
+	data, err := hc.HarborUsecase.GetHarborByID(ctx, uint(id))
+
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve harbor", err.Error()))
 		return
@@ -69,13 +65,11 @@ func (h *HarborController) GetHarborByID(ctx *gin.Context) {
 		return
 	}
 
-	// harborDTO := dto.ToHarborDTO(harbor)
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Harbor retrieved successfully", nil))
 }
 
-// UpdateHarbor handles updating an existing harbor
-func (h *HarborController) UpdateHarbor(ctx *gin.Context) {
-	request := new(model.WriteHarborRequest)
+func (hc *HarborController) UpdateHarbor(ctx *gin.Context) {
+	request := new(model.UpdateHarborRequest)
 	id, _ := strconv.Atoi(ctx.Param("id"))
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
@@ -88,9 +82,7 @@ func (h *HarborController) UpdateHarbor(ctx *gin.Context) {
 		return
 	}
 
-	// harbor := dto.ToHarborEntity(request)
-
-	if err := h.HarborUsecase.UpdateHarbor(ctx, uint(id), request); err != nil {
+	if err := hc.HarborUsecase.UpdateHarbor(ctx, uint(id), request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update harbor", err.Error()))
 		return
 	}
@@ -98,15 +90,15 @@ func (h *HarborController) UpdateHarbor(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Harbor updated successfully", nil))
 }
 
-// DeleteHarbor handles deleting a harbor by its ID
-func (h *HarborController) DeleteHarbor(ctx *gin.Context) {
+func (hc *HarborController) DeleteHarbor(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
+
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid harbor ID", err.Error()))
 		return
 	}
 
-	if err := h.HarborUsecase.DeleteHarbor(ctx, uint(id)); err != nil {
+	if err := hc.HarborUsecase.DeleteHarbor(ctx, uint(id)); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete harbor", err.Error()))
 		return
 	}

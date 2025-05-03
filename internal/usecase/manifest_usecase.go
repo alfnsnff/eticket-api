@@ -3,7 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
-	"eticket-api/internal/domain/entities"
+	"eticket-api/internal/domain/entity"
 	"eticket-api/internal/model"
 	"eticket-api/internal/model/mapper"
 	"eticket-api/internal/repository"
@@ -22,46 +22,28 @@ func NewManifestUsecase(db *gorm.DB, manifest_repository *repository.ManifestRep
 	return &ManifestUsecase{DB: db, ManifestRepository: manifest_repository}
 }
 
-func (s *ManifestUsecase) CreateManifest(ctx context.Context, request *model.WriteManifestRequest) error {
-	manifest := mapper.ToManifestEntity(request)
+func (m *ManifestUsecase) CreateManifest(ctx context.Context, request *model.WriteManifestRequest) error {
+	manifest := mapper.ManifestMapper.FromWrite(request)
 
 	if manifest.ShipID == 0 {
 		return fmt.Errorf("shipClass ship ID cannot be zero")
 	}
+
 	if manifest.ClassID == 0 {
 		return fmt.Errorf("shipClass class ID cannot be zero")
 	}
 
-	existing := new(entities.Manifest)
-
-	err := tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
-		var err error
-		existing, err = s.ManifestRepository.GetByShipAndClass(tx, manifest.ShipID, manifest.ClassID)
-		return err
-	})
-
-	if err != nil {
-		return err
-	}
-
-	if existing != nil {
-		return fmt.Errorf("ship class with this ship ID and class ID already exists")
-	}
-
-	return tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
-		return s.ManifestRepository.Create(tx, manifest)
+	return tx.Execute(ctx, m.DB, func(tx *gorm.DB) error {
+		return m.ManifestRepository.Create(tx, manifest)
 	})
 }
 
-// GetAllshipes retrieves all ships
-func (s *ManifestUsecase) GetAllManifests(ctx context.Context) ([]*model.ReadManifestResponse, error) {
-	// return s.ManifestRepository.GetAll()
+func (m *ManifestUsecase) GetAllManifests(ctx context.Context) ([]*model.ReadManifestResponse, error) {
+	manifests := []*entity.Manifest{}
 
-	manifests := []*entities.Manifest{}
-
-	err := tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
+	err := tx.Execute(ctx, m.DB, func(tx *gorm.DB) error {
 		var err error
-		manifests, err = s.ManifestRepository.GetAll(tx)
+		manifests, err = m.ManifestRepository.GetAll(tx)
 		return err
 	})
 
@@ -69,53 +51,31 @@ func (s *ManifestUsecase) GetAllManifests(ctx context.Context) ([]*model.ReadMan
 		return nil, fmt.Errorf("failed to get all books: %w", err)
 	}
 
-	return mapper.ToManifestsModel(manifests), nil
+	return mapper.ManifestMapper.ToModels(manifests), nil
 }
 
-// GetshipByID retrieves a ship by its ID
-func (s *ManifestUsecase) GetManifestByID(ctx context.Context, id uint) (*model.ReadManifestResponse, error) {
+func (m *ManifestUsecase) GetManifestByID(ctx context.Context, id uint) (*model.ReadManifestResponse, error) {
+	manifest := new(entity.Manifest)
 
-	manifest := new(entities.Manifest)
-
-	err := tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
+	err := tx.Execute(ctx, m.DB, func(tx *gorm.DB) error {
 		var err error
-		manifest, err = s.ManifestRepository.GetByID(tx, id)
+		manifest, err = m.ManifestRepository.GetByID(tx, id)
 		return err
 	})
 
 	if err != nil {
 		return nil, err
 	}
+
 	if manifest == nil {
 		return nil, errors.New("ship class not found")
 	}
-	return mapper.ToManifestModel(manifest), nil
+
+	return mapper.ManifestMapper.ToModel(manifest), nil
 }
 
-// GetshipByID retrieves a ship by its ID
-func (s *ManifestUsecase) GetManifestsByShipID(ctx context.Context, shipId uint) ([]*model.ReadManifestResponse, error) {
-	// shipClasses, err := s.ManifestRepository.GetByShipID(shipId)
-
-	manifests := []*entities.Manifest{}
-
-	err := tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
-		var err error
-		manifests, err = s.ManifestRepository.GetByShipID(tx, shipId)
-		return err
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	if manifests == nil {
-		return nil, errors.New("ship class not found")
-	}
-	return mapper.ToManifestsModel(manifests), nil
-}
-
-// Updateship updates an existing ship
-func (s *ManifestUsecase) UpdateManifest(ctx context.Context, id uint, request *model.WriteManifestRequest) error {
-	manifest := mapper.ToManifestEntity(request)
+func (m *ManifestUsecase) UpdateManifest(ctx context.Context, id uint, request *model.UpdateManifestRequest) error {
+	manifest := mapper.ManifestMapper.FromUpdate(request)
 	manifest.ID = id
 
 	if manifest.ID == 0 {
@@ -127,22 +87,21 @@ func (s *ManifestUsecase) UpdateManifest(ctx context.Context, id uint, request *
 	if manifest.ClassID == 0 {
 		return fmt.Errorf("shipClass class ID cannot be zero")
 	}
-	return tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
-		return s.ManifestRepository.Update(tx, manifest)
+	return tx.Execute(ctx, m.DB, func(tx *gorm.DB) error {
+		return m.ManifestRepository.Update(tx, manifest)
 	})
 }
 
-// Deleteship deletes a ship by its ID
-func (s *ManifestUsecase) DeleteManifest(ctx context.Context, id uint) error {
+func (m *ManifestUsecase) DeleteManifest(ctx context.Context, id uint) error {
 
-	return tx.Execute(ctx, s.DB, func(tx *gorm.DB) error {
-		shipClass, err := s.ManifestRepository.GetByID(tx, id)
+	return tx.Execute(ctx, m.DB, func(tx *gorm.DB) error {
+		shipClass, err := m.ManifestRepository.GetByID(tx, id)
 		if err != nil {
 			return err
 		}
 		if shipClass == nil {
 			return errors.New("route not found")
 		}
-		return s.ManifestRepository.Delete(tx, shipClass)
+		return m.ManifestRepository.Delete(tx, shipClass)
 	})
 }

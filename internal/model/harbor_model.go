@@ -14,6 +14,11 @@ type ReadHarborResponse struct {
 
 // HarborDTO represents a harbor.
 type WriteHarborRequest struct {
+	Name string `json:"name"`
+}
+
+// HarborDTO represents a harbor.
+type UpdateHarborRequest struct {
 	ID   uint   `json:"id"`
 	Name string `json:"name"`
 }

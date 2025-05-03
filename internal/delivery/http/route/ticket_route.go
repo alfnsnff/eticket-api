@@ -18,8 +18,6 @@ func NewTicketRouter(db *gorm.DB, group *gin.RouterGroup) {
 		TicketUsecase: usecase.NewTicketUsecase(db, tr, sr, fr),
 	}
 	group.POST("/ticket", tc.CreateTicket)
-	group.POST("/ticket/validate", tc.ValidateTicket)
-	group.POST("/ticket/check", tc.GetBookedCount)
 	group.GET("/tickets", tc.GetAllTickets)
 	group.GET("/ticket/:id", tc.GetTicketByID)
 	group.PUT("/ticket/:id", tc.UpdateTicket)

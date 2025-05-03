@@ -3,7 +3,7 @@ package main
 import (
 	"eticket-api/config"
 	"eticket-api/internal/delivery/http/route"
-	"eticket-api/internal/domain/entities"
+	"eticket-api/internal/domain/entity"
 	"eticket-api/pkg/db/postgres"
 	"eticket-api/pkg/utils/conf"
 	"log"
@@ -37,7 +37,7 @@ func main() {
 	}
 
 	// Automatically migrate your models (creating tables, etc.)
-	if err := db.AutoMigrate(&entities.Route{}, &entities.Class{}, &entities.Schedule{}, &entities.Ship{}, &entities.Harbor{}, &entities.Booking{}, &entities.Ticket{}, &entities.Manifest{}, &entities.Fare{}); err != nil {
+	if err := db.AutoMigrate(&entity.Route{}, &entity.Class{}, &entity.Schedule{}, &entity.Ship{}, &entity.Harbor{}, &entity.Booking{}, &entity.Ticket{}, &entity.Manifest{}, &entity.Fare{}, &entity.Allocation{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
