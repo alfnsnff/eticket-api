@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"eticket-api/internal/domain/dto"
+	"eticket-api/internal/model"
 	"eticket-api/internal/usecase"
 	"eticket-api/pkg/utils/response"
 	"net/http"
@@ -15,24 +15,20 @@ type BookingController struct {
 }
 
 // NewBookingController creates a new BookingController instance
-func NewBookingController(bookingUsecase *usecase.BookingUsecase) *BookingController {
-	return &BookingController{BookingUsecase: bookingUsecase}
+func NewBookingController(booking_usecase *usecase.BookingUsecase) *BookingController {
+	return &BookingController{BookingUsecase: booking_usecase}
 }
 
-// CreateBooking handles creating a new booking
-func (h *BookingController) CreateBooking(ctx *gin.Context) {
-	var bookingCreate dto.BookingCreate
+func (bc *BookingController) CreateBooking(ctx *gin.Context) {
+	request := new(model.WriteBookingRequest)
 
-	// Bind request body to DTO
-	if err := ctx.ShouldBindJSON(&bookingCreate); err != nil {
+	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	booking, _ := dto.ToBookingEntity(&bookingCreate)
+	err := bc.BookingUsecase.CreateBooking(ctx, request)
 
-	// Call use case
-	err := h.BookingUsecase.CreateBooking(ctx, &booking)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create booking", err.Error()))
 		return
@@ -41,69 +37,46 @@ func (h *BookingController) CreateBooking(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Booking created successfully", nil))
 }
 
-// // CreateBookingWithTickets handles creating a booking with associated tickets
-// func (h *BookingController) CreateBookingWithTickets(ctx *gin.Context) {
-// 	var bookingCreate dto.BookingCreate
+func (bc *BookingController) GetAllBookings(ctx *gin.Context) {
+	datas, err := bc.BookingUsecase.GetAllBookings(ctx)
 
-// 	if err := ctx.ShouldBindJSON(&bookingCreate); err != nil {
-// 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
-// 		return
-// 	}
-
-// 	booking, tickets := dto.ToBookingEntity(&bookingCreate)
-
-// 	// Call use case
-// 	err := h.BookingUsecase.CreateBookingWithTickets(ctx, &booking, &tickets)
-// 	if err != nil {
-// 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create booking with tickets", err.Error()))
-// 		return
-// 	}
-
-// 	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Booking with tickets created successfully", nil))
-// }
-
-// GetAllBookings retrieves all bookings
-func (h *BookingController) GetAllBookings(ctx *gin.Context) {
-	bookings, err := h.BookingUsecase.GetAllBookings(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve bookings", err.Error()))
 		return
 	}
 
-	bookingDTOs := dto.ToBookingDTOs(bookings)
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(bookingDTOs, "Bookings retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Bookings retrieved successfully", nil))
 }
 
 // GetBookingByID retrieves a booking by its ID
-func (h *BookingController) GetBookingByID(ctx *gin.Context) {
+func (bc *BookingController) GetBookingByID(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
+
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid booking ID", err.Error()))
 		return
 	}
 
-	booking, err := h.BookingUsecase.GetBookingByID(ctx, uint(id))
+	data, err := bc.BookingUsecase.GetBookingByID(ctx, uint(id))
+
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve booking", err.Error()))
 		return
 	}
 
-	if booking == nil {
+	if data == nil {
 		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Booking not found", nil))
 		return
 	}
 
-	bookingDTO := dto.ToBookingDTO(booking)
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(bookingDTO, "Booking retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Booking retrieved successfully", nil))
 }
 
-// UpdateBooking updates an existing booking
-func (h *BookingController) UpdateBooking(ctx *gin.Context) {
-	var bookingUpdate dto.BookingCreate
-
+func (bc *BookingController) UpdateBooking(ctx *gin.Context) {
+	request := new(model.UpdateBookingRequest)
 	id, _ := strconv.Atoi(ctx.Param("id"))
 
-	if err := ctx.ShouldBindJSON(&bookingUpdate); err != nil {
+	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
@@ -113,9 +86,8 @@ func (h *BookingController) UpdateBooking(ctx *gin.Context) {
 		return
 	}
 
-	booking, _ := dto.ToBookingEntity(&bookingUpdate)
+	err := bc.BookingUsecase.UpdateBooking(ctx, uint(id), request)
 
-	err := h.BookingUsecase.UpdateBooking(ctx, uint(id), &booking)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update booking", err.Error()))
 		return
@@ -124,8 +96,7 @@ func (h *BookingController) UpdateBooking(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Booking updated successfully", nil))
 }
 
-// DeleteBooking deletes a booking by its ID
-func (h *BookingController) DeleteBooking(ctx *gin.Context) {
+func (bc *BookingController) DeleteBooking(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
@@ -133,7 +104,7 @@ func (h *BookingController) DeleteBooking(ctx *gin.Context) {
 		return
 	}
 
-	if err := h.BookingUsecase.DeleteBooking(ctx, uint(id)); err != nil {
+	if err := bc.BookingUsecase.DeleteBooking(ctx, uint(id)); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete booking", err.Error()))
 		return
 	}

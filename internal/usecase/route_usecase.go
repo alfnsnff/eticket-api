@@ -3,7 +3,9 @@ package usecase
 import (
 	"context"
 	"errors"
-	"eticket-api/internal/domain/entities"
+	"eticket-api/internal/domain/entity"
+	"eticket-api/internal/model"
+	"eticket-api/internal/model/mapper"
 	"eticket-api/internal/repository"
 	tx "eticket-api/pkg/utils/helper"
 	"fmt"
@@ -16,20 +18,31 @@ type RouteUsecase struct {
 	RouteRepository *repository.RouteRepository
 }
 
-func NewRouteUsecase(db *gorm.DB, routeRepository *repository.RouteRepository) *RouteUsecase {
+func NewRouteUsecase(db *gorm.DB, route_repository *repository.RouteRepository) *RouteUsecase {
 	return &RouteUsecase{
 		DB:              db,
-		RouteRepository: routeRepository,
+		RouteRepository: route_repository,
 	}
 }
 
-// GetAllRoutes retrieves all routes
-func (s *RouteUsecase) GetAllRoutes(ctx context.Context) ([]*entities.Route, error) {
-	var routes []*entities.Route
+func (r *RouteUsecase) CreateRoute(ctx context.Context, request *model.WriteRouteRequest) error {
+	route := mapper.RouteMapper.FromWrite(request)
 
-	err := tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
+	if route.DepartureHarborID == 0 || route.ArrivalHarborID == 0 {
+		return fmt.Errorf("harbor ID cannot be empty")
+	}
+
+	return tx.Execute(ctx, r.DB, func(tx *gorm.DB) error {
+		return r.RouteRepository.Create(tx, route)
+	})
+}
+
+func (r *RouteUsecase) GetAllRoutes(ctx context.Context) ([]*model.ReadRouteResponse, error) {
+	routes := []*entity.Route{}
+
+	err := tx.Execute(ctx, r.DB, func(tx *gorm.DB) error {
 		var err error
-		routes, err = s.RouteRepository.GetAll(txDB)
+		routes, err = r.RouteRepository.GetAll(tx)
 		return err
 	})
 
@@ -37,27 +50,15 @@ func (s *RouteUsecase) GetAllRoutes(ctx context.Context) ([]*entities.Route, err
 		return nil, fmt.Errorf("failed to get all routes: %w", err)
 	}
 
-	return routes, nil
+	return mapper.RouteMapper.ToModels(routes), nil
 }
 
-// CreateRoute validates and creates a new Route
-func (s *RouteUsecase) CreateRoute(ctx context.Context, route *entities.Route) error {
-	if route.DepartureHarborID == 0 || route.ArrivalHarborID == 0 {
-		return fmt.Errorf("harbor ID cannot be empty")
-	}
+func (r *RouteUsecase) GetRouteByID(ctx context.Context, id uint) (*model.ReadRouteResponse, error) {
+	route := new(entity.Route)
 
-	return tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		return s.RouteRepository.Create(txDB, route)
-	})
-}
-
-// GetRouteByID retrieves a Route by its ID
-func (s *RouteUsecase) GetRouteByID(ctx context.Context, id uint) (*entities.Route, error) {
-	var route *entities.Route
-
-	err := tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
+	err := tx.Execute(ctx, r.DB, func(tx *gorm.DB) error {
 		var err error
-		route, err = s.RouteRepository.GetByID(txDB, id)
+		route, err = r.RouteRepository.GetByID(tx, id)
 		return err
 	})
 
@@ -69,35 +70,37 @@ func (s *RouteUsecase) GetRouteByID(ctx context.Context, id uint) (*entities.Rou
 		return nil, errors.New("route not found")
 	}
 
-	return route, nil
+	return mapper.RouteMapper.ToModel(route), nil
 }
 
-// UpdateRoute updates an existing Route
-func (s *RouteUsecase) UpdateRoute(ctx context.Context, id uint, route *entities.Route) error {
-	if id == 0 {
-		return fmt.Errorf("route ID cannot be zero")
+func (r *RouteUsecase) UpdateRoute(ctx context.Context, id uint, request *model.UpdateRouteRequest) error {
+	route := mapper.RouteMapper.FromUpdate(request)
+	route.ID = id
+
+	if route.ID == 0 {
+		return fmt.Errorf("shipClass ID cannot be zero")
 	}
+
 	if route.DepartureHarborID == 0 || route.ArrivalHarborID == 0 {
 		return fmt.Errorf("harbor ID cannot be empty")
 	}
 
-	route.ID = id
-
-	return tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		return s.RouteRepository.Update(txDB, route)
+	return tx.Execute(ctx, r.DB, func(tx *gorm.DB) error {
+		return r.RouteRepository.Update(tx, route)
 	})
 }
 
-// DeleteRoute deletes a Route by its ID
-func (s *RouteUsecase) DeleteRoute(ctx context.Context, id uint) error {
-	return tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		route, err := s.RouteRepository.GetByID(txDB, id)
+func (r *RouteUsecase) DeleteRoute(ctx context.Context, id uint) error {
+
+	return tx.Execute(ctx, r.DB, func(tx *gorm.DB) error {
+		route, err := r.RouteRepository.GetByID(tx, id)
 		if err != nil {
 			return err
 		}
 		if route == nil {
 			return errors.New("route not found")
 		}
-		return s.RouteRepository.Delete(txDB, id)
+		return r.RouteRepository.Delete(tx, route)
 	})
+
 }

@@ -3,7 +3,9 @@ package usecase
 import (
 	"context"
 	"errors"
-	"eticket-api/internal/domain/entities"
+	"eticket-api/internal/domain/entity"
+	"eticket-api/internal/model"
+	"eticket-api/internal/model/mapper"
 	"eticket-api/internal/repository"
 	tx "eticket-api/pkg/utils/helper"
 	"fmt"
@@ -16,29 +18,28 @@ type HarborUsecase struct {
 	HarborRepository *repository.HarborRepository
 }
 
-func NewHarborUsecase(db *gorm.DB, harborRepository *repository.HarborRepository) *HarborUsecase {
-	return &HarborUsecase{DB: db, HarborRepository: harborRepository}
+func NewHarborUsecase(db *gorm.DB, harbor_repository *repository.HarborRepository) *HarborUsecase {
+	return &HarborUsecase{DB: db, HarborRepository: harbor_repository}
 }
 
-// Createharbor validates and creates a new harbor
-func (s *HarborUsecase) CreateHarbor(ctx context.Context, harbor *entities.Harbor) error {
+func (h *HarborUsecase) CreateHarbor(ctx context.Context, request *model.WriteHarborRequest) error {
+	harbor := mapper.HarborMapper.FromWrite(request)
+
 	if harbor.Name == "" {
 		return fmt.Errorf("harbor name cannot be empty")
 	}
 
-	return tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		return s.HarborRepository.Create(txDB, harbor)
+	return tx.Execute(ctx, h.DB, func(tx *gorm.DB) error {
+		return h.HarborRepository.Create(tx, harbor)
 	})
 }
 
-// GetAllharbores retrieves all harbors
-func (s *HarborUsecase) GetAllHarbors(ctx context.Context) ([]*entities.Harbor, error) {
+func (h *HarborUsecase) GetAllHarbors(ctx context.Context) ([]*model.ReadHarborResponse, error) {
+	harbors := []*entity.Harbor{}
 
-	var harbors []*entities.Harbor
-
-	err := tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
+	err := tx.Execute(ctx, h.DB, func(tx *gorm.DB) error {
 		var err error
-		harbors, err = s.HarborRepository.GetAll(txDB)
+		harbors, err = h.HarborRepository.GetAll(tx)
 		return err
 	})
 
@@ -46,17 +47,15 @@ func (s *HarborUsecase) GetAllHarbors(ctx context.Context) ([]*entities.Harbor, 
 		return nil, fmt.Errorf("failed to get all books: %w", err)
 	}
 
-	return harbors, nil
+	return mapper.HarborMapper.ToModels(harbors), nil
 }
 
-// GetharborByID retrieves a harbor by its ID
-func (s *HarborUsecase) GetHarborByID(ctx context.Context, id uint) (*entities.Harbor, error) {
+func (h *HarborUsecase) GetHarborByID(ctx context.Context, id uint) (*model.ReadHarborResponse, error) {
+	harbor := new(entity.Harbor)
 
-	var harbor *entities.Harbor
-
-	err := tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
+	err := tx.Execute(ctx, h.DB, func(tx *gorm.DB) error {
 		var err error
-		harbor, err = s.HarborRepository.GetByID(txDB, id)
+		harbor, err = h.HarborRepository.GetByID(tx, id)
 		return err
 	})
 
@@ -67,11 +66,12 @@ func (s *HarborUsecase) GetHarborByID(ctx context.Context, id uint) (*entities.H
 	if harbor == nil {
 		return nil, errors.New("harbor not found")
 	}
-	return harbor, nil
+
+	return mapper.HarborMapper.ToModel(harbor), nil
 }
 
-// Updateharbor updates an existing harbor
-func (s *HarborUsecase) UpdateHarbor(ctx context.Context, id uint, harbor *entities.Harbor) error {
+func (h *HarborUsecase) UpdateHarbor(ctx context.Context, id uint, request *model.UpdateHarborRequest) error {
+	harbor := mapper.HarborMapper.FromUpdate(request)
 	harbor.ID = id
 
 	if harbor.ID == 0 {
@@ -81,21 +81,22 @@ func (s *HarborUsecase) UpdateHarbor(ctx context.Context, id uint, harbor *entit
 		return fmt.Errorf("harbor name cannot be empty")
 	}
 
-	return tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		return s.HarborRepository.Update(txDB, harbor)
+	return tx.Execute(ctx, h.DB, func(tx *gorm.DB) error {
+		return h.HarborRepository.Update(tx, harbor)
 	})
 }
 
-// Deleteharbor deletes a harbor by its ID
-func (s *HarborUsecase) DeleteHarbor(ctx context.Context, id uint) error {
-	return tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-		harbor, err := s.HarborRepository.GetByID(txDB, id)
+func (h *HarborUsecase) DeleteHarbor(ctx context.Context, id uint) error {
+
+	return tx.Execute(ctx, h.DB, func(tx *gorm.DB) error {
+		harbor, err := h.HarborRepository.GetByID(tx, id)
 		if err != nil {
 			return err
 		}
 		if harbor == nil {
 			return errors.New("route not found")
 		}
-		return s.HarborRepository.Delete(txDB, id)
+		return h.HarborRepository.Delete(tx, harbor)
 	})
+
 }

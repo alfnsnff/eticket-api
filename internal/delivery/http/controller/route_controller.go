@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"eticket-api/internal/domain/dto"
+	"eticket-api/internal/model"
 	"eticket-api/internal/usecase"
 	"eticket-api/pkg/utils/response" // Import the response package
 	"net/http"
@@ -14,22 +14,19 @@ type RouteController struct {
 	RouteUsecase *usecase.RouteUsecase
 }
 
-// NewRouteController creates a new RouteController instance.
-func NewRouteController(routeUsecase *usecase.RouteUsecase) *RouteController {
-	return &RouteController{RouteUsecase: routeUsecase}
+func NewRouteController(route_usecase *usecase.RouteUsecase) *RouteController {
+	return &RouteController{RouteUsecase: route_usecase}
 }
 
-// CreateRoute creates a new route
-func (h *RouteController) CreateRoute(ctx *gin.Context) {
-	var routeCreate dto.RouteCreate
-	if err := ctx.ShouldBindJSON(&routeCreate); err != nil {
+func (rc *RouteController) CreateRoute(ctx *gin.Context) {
+	request := new(model.WriteRouteRequest)
+
+	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	route := dto.ToRouteEntity(&routeCreate)
-
-	if err := h.RouteUsecase.CreateRoute(ctx, &route); err != nil {
+	if err := rc.RouteUsecase.CreateRoute(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create route", err.Error()))
 		return
 	}
@@ -37,21 +34,18 @@ func (h *RouteController) CreateRoute(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Route created successfully", nil))
 }
 
-// GetAllRoutes retrieves all routes
-func (h *RouteController) GetAllRoutes(ctx *gin.Context) {
-	routes, err := h.RouteUsecase.GetAllRoutes(ctx)
+func (rc *RouteController) GetAllRoutes(ctx *gin.Context) {
+	datas, err := rc.RouteUsecase.GetAllRoutes(ctx)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve routes", err.Error()))
 		return
 	}
 
-	routeDTOs := dto.ToRouteDTOs(routes)
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(routeDTOs, "Routes retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Routes retrieved successfully", nil))
 }
 
-// GetRouteByID retrieves a single route by ID
-func (h *RouteController) GetRouteByID(ctx *gin.Context) {
+func (rc *RouteController) GetRouteByID(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
@@ -59,28 +53,26 @@ func (h *RouteController) GetRouteByID(ctx *gin.Context) {
 		return
 	}
 
-	route, err := h.RouteUsecase.GetRouteByID(ctx, uint(id))
+	data, err := rc.RouteUsecase.GetRouteByID(ctx, uint(id))
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve route", err.Error())) // More specific error
 		return
 	}
-	if route == nil {
+
+	if data == nil {
 		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Route not found", nil))
 		return
 	}
 
-	routeDTO := dto.ToRouteDTO(route)
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(routeDTO, "Route retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Route retrieved successfully", nil))
 }
 
-// UpdateRoute updates an existing route
-func (h *RouteController) UpdateRoute(ctx *gin.Context) {
-	var routeUpdate dto.RouteCreate
-
+func (rc *RouteController) UpdateRoute(ctx *gin.Context) {
+	request := new(model.UpdateRouteRequest)
 	id, _ := strconv.Atoi(ctx.Param("id"))
 
-	if err := ctx.ShouldBindJSON(&routeUpdate); err != nil {
+	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
@@ -90,9 +82,7 @@ func (h *RouteController) UpdateRoute(ctx *gin.Context) {
 		return
 	}
 
-	route := dto.ToRouteEntity(&routeUpdate)
-
-	if err := h.RouteUsecase.UpdateRoute(ctx, uint(id), &route); err != nil {
+	if err := rc.RouteUsecase.UpdateRoute(ctx, uint(id), request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update route", err.Error()))
 		return
 	}
@@ -100,15 +90,15 @@ func (h *RouteController) UpdateRoute(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Route updated successfully", nil))
 }
 
-// DeleteRoute deletes a route by ID
-func (h *RouteController) DeleteRoute(ctx *gin.Context) {
+func (rc *RouteController) DeleteRoute(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
+
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid route ID", err.Error()))
 		return
 	}
 
-	if err := h.RouteUsecase.DeleteRoute(ctx, uint(id)); err != nil {
+	if err := rc.RouteUsecase.DeleteRoute(ctx, uint(id)); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete route", err.Error()))
 		return
 	}
