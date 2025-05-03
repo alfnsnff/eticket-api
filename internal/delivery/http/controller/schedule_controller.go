@@ -105,3 +105,26 @@ func (scc *ScheduleController) DeleteSchedule(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Schedule deleted successfully", nil))
 }
+
+func (scc *ScheduleController) GetQuotaByScheduleID(ctx *gin.Context) {
+	id, err := strconv.Atoi(ctx.Param("id"))
+
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid schedule ID", err.Error()))
+		return
+	}
+
+	data, err := scc.ScheduleUsecase.GetScheduleDetailsWithAvailability(ctx, uint(id))
+
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve schedule", err.Error()))
+		return
+	}
+
+	if data == nil {
+		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Schedule not found", nil))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Schedule retrieved successfully", nil))
+}

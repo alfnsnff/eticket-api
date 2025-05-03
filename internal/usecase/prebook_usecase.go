@@ -68,7 +68,7 @@ func (uc *PrebookTicketsUsecase) Execute(ctx context.Context, request *model.Cla
 
 			// Get the ScheduleCapacity entity WITH a FOR UPDATE lock
 			// Use the repository method we defined aerlier
-			scheduleCapacity, err := uc.AllocationRepository.LockBySchedlueAndClass(tx, request.ScheduleID, item.ClassID)
+			scheduleCapacity, err := uc.AllocationRepository.LockByScheduleAndClass(tx, request.ScheduleID, item.ClassID)
 			if err != nil {
 				return fmt.Errorf("failed to get schedule capacity for class %d: %w", item.ClassID, err)
 			}

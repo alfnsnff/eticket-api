@@ -63,3 +63,21 @@ type UpdateScheduleRequest struct {
 	ShipID   uint      `json:"ship_id"`
 	Datetime time.Time `json:"datetime"`
 }
+
+// ScheduleClassAvailability represents the availability and price for a specific class on a schedule
+type ScheduleClassAvailability struct {
+	ClassID           uint    `json:"class_id"`
+	ClassName         string  `json:"class_name"`
+	TotalCapacity     int     `json:"total_capacity"`
+	AvailableCapacity int     `json:"available_capacity"`
+	Price             float32 `json:"price"`
+	Currency          string  `json:"currency"` // Assuming currency is fixed or part of Fare/Route
+}
+
+// ReadScheduleDetailsWithAvailabilityResponse represents the response for schedule details with availability
+type ReadScheduleDetailsWithAvailabilityResponse struct {
+	ScheduleID          uint                        `json:"schedule_id"`
+	RouteID             uint                        `json:"route_id"`
+	ShipName            string                      `json:"ship_name"`
+	ClassesAvailability []ScheduleClassAvailability `json:"classes_availability"`
+}
