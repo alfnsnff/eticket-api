@@ -59,7 +59,6 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Now set up your routes
 	// These routes will now be protected by the CORS middleware
 	route.Setup(router, db)
 
