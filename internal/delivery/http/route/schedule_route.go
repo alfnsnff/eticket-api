@@ -10,16 +10,21 @@ import (
 )
 
 func NewScheduleRouter(db *gorm.DB, group *gin.RouterGroup) {
-	hs := repository.NewScheduleRepository()
-	hr := repository.NewRouteRepository()
-	hp := repository.NewFareRepository()
-	ht := repository.NewTicketRepository()
+	ar := repository.NewAllocationRepository()
+	cr := repository.NewClassRepository()
+	fr := repository.NewFareRepository()
+	mr := repository.NewManifestRepository()
+	rr := repository.NewRouteRepository()
+	shr := repository.NewShipRepository()
+	scr := repository.NewScheduleRepository()
+	tr := repository.NewTicketRepository()
 	hc := &controller.ScheduleController{
-		ScheduleUsecase: usecase.NewScheduleUsecase(db, hs, hr, hp, ht),
+		ScheduleUsecase: usecase.NewScheduleUsecase(db, ar, cr, fr, mr, rr, shr, scr, tr),
 	}
 	group.POST("/schedule", hc.CreateSchedule)
 	group.GET("/schedules", hc.GetAllSchedules)
 	group.GET("/schedule/:id", hc.GetScheduleByID)
+	group.GET("/schedule/quota/:id", hc.GetQuotaByScheduleID)
 	group.PUT("/schedule/:id", hc.UpdateSchedule)
 	group.DELETE("/schedule/:id", hc.DeleteSchedule)
 }
