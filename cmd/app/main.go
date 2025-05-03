@@ -41,18 +41,27 @@ func main() {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
-	// Set up Gin router and routes
+	// Set up Gin router
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
-	route.Setup(router, db)
+
+	// Define allowed origins (your frontend URL)
+	origins := []string{"http://localhost:3000", "https://tiket-hebat.vercel.app/"}
+
+	// Apply CORS middleware FIRST
+	// This ensures CORS headers are processed for all routes defined afterwards
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
+		AllowOrigins:     origins,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}, // Include OPTIONS for preflight requests
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
+
+	// Now set up your routes
+	// These routes will now be protected by the CORS middleware
+	route.Setup(router, db)
 
 	// Run the server
 	if err := router.Run(":8080"); err != nil {
