@@ -50,3 +50,16 @@ func (scr *ScheduleRepository) GetByID(db *gorm.DB, id uint) (*entity.Schedule, 
 // 	result := query.Find(&schedule)
 // 	return schedule, result.Error
 // }
+
+func (scr *ScheduleRepository) GetAllScheduled(db *gorm.DB) ([]*entity.Schedule, error) {
+	schedules := []*entity.Schedule{}
+
+	// Corrected line: Use "?" as a placeholder and pass the string value as a parameter
+	result := db.Where("status = ?", "scheduled").Find(&schedules)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return schedules, nil
+}

@@ -56,6 +56,8 @@ func (sc *ScheduleUsecase) CreateSchedule(ctx context.Context, request *model.Wr
 		return fmt.Errorf("schedule datetime cannot be empty")
 	}
 
+	// schedule.Status = "schedulled" // Set default status
+
 	return tx.Execute(ctx, sc.DB, func(tx *gorm.DB) error {
 		return sc.ScheduleRepository.Create(tx, schedule)
 	})
@@ -127,6 +129,22 @@ func (sc *ScheduleUsecase) DeleteSchedule(ctx context.Context, id uint) error {
 		return sc.ScheduleRepository.Delete(tx, schedule)
 	})
 
+}
+
+func (sc *ScheduleUsecase) GetAllScheduled(ctx context.Context) ([]*model.ReadScheduleResponse, error) {
+	schedules := []*entity.Schedule{}
+
+	err := tx.Execute(ctx, sc.DB, func(tx *gorm.DB) error {
+		var err error
+		schedules, err = sc.ScheduleRepository.GetAllScheduled(tx)
+		return err
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all schedules: %w", err)
+	}
+
+	return mapper.ScheduleMapper.ToModels(schedules), nil
 }
 
 // // SearchSchedule searches a schedule by departure, arrival, and date

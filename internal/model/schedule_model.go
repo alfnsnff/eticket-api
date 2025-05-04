@@ -45,6 +45,7 @@ type ReadScheduleResponse struct {
 	ShipID    uint      `json:"ship"`
 	RouteID   uint      `json:"route"`
 	Datetime  time.Time `json:"datetime"`
+	Status    string    `json:"status"` // e.g., 'active', 'inactive', 'cancelled'
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -54,6 +55,7 @@ type WriteScheduleRequest struct {
 	RouteID  uint      `json:"route_id"`
 	ShipID   uint      `json:"ship_id"`
 	Datetime time.Time `json:"datetime"`
+	Status   string    `json:"status"` // e.g., 'active', 'inactive', 'cancelled'
 }
 
 // ScheduleDTO represents a Schedule.
@@ -62,6 +64,7 @@ type UpdateScheduleRequest struct {
 	RouteID  uint      `json:"route_id"`
 	ShipID   uint      `json:"ship_id"`
 	Datetime time.Time `json:"datetime"`
+	Status   string    `json:"status"` // e.g., 'active', 'inactive', 'cancelled'
 }
 
 // ScheduleClassAvailability represents the availability and price for a specific class on a schedule
@@ -78,6 +81,5 @@ type ScheduleClassAvailability struct {
 type ReadScheduleDetailsWithAvailabilityResponse struct {
 	ScheduleID          uint                        `json:"schedule_id"`
 	RouteID             uint                        `json:"route_id"`
-	ShipName            string                      `json:"ship_name"`
 	ClassesAvailability []ScheduleClassAvailability `json:"classes_availability"`
 }

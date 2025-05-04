@@ -46,7 +46,7 @@ func main() {
 	router := gin.Default()
 
 	// Define allowed origins (your frontend URL)
-	origins := []string{"http://localhost:3000", "https://tiket-hebat.vercel.app/"}
+	origins := []string{"http://localhost:3000", "https://tiket-hebat.vercel.app"}
 
 	// Apply CORS middleware FIRST
 	// This ensures CORS headers are processed for all routes defined afterwards
