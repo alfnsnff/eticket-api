@@ -7,9 +7,10 @@ type Schedule struct {
 	RouteID   uint      `gorm:"not null;index" json:"route_id"` // Foreign key
 	ShipID    uint      `gorm:"not null;index" json:"ship_id"`
 	Datetime  time.Time `gorm:"not null" json:"datetime"`
+	Status    *string   `gorm:"type:varchar(20)" json:"status"` // e.g., 'active', 'inactive', 'cancelled'
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 
-	Route Route `gorm:"foreignKey:RouteID" json:"route"` // Gorm will create the relationship
-	Ship  Ship  `gorm:"foreignKey:ShipID" json:"ship"`   // Gorm will create the relationship
+	// Route Route `gorm:"foreignKey:RouteID" json:"route"` // Gorm will create the relationship
+	// Ship  Ship  `gorm:"foreignKey:ShipID" json:"ship"`   // Gorm will create the relationship
 }

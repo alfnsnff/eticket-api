@@ -17,6 +17,7 @@ func NewBookingRouter(db *gorm.DB, group *gin.RouterGroup) {
 		BookingUsecase: usecase.NewBookingUsecase(db, hr, tr),
 	}
 	// group.POST("/booking", hc.CreateBooking)
+	group.POST("/booking/confirm", hc.ConfirmBooking)
 	// group.POST("/booking/with-tickets", hc.CreateBookingWithTickets)
 	group.GET("/bookings", hc.GetAllBookings)
 	group.GET("/booking/:id", hc.GetBookingByID)

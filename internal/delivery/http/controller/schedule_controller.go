@@ -45,6 +45,17 @@ func (scc *ScheduleController) GetAllSchedules(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Schedules retrieved successfully", nil))
 }
 
+func (scc *ScheduleController) GetAllScheduled(ctx *gin.Context) {
+	datas, err := scc.ScheduleUsecase.GetAllScheduled(ctx)
+
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve schedules", err.Error()))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Schedules retrieved successfully", nil))
+}
+
 func (scc *ScheduleController) GetScheduleByID(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 
