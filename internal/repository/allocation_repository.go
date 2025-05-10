@@ -16,7 +16,7 @@ func NewAllocationRepository() *AllocationRepository {
 	return &AllocationRepository{}
 }
 
-func (scr *AllocationRepository) GetAll(db *gorm.DB) ([]*entity.Allocation, error) {
+func (ar *AllocationRepository) GetAll(db *gorm.DB) ([]*entity.Allocation, error) {
 	allocations := []*entity.Allocation{}
 	result := db.Find(&allocations)
 	if result.Error != nil {
@@ -25,7 +25,7 @@ func (scr *AllocationRepository) GetAll(db *gorm.DB) ([]*entity.Allocation, erro
 	return allocations, nil
 }
 
-func (scr *AllocationRepository) GetByID(db *gorm.DB, id uint) (*entity.Allocation, error) {
+func (ar *AllocationRepository) GetByID(db *gorm.DB, id uint) (*entity.Allocation, error) {
 	allocation := new(entity.Allocation)
 	result := db.First(&allocation, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -34,7 +34,7 @@ func (scr *AllocationRepository) GetByID(db *gorm.DB, id uint) (*entity.Allocati
 	return allocation, result.Error
 }
 
-func (scr *AllocationRepository) LockByScheduleAndClass(db *gorm.DB, scheduleID uint, classID uint) (*entity.Allocation, error) {
+func (ar *AllocationRepository) LockByScheduleAndClass(db *gorm.DB, scheduleID uint, classID uint) (*entity.Allocation, error) {
 	allocation := new(entity.Allocation)
 	result := db.Where("schedule_id = ? AND class_id = ?", scheduleID, classID).Clauses(clause.Locking{Strength: "UPDATE"}).First(allocation)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -43,7 +43,7 @@ func (scr *AllocationRepository) LockByScheduleAndClass(db *gorm.DB, scheduleID 
 	return allocation, result.Error
 }
 
-func (scr *AllocationRepository) GetBySchedlueAndClass(db *gorm.DB, scheduleID uint, classID uint) (*entity.Allocation, error) {
+func (ar *AllocationRepository) GetBySchedlueAndClass(db *gorm.DB, scheduleID uint, classID uint) (*entity.Allocation, error) {
 	allocation := new(entity.Allocation)
 	result := db.Where("schedule_id = ? AND class_id = ?", scheduleID, classID).Find(allocation)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -52,7 +52,7 @@ func (scr *AllocationRepository) GetBySchedlueAndClass(db *gorm.DB, scheduleID u
 	return allocation, result.Error
 }
 
-func (r *AllocationRepository) FindByScheduleID(db *gorm.DB, scheduleID uint) ([]*entity.Allocation, error) {
+func (ar *AllocationRepository) FindByScheduleID(db *gorm.DB, scheduleID uint) ([]*entity.Allocation, error) {
 	allocations := []*entity.Allocation{} // Declare an empty slice of pointers
 
 	// CORRECT LINE: Pass a POINTER to the slice (&allocations)
@@ -65,4 +65,12 @@ func (r *AllocationRepository) FindByScheduleID(db *gorm.DB, scheduleID uint) ([
 
 	// Return the slice (it will be empty if no records were found, and result.Error will be nil)
 	return allocations, nil
+}
+
+func (tr *AllocationRepository) CreateBulk(db *gorm.DB, allocations []*entity.Allocation) error {
+	result := db.Create(&allocations)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
 }

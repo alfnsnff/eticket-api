@@ -23,6 +23,7 @@ type BookingUsecase struct {
 func NewBookingUsecase(db *gorm.DB,
 	booking_repository *repository.BookingRepository,
 	ticket_repository *repository.TicketRepository,
+
 ) *BookingUsecase {
 	return &BookingUsecase{
 		DB:                db,
@@ -111,155 +112,108 @@ func (b *BookingUsecase) DeleteBooking(ctx context.Context, id uint) error {
 
 }
 
-// Execute handles the process of confirming payment and finalizing the booking.
-// This is a critical atomic transaction.
-func (b *BookingUsecase) ConfirmBook(ctx context.Context, request *model.ConfirmPaymentRequest) (*model.ConfirmPaymentResponse, error) {
-	// Basic input validation
-	if len(request.TicketIDs) == 0 ||
-		request.Name == "" || request.IDType == "" || request.IDNumber == "" ||
-		request.PhoneNumber == "" || request.Email == "" || request.BirthDate.IsZero() {
-		return nil, errors.New("invalid request: PaymentIntentID, TicketIDs, and all booker details are required")
+func (b *BookingUsecase) ConfirmBooking(ctx context.Context, request *model.ConfirmBookingRequest) (*model.ConfirmBookingResponse, error) {
+	if err := validateConfirmRequest(request); err != nil {
+		return nil, err
 	}
-
-	// User verification step is removed as users are not logged in
 
 	var confirmedBooking *entity.Booking
 	var confirmedTicketIDs []uint
 
-	// --- Wrap the core logic in a transaction ---
-	err := tx.Execute(ctx, b.DB, func(txDB *gorm.DB) error {
-		// --- All repository calls within this function MUST use txDB ---
-
-		// Step 1: Verify Payment Status (Often involves an external call)
-		// This part depends on your payment gateway integration.
-		// You might call an external service here or check a local payment record status.
-		// For this example, we'll assume a successful payment check happened already
-		// or is handled by the PaymentIntentID verification.
-		// If payment verification fails, return an error to trigger rollback.
-		// Example: Check payment record status in your DB if you store them.
-		// paymentRecord, err := uc.PaymentRepository.GetByIntentID(txDB, request.PaymentIntentID) // Use txDB
-		// if err != nil || paymentRecord.Status != "succeeded" {
-		//    return errors.New("payment not verified or failed")
-		// }
-
-		// Step 2: Retrieve and Verify Tickets
-		// Retrieve the tickets that are supposed to be confirmed by this payment.
-		// Use txDB for the repository call.
-		ticketsToConfirm, err := b.TicketRepository.FindManyByIDs(txDB, request.TicketIDs) // Use txDB
+	err := tx.Execute(ctx, b.DB, func(tx *gorm.DB) error {
+		tickets, err := b.TicketRepository.FindManyByIDs(tx, request.TicketIDs)
 		if err != nil {
-			// Log this error: Database read failure
-			return fmt.Errorf("failed to retrieve tickets for confirmation within transaction: %w", err) // Return error
+			return fmt.Errorf("failed to retrieve tickets: %w", err)
 		}
-
-		if len(ticketsToConfirm) != len(request.TicketIDs) {
-			// Some requested tickets were not found. This might indicate a problem.
-			// You might want to return an error or handle this case specifically.
+		if len(tickets) != len(request.TicketIDs) {
 			return errors.New("one or more tickets for confirmation not found")
 		}
 
-		var totalAmount float32 = 0
-		ticketsForBulkUpdate := []*entity.Ticket{}
-		now := time.Now() // Get time inside the transaction
-
-		// Verify status and expiry for each ticket
-		// Also, get the ScheduleID from one of the tickets (assuming all are for the same schedule)
-		var scheduleID uint = 0
-		if len(ticketsToConfirm) > 0 {
-			// Assuming ScheduleID on Ticket entity is NOT nullable (uint)
-			scheduleID = ticketsToConfirm[0].ScheduleID // Assuming all tickets are for the same schedule
-		} else {
-			// Should not happen if len(request.TicketIDs) > 0 and FindManyByIDs returned a slice of the same length
-			return errors.New("no tickets found to confirm")
-		}
-
-		for _, ticket := range ticketsToConfirm {
-			// Check Status - Must be in a state ready for confirmation (e.g., pending_payment)
-			if ticket.Status != "pending_payment" {
-				// Log this: Ticket in wrong state for confirmation
-				return fmt.Errorf("ticket %d in wrong status for confirmation: %s", ticket.ID, ticket.Status) // Return error
-			}
-
-			// Check Expiry Time - Ensure it hasn't expired just before confirmation
-			if ticket.ExpiresAt.Before(now) { // Use 'now' captured inside the transaction
-				// Log this: Ticket expired just before confirmation
-				return fmt.Errorf("ticket %d expired just before confirmation", ticket.ID) // Return error
-				// The background job should ideally cancel this, but this is a final check
-			}
-
-			// Accumulate total amount
-			totalAmount += ticket.Price
-
-			// Prepare for update
-			ticket.Status = "confirmed"
-			ticket.BookingTimestamp = &now // Set confirmation timestamp (Assuming BookingTimestamp on Ticket is *time.Time)
-			// BookingID will be set after the Booking entity is created
-			ticketsForBulkUpdate = append(ticketsForBulkUpdate, ticket)
-		}
-
-		// Step 3: Create the Booking Record using the provided entity structure
-		// Use txDB for the repository call.
-		newBooking := &entity.Booking{
-			ScheduleID: scheduleID, // Populate ScheduleID from tickets
-
-			// Populate Booker Information from the request
-			CustomerName: request.Name,
-			IDType:       request.IDType,
-			IDNumber:     request.IDNumber,
-			PhoneNumber:  request.PhoneNumber,
-			Email:        request.Email,
-			BirthDate:    request.BirthDate,
-
-			// Populate Booking Transaction Details
-			BookingTimestamp: now, // Use the same timestamp as ticket confirmation
-			TotalAmount:      totalAmount,
-			Status:           "completed", // Or "paid", "confirmed"
-
-			// Add other booking details like PaymentIntentID if needed
-			// PaymentIntentID: request.PaymentIntentID,
-		}
-		err = b.BookingRepository.Create(txDB, newBooking) // Use txDB
+		now := time.Now()
+		ticketsToUpdate, total, scheduleID, err := b.validateAndPrepareTickets(tickets, now)
 		if err != nil {
-			// Log this error: Database write failure
-			return fmt.Errorf("failed to create booking record within transaction: %w", err) // Return error
+			return err
 		}
 
-		// Store the created booking entity to access its ID later
-		confirmedBooking = newBooking
+		booking := buildBooking(request, scheduleID, now, total)
+		if err := b.BookingRepository.Create(tx, booking); err != nil {
+			return fmt.Errorf("failed to create booking: %w", err)
+		}
+		confirmedBooking = booking
 
-		// Step 4: Update Tickets with Booking ID and Status
-		// Now that we have the BookingID, update the tickets
-		confirmedTicketIDs = make([]uint, len(ticketsForBulkUpdate)) // Populate slice declared outside
-		for i, ticket := range ticketsForBulkUpdate {
-			// Assuming BookingID on Ticket entity is *uint
-			ticket.BookingID = &confirmedBooking.ID // Set the FK to the new Booking ID
-			confirmedTicketIDs[i] = ticket.ID       // Collect IDs for response
+		confirmedTicketIDs = updateTicketsWithBooking(ticketsToUpdate, booking.ID)
+
+		if err := b.TicketRepository.UpdateBulk(tx, ticketsToUpdate); err != nil {
+			return fmt.Errorf("failed to update tickets: %w", err)
 		}
 
-		// Save the updated tickets (now with BookingID and status='confirmed')
-		// Assuming ITicketRepository has an UpdateMany method
-		err = b.TicketRepository.UpdateBulk(txDB, ticketsForBulkUpdate) // Use txDB
-		if err != nil {
-			// Log this error: Database write failure
-			return fmt.Errorf("failed to update tickets with booking ID within transaction: %w", err) // Return error
-		}
-
-		// If we reach here, all operations within the transaction function succeeded
-		return nil // Return nil to trigger commit
+		return nil
 	})
-	// --- Transaction ends here (commit or rollback) ---
 
-	// Handle any errors that occurred during the transaction
 	if err != nil {
-		// Check for specific errors returned from inside the transaction if needed
-		// e.g., "ticket in wrong status", "ticket expired", "payment not verified"
-		return nil, fmt.Errorf("failed to execute payment confirmation transaction: %w", err) // Wrap the error
+		return nil, fmt.Errorf("confirm book transaction failed: %w", err)
 	}
 
-	// --- Return Response (outside the transaction) ---
-	// The variables populated inside the transaction func are available here if commit succeeded
-	return &model.ConfirmPaymentResponse{
+	return &model.ConfirmBookingResponse{
 		BookingID:          confirmedBooking.ID,
 		BookingStatus:      confirmedBooking.Status,
 		ConfirmedTicketIDs: confirmedTicketIDs,
 	}, nil
+}
+
+func validateConfirmRequest(request *model.ConfirmBookingRequest) error {
+	if len(request.TicketIDs) == 0 ||
+		request.Name == "" || request.IDType == "" || request.IDNumber == "" ||
+		request.PhoneNumber == "" || request.Email == "" || request.BirthDate.IsZero() {
+		return errors.New("invalid request: missing required fields")
+	}
+	return nil
+}
+
+func (b *BookingUsecase) validateAndPrepareTickets(
+	tickets []*entity.Ticket,
+	now time.Time,
+) ([]*entity.Ticket, float32, uint, error) {
+	var total float32
+	var scheduleID uint
+	for i, ticket := range tickets {
+		if ticket.Status != "pending_payment" {
+			return nil, 0, 0, fmt.Errorf("ticket %d not in pending_payment state", ticket.ID)
+		}
+		// if ticket.ExpiresAt.Before(now) {
+		// 	return nil, 0, 0, fmt.Errorf("ticket %d expired before confirmation", ticket.ID)
+		// }
+		if i == 0 {
+			scheduleID = ticket.ScheduleID
+		}
+		ticket.Status = "confirmed"
+		ticket.BookedAt = &now
+		total += ticket.Price
+	}
+	return tickets, total, scheduleID, nil
+}
+
+func buildBooking(request *model.ConfirmBookingRequest, scheduleID uint, now time.Time, total float32) *entity.Booking {
+	return &entity.Booking{
+		ScheduleID:   scheduleID,
+		CustomerName: request.Name,
+		IDType:       request.IDType,
+		IDNumber:     request.IDNumber,
+		PhoneNumber:  request.PhoneNumber,
+		Email:        request.Email,
+		BirthDate:    request.BirthDate,
+		BookedAt:     now,
+		TotalPrice:   total,
+		Status:       "completed",
+		// PaymentIntentID: request.PaymentIntentID, // Uncomment if needed
+	}
+}
+
+func updateTicketsWithBooking(tickets []*entity.Ticket, bookingID uint) []uint {
+	ids := make([]uint, len(tickets))
+	for i, t := range tickets {
+		t.BookingID = &bookingID
+		ids[i] = t.ID
+	}
+	return ids
 }

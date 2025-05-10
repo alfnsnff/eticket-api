@@ -14,9 +14,9 @@ func NewRouteRouter(db *gorm.DB, group *gin.RouterGroup) {
 	rc := &controller.RouteController{
 		RouteUsecase: usecase.NewRouteUsecase(db, rr),
 	}
-	group.POST("/route", rc.CreateRoute)
+	group.POST("/route/create", rc.CreateRoute)
 	group.GET("/routes", rc.GetAllRoutes)
 	group.GET("/route/:id", rc.GetRouteByID)
-	group.PUT("/route/:id", rc.UpdateRoute)
+	group.PUT("/route//update:id", rc.UpdateRoute)
 	group.DELETE("/route/:id", rc.DeleteRoute)
 }

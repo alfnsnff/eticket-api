@@ -19,6 +19,7 @@ type TicketUsecase struct {
 	TicketRepository   *repository.TicketRepository
 	ScheduleRepository *repository.ScheduleRepository
 	FareRepository     *repository.FareRepository
+	SessionRepository  *repository.SessionRepository
 }
 
 func NewTicketUsecase(
@@ -26,12 +27,14 @@ func NewTicketUsecase(
 	ticket_repository *repository.TicketRepository,
 	schedule_repository *repository.ScheduleRepository,
 	fare_repository *repository.FareRepository,
+	session_repository *repository.SessionRepository,
 ) *TicketUsecase {
 	return &TicketUsecase{
 		DB:                 db,
 		TicketRepository:   ticket_repository,
 		ScheduleRepository: schedule_repository,
 		FareRepository:     fare_repository,
+		SessionRepository:  session_repository,
 	}
 }
 
@@ -115,137 +118,114 @@ func (t *TicketUsecase) DeleteTicket(ctx context.Context, id uint) error {
 
 }
 
-// Execute handles the process of receiving and saving passenger data for claimed tickets,
-// wrapped in a transaction.
 func (t *TicketUsecase) FillData(ctx context.Context, request *model.FillPassengerDataRequest) (*model.FillPassengerDataResponse, error) {
-	// Basic input validation (can remain outside the transaction)
 	if len(request.PassengerData) == 0 {
 		return nil, errors.New("invalid request: UserID and passenger data are required")
 	}
 
-	// Optional: Verify user exists (can remain outside the transaction if preferred,
-	// or move inside if you need the user entity within the transaction)
-	// _, err := uc.UserRepository.GetByID(ctx, request.UserID)
-	// if err != nil {
-	// 	if errors.Is(err, gorm.ErrRecordNotFound) { return nil, errors.New("user not found") }
-	// 	return nil, fmt.Errorf("failed to verify user: %w", err)
-	// }
+	_, passengerMap := extractPassengerData(request)
 
-	// Extract ticket IDs from the request (can remain outside the transaction)
+	var updatedIDs []uint
+	var failed []model.TicketUpdateFailure
+
+	err := tx.Execute(ctx, t.DB, func(tx *gorm.DB) error {
+		session, err := t.SessionRepository.GetByUUIDWithLock(tx, request.SessionID, true)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve claim session %s within transaction: %w", request.SessionID, err)
+		}
+		if session == nil {
+			return errors.New("claim session not found")
+		}
+
+		now := time.Now()
+		if session.ExpiresAt.Before(now) {
+			return errors.New("claim session has expired")
+		}
+
+		tickets, err := t.TicketRepository.FindManyBySessionID(tx, session.ID)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve tickets: %w", err)
+		}
+
+		updatedIDs, failed, tickets = t.validateAndUpdateTickets(tickets, passengerMap, now)
+
+		if len(tickets) > 0 {
+			err = t.TicketRepository.UpdateBulk(tx, tickets)
+			if err != nil {
+				return fmt.Errorf("failed to save tickets: %w", err)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("fill passenger data failed: %w", err)
+	}
+
+	return &model.FillPassengerDataResponse{
+		UpdatedTicketIDs: updatedIDs,
+		FailedTickets:    failed,
+	}, nil
+}
+
+func extractPassengerData(request *model.FillPassengerDataRequest) ([]uint, map[uint]model.PassengerDataInput) {
 	ticketIDs := make([]uint, len(request.PassengerData))
-	passengerDataMap := make(map[uint]model.PassengerDataInput) // Map ticketID to submitted data
+	passengerMap := make(map[uint]model.PassengerDataInput)
 	for i, data := range request.PassengerData {
 		ticketIDs[i] = data.TicketID
-		passengerDataMap[data.TicketID] = data
+		passengerMap[data.TicketID] = data
+	}
+	return ticketIDs, passengerMap
+}
+
+func (t *TicketUsecase) validateAndUpdateTickets(
+	tickets []*entity.Ticket,
+	dataMap map[uint]model.PassengerDataInput,
+	now time.Time,
+) ([]uint, []model.TicketUpdateFailure, []*entity.Ticket) {
+
+	retrievedTicketsMap := make(map[uint]*entity.Ticket)
+	for _, ticket := range tickets {
+		retrievedTicketsMap[ticket.ID] = ticket
 	}
 
-	// Variables to collect results from inside the transaction
-	var updatedTicketIDs []uint
-	var failedTickets []model.TicketUpdateFailure // Use the local struct type or model type consistently
+	var updatedIDs []uint
+	var failed []model.TicketUpdateFailure
+	var toUpdate []*entity.Ticket
 
-	// --- Wrap the core logic in a transaction ---
-	err := tx.Execute(ctx, t.DB, func(txDB *gorm.DB) error {
-		// --- All repository calls within this function MUST use txDB ---
+	for id, data := range dataMap {
+		ticket, exists := retrievedTicketsMap[id]
+		if !exists {
 
-		// Retrieve the ticket entities from the database within the transaction
-		// Use txDB for the repository call
-		ticketsToUpdate, err := t.TicketRepository.FindManyByIDs(txDB, ticketIDs) // Use txDB
-		if err != nil {
-			// Log this error: Database read failure
-			return fmt.Errorf("failed to retrieve tickets within transaction: %w", err) // Return error to trigger rollback
+			failed = append(failed, model.TicketUpdateFailure{TicketID: id, Reason: "Ticket not found in session"})
+			continue
 		}
-
-		// Map retrieved tickets by ID for easy lookup
-		retrievedTicketsMap := make(map[uint]*entity.Ticket)
-		for _, ticket := range ticketsToUpdate {
-			retrievedTicketsMap[ticket.ID] = ticket
+		if ticket.Status != "pending_data_entry" {
+			failed = append(failed, model.TicketUpdateFailure{TicketID: id, Reason: fmt.Sprintf("Status is %s", ticket.Status)})
+			continue
 		}
-
-		// Prepare slice for bulk update if your repository supports UpdateMany
-		ticketsForBulkUpdate := []*entity.Ticket{}
-		now := time.Now() // Get time inside the transaction for consistency
-
-		// --- Validate and Update Ticket Entities ---
-		// Populate the slices declared outside the transaction func
-		updatedTicketIDs = []uint{}
-		failedTickets = []model.TicketUpdateFailure{}
-
-		for _, reqData := range request.PassengerData {
-			ticket, ok := retrievedTicketsMap[reqData.TicketID]
-			if !ok {
-				// Ticket ID from request was not found in the database
-				failedTickets = append(failedTickets, model.TicketUpdateFailure{TicketID: reqData.TicketID, Reason: "Ticket not found"})
-				continue
-			}
-
-			// Check Status
-			if ticket.Status != "pending_data_entry" {
-				failedTickets = append(failedTickets, model.TicketUpdateFailure{TicketID: reqData.TicketID, Reason: fmt.Sprintf("Ticket status is not pending data entry (%s)", ticket.Status)})
-				continue
-			}
-
-			// Check Expiry Time
-			if ticket.ExpiresAt.Before(now) { // Use 'now' captured inside the transaction
-				failedTickets = append(failedTickets, model.TicketUpdateFailure{TicketID: reqData.TicketID, Reason: "Ticket has expired"})
-				// Optional: Trigger cancellation of this ticket here or rely on background job
-				continue
-			}
-
-			// Basic data validation (can be more extensive)
-			if reqData.PassengerName == "" {
-				failedTickets = append(failedTickets, model.TicketUpdateFailure{TicketID: reqData.TicketID, Reason: "Passenger name cannot be empty"})
-				continue
-			}
-			// Add validation for PassportNumber, DateOfBirth, etc.
-
-			// --- Update Fields if Valid ---
-			// Update the entity with the submitted data
-			ticket.PassengerName = &reqData.PassengerName // Assuming PassengerName in entity is *string
-			ticket.IDType = &reqData.IDType               // Assuming PassportNumber in entity is *string
-			ticket.IDNumber = &reqData.IDNumber           // Assuming PassportNumber in entity is *string
-			ticket.SeatNumber = reqData.SeatNumber
-			// ... update other passenger fields ...
-
-			// Update status and timestamp
-			ticket.Status = "pending_payment" // Move to next stage
-			ticket.DataFilledAt = &now        // Set data filled timestamp (Assuming DataFilledAt is *time.Time)
-
-			// Add to list for bulk update
-			ticketsForBulkUpdate = append(ticketsForBulkUpdate, ticket)
-
-			// Collect ID for successful updates list
-			updatedTicketIDs = append(updatedTicketIDs, ticket.ID)
+		if data.PassengerName == "" {
+			failed = append(failed, model.TicketUpdateFailure{TicketID: id, Reason: "Passenger name required"})
+			continue
 		}
-
-		// --- Save Updated Tickets to Database ---
-		// This step should be atomic for the batch.
-		if len(ticketsForBulkUpdate) > 0 {
-			// Assuming ITicketRepository has an UpdateMany or UpdateBulk method
-			// Use txDB for the repository call
-			err = t.TicketRepository.UpdateBulk(txDB, ticketsForBulkUpdate) // Use txDB
-			if err != nil {
-				// Log this error: Database write failure
-				// If bulk update fails, return an error to trigger rollback of the entire transaction
-				return fmt.Errorf("failed to save updated ticket data within transaction: %w", err)
-			}
+		if data.IDType == "" {
+			failed = append(failed, model.TicketUpdateFailure{TicketID: id, Reason: "ID Type required"})
+			continue
 		}
-
-		// If we reach here, all operations within the transaction function succeeded
-		return nil // Return nil to trigger commit
-	})
-	// --- Transaction ends here (commit or rollback) ---
-
-	// Handle any errors that occurred during the transaction
-	if err != nil {
-		// Check for specific errors returned from inside the transaction if needed
-		// e.g., if using custom error types
-		return nil, fmt.Errorf("failed to execute fill passenger data transaction: %w", err) // Wrap the error
+		if data.IDNumber == "" {
+			failed = append(failed, model.TicketUpdateFailure{TicketID: id, Reason: "ID Number required"})
+			continue
+		}
+		ticket.PassengerName = &data.PassengerName
+		ticket.IDType = &data.IDType
+		ticket.IDNumber = &data.IDNumber
+		ticket.SeatNumber = data.SeatNumber
+		ticket.Status = "pending_payment"
+		ticket.EntriesAt = &now
+		toUpdate = append(toUpdate, ticket)
+		updatedIDs = append(updatedIDs, ticket.ID)
 	}
 
-	// --- Return Response (outside the transaction) ---
-	// The slices updated inside the transaction func are available here if commit succeeded
-	return &model.FillPassengerDataResponse{
-		UpdatedTicketIDs: updatedTicketIDs,
-		FailedTickets:    failedTickets,
-	}, nil
+	return updatedIDs, failed, toUpdate
 }

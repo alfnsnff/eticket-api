@@ -34,7 +34,7 @@ func (f *FareUsecase) CreateFare(ctx context.Context, request *model.WriteFareRe
 	if fare.ManifestID == 0 {
 		return fmt.Errorf("ship class ID cannot be zero")
 	}
-	if fare.Price == 0 {
+	if fare.TicketPrice == 0 {
 		return fmt.Errorf("fare cannot be zero")
 	}
 
@@ -92,7 +92,7 @@ func (f *FareUsecase) UpdateFare(ctx context.Context, id uint, request *model.Up
 	if fare.ManifestID == 0 {
 		return fmt.Errorf("manifest ID cannot be zero")
 	}
-	if fare.Price == 0 {
+	if fare.TicketPrice == 0 {
 		return fmt.Errorf("fare cannot be zero")
 	}
 

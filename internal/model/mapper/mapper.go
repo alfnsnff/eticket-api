@@ -88,6 +88,7 @@ var (
 	FareMapper       = NewMapper[entity.Fare, model.ReadFareResponse, model.WriteFareRequest, model.UpdateFareRequest]()
 	ManifestMapper   = NewMapper[entity.Manifest, model.ReadManifestResponse, model.WriteManifestRequest, model.UpdateManifestRequest]()
 	ShipMapper       = NewMapper[entity.Ship, model.ReadShipResponse, model.WriteShipRequest, model.UpdateShipRequest]()
+	SessionMapper    = NewMapper[entity.ClaimSession, model.ReadClaimSessionResponse, model.WriteClaimSessionRequest, model.UpdateClaimSessionRequest]()
 	ScheduleMapper   = NewMapper[entity.Schedule, model.ReadScheduleResponse, model.WriteScheduleRequest, model.UpdateScheduleRequest]()
 	ClassMapper      = NewMapper[entity.Class, model.ReadClassResponse, model.WriteClassRequest, model.UpdateClassRequest]()
 	BookingMapper    = NewMapper[entity.Booking, model.ReadBookingResponse, model.WriteBookingRequest, model.UpdateBookingRequest]()

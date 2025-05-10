@@ -14,9 +14,9 @@ func NewHarborRouter(db *gorm.DB, group *gin.RouterGroup) {
 	hc := &controller.HarborController{
 		HarborUsecase: usecase.NewHarborUsecase(db, hr),
 	}
-	group.POST("/harbor", hc.CreateHarbor)
+	group.POST("/harbor/create", hc.CreateHarbor)
 	group.GET("/harbors", hc.GetAllHarbors)
 	group.GET("/harbor/:id", hc.GetHarborByID)
-	group.PUT("/harbor/:id", hc.UpdateHarbor)
+	group.PUT("/harbor/update/:id", hc.UpdateHarbor)
 	group.DELETE("/harbor/:id", hc.DeleteHarbor)
 }

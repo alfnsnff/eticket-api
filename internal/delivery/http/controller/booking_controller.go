@@ -113,14 +113,14 @@ func (bc *BookingController) DeleteBooking(ctx *gin.Context) {
 }
 
 func (bc *BookingController) ConfirmBooking(ctx *gin.Context) {
-	request := new(model.ConfirmPaymentRequest)
+	request := new(model.ConfirmBookingRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	datas, err := bc.BookingUsecase.ConfirmBook(ctx, request)
+	datas, err := bc.BookingUsecase.ConfirmBooking(ctx, request)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create class", err.Error()))

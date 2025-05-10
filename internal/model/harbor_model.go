@@ -6,25 +6,25 @@ import (
 
 // HarborDTO represents a harbor.
 type ReadHarborResponse struct {
-	ID        uint      `json:"id"`
-	Name      string    `json:"name"`
-	Status    string    `json:"status"`
-	Year      string    `json:"year"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID            uint      `json:"id"`
+	HarborName    string    `json:"harbor_name"`
+	Status        string    `json:"status"`
+	YearOperation string    `json:"year_operation"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 // HarborDTO represents a harbor.
 type WriteHarborRequest struct {
-	Name   string `json:"name"`
-	Status string `json:"status"`
-	Year   string `json:"year"`
+	HarborName    string `json:"harbor_name"`
+	Status        string `json:"status"`
+	YearOperation string `json:"year_operation"`
 }
 
 // HarborDTO represents a harbor.
 type UpdateHarborRequest struct {
-	ID     uint   `json:"id"`
-	Name   string `json:"name"`
-	Status string `json:"status"`
-	Year   string `json:"year"`
+	ID            uint   `json:"id"`
+	HarborName    string `json:"harbor_name"`
+	Status        string `json:"status"`
+	YearOperation string `json:"year_operation"`
 }

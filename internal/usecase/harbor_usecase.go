@@ -25,7 +25,7 @@ func NewHarborUsecase(db *gorm.DB, harbor_repository *repository.HarborRepositor
 func (h *HarborUsecase) CreateHarbor(ctx context.Context, request *model.WriteHarborRequest) error {
 	harbor := mapper.HarborMapper.FromWrite(request)
 
-	if harbor.Name == "" {
+	if harbor.HarborName == "" {
 		return fmt.Errorf("harbor name cannot be empty")
 	}
 
@@ -77,7 +77,7 @@ func (h *HarborUsecase) UpdateHarbor(ctx context.Context, id uint, request *mode
 	if harbor.ID == 0 {
 		return fmt.Errorf("harbor ID cannot be zero")
 	}
-	if harbor.Name == "" {
+	if harbor.HarborName == "" {
 		return fmt.Errorf("harbor name cannot be empty")
 	}
 

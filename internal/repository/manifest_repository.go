@@ -41,3 +41,12 @@ func (mr *ManifestRepository) GetByShipAndClass(ctx *gorm.DB, shipID uint, class
 	}
 	return manifest, result.Error
 }
+
+func (r *ManifestRepository) FindByShipID(db *gorm.DB, shipID uint) ([]*entity.Manifest, error) {
+	manifests := []*entity.Manifest{}
+	result := db.Where("ship_id = ?", shipID).Find(&manifests)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return manifests, nil
+}

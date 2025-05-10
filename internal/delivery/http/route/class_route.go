@@ -14,9 +14,9 @@ func NewClassRouter(db *gorm.DB, group *gin.RouterGroup) {
 	cc := &controller.ClassController{
 		ClassUsecase: usecase.NewClassUsecase(db, cr),
 	}
-	group.POST("/class", cc.CreateClass)
+	group.POST("/class/create", cc.CreateClass)
 	group.GET("/classes", cc.GetAllClasses)
 	group.GET("/class/:id", cc.GetClassByID)
-	group.PUT("/class/:id", cc.UpdateClass)
+	group.PUT("/class/update/:id", cc.UpdateClass)
 	group.DELETE("/class/:id", cc.DeleteClass)
 }

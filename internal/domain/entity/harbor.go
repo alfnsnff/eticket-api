@@ -3,10 +3,14 @@ package entity
 import "time"
 
 type Harbor struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	Name      string    `gorm:"not null" json:"name"`
-	Status    string    `json:"status"`
-	Year      string    `json:"year"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID            uint      `gorm:"column:id;primaryKey"`
+	HarborName    string    `gorm:"column:harbor_name;type:varchar(24);not null"`
+	Status        string    `gorm:"column:harbor_status;idtype:varchar(24);not null"`
+	YearOperation string    `gorm:"column:year_operation;type:varchar(24);not null"`
+	CreatedAt     time.Time `gorm:"column:created_at;not null"`
+	UpdatedAt     time.Time `gorm:"column:updated_at;not null"`
+}
+
+func (h *Harbor) TableName() string {
+	return "harbor"
 }

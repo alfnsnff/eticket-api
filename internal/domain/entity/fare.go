@@ -3,10 +3,14 @@ package entity
 import "time"
 
 type Fare struct {
-	ID         uint      `gorm:"primaryKey" json:"id"`
-	RouteID    uint      `gorm:"not null;index;" json:"route_id"`
-	ManifestID uint      `gorm:"not null;index;" json:"manifest_id"`
-	Price      float32   `json:"price"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID          uint      `gorm:"column:id;primaryKey"`
+	RouteID     uint      `gorm:"column:route_id;not null;index;"`
+	ManifestID  uint      `gorm:"column:manifest_id;not null;index;"`
+	TicketPrice float32   `gorm:"column:ticket_price;not null"`
+	CreatedAt   time.Time `gorm:"column:created_at;not null"`
+	UpdatedAt   time.Time `gorm:"column:updated_at;not null"`
+}
+
+func (f *Fare) TableName() string {
+	return "fare"
 }

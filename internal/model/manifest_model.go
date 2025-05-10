@@ -4,14 +4,6 @@ import (
 	"time"
 )
 
-// type ManifestClass struct {
-// 	Name string `json:"name"`
-// }
-
-// type ManifestShip struct {
-// 	Name string `json:"name"`
-// }
-
 // ShipDTO represents a Ship.
 type ReadManifestResponse struct {
 	ID        uint      `json:"id"`

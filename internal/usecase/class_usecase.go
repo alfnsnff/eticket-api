@@ -25,7 +25,7 @@ func NewClassUsecase(db *gorm.DB, class_repository *repository.ClassRepository) 
 func (c *ClassUsecase) CreateClass(ctx context.Context, request *model.WriteClassRequest) error {
 	class := mapper.ClassMapper.FromWrite(request)
 
-	if class.Name == "" {
+	if class.ClassName == "" {
 		return fmt.Errorf("class name cannot be empty")
 	}
 
@@ -79,7 +79,7 @@ func (c *ClassUsecase) UpdateClass(ctx context.Context, id uint, request *model.
 	if class.ID == 0 {
 		return fmt.Errorf("class ID cannot be zero")
 	}
-	if class.Name == "" {
+	if class.ClassName == "" {
 		return fmt.Errorf("class name cannot be empty")
 	}
 
