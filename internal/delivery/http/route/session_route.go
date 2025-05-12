@@ -20,7 +20,8 @@ func NewSessionRouter(db *gorm.DB, group *gin.RouterGroup) {
 		SessionUsecase: usecase.NewSessionUsecase(db, sr, tr, scr, ar, mr, fr),
 	}
 	group.POST("/session/create", hc.CreateSession)
-	group.POST("/session/ticket/lock", hc.LockTicket)
+	group.POST("/session/ticket/lock", hc.SessionTicketLock)
+	group.POST("/session/ticket/data/entry", hc.SessionTicketDataEntry)
 	group.GET("/sessions", hc.GetAllSessions)
 	group.GET("/session/:id", hc.GetSessionByID)
 	group.GET("/session/uuid/:sessionid", hc.GetSessionBySessionID)

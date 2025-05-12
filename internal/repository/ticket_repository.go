@@ -37,47 +37,26 @@ func (r *TicketRepository) CountByScheduleClassAndStatuses(db *gorm.DB, schedule
 	var count int64
 
 	now := time.Now()
-	// Define pending statuses that are subject to expiry and linked via Session
 	pendingStatuses := []string{"pending_data_entry", "pending_payment"}
-
-	// Use db.Model to specify the table for counting
 	query := db.Model(&entity.Ticket{}).
 		Where("schedule_id = ? AND class_id = ?", scheduleID, classID).
-		// Use LEFT JOIN to include tickets not linked to a session (like 'confirmed')
-		// Use the table name 'session' as indicated by your entity and error message
-		// Corrected: Use tickets.session_id to match the Ticket entity field name
-		Joins("LEFT JOIN claim_session ON ticket.claim_session_id = claim_session.id") // Join tickets FK to session PK
-
-	// --- Build the complex WHERE clause based on the JOINed tables ---
-	// We want to count tickets that match the schedule/class AND meet one of these conditions:
-	// 1. The status is 'confirmed'
-	// OR
-	// 2. The status is in the pending statuses
-	//    AND the ticket is linked to a Session (session_id IS NOT NULL)
-	//    AND the linked Session's expiry time is in the future (session.expires_at > ?)
+		Joins("LEFT JOIN claim_session ON ticket.claim_session_id = claim_session.id")
 
 	query = query.Where(
-		// Condition 1: Status is 'confirmed'
-		// Use explicit table name 'tickets' for clarity
+
 		db.Where("ticket.status = ?", "confirmed").
-			// Condition 2: Pending statuses linked to a non-expired session
-			// Use explicit table names for clarity
-			// Corrected: Use tickets.session_id to match the Ticket entity field name
 			Or(db.Where("ticket.status IN (?) AND ticket.claim_session_id IS NOT NULL AND claim_session.expires_at > ?",
-				pendingStatuses, // Parameter for tickets.status IN (?)
-				now,             // Parameter for session.expires_at > ?
+				pendingStatuses,
+				now,
 			)),
 	)
 
-	// Execute the count query
 	result := query.Count(&count)
 
 	if result.Error != nil {
-		// Log this error: Database query failed
 		return 0, result.Error
 	}
 
-	// Return the count and a nil error if successful
 	return count, nil
 }
 
@@ -113,4 +92,20 @@ func (tr *TicketRepository) FindManyBySessionID(db *gorm.DB, sessionID uint) ([]
 		return nil, result.Error
 	}
 	return tickets, nil
+}
+
+func (r *TicketRepository) CancelManyBySessionID(db *gorm.DB, sessionID uint) error {
+	result := db.Model(&entity.Ticket{}).
+		Where("claim_session_id = ?", sessionID).
+		Updates(map[string]interface{}{
+			"status":           "cancelled",
+			"claim_session_id": nil,
+		})
+
+	// Check for database errors during the update operation
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
 }

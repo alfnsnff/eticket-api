@@ -76,19 +76,14 @@ func (r *SessionRepository) GetByUUIDWithLock(db *gorm.DB, uuid string, forUpdat
 	return &session, nil // Return pointer to the found entity
 }
 
-// FindExpired retrieves ClaimSession entities whose ExpiresAt is in the past.
 func (r *SessionRepository) FindExpired(db *gorm.DB, expiryTime time.Time, limit int) ([]*entity.ClaimSession, error) {
 	var sessions []*entity.ClaimSession
 
-	// Use the provided db instance (txDB from the job or a new session if not in tx)
-	// Find sessions where expires_at is less than or equal to the provided expiryTime (usually time.Now())
-	// Add a limit for batch processing in the cleanup job
 	result := db.Where("expires_at <= ?", expiryTime).Limit(limit).Find(&sessions)
 
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to find expired claim sessions: %w", result.Error)
 	}
 
-	// Return the slice of sessions (it will be empty if none were found) and a nil error
 	return sessions, nil
 }

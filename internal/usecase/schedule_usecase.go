@@ -148,19 +148,19 @@ func (sc *ScheduleUsecase) GetAllScheduled(ctx context.Context) ([]*model.ReadSc
 	return mapper.ScheduleMapper.ToModels(schedules), nil
 }
 
-func (sc *ScheduleUsecase) GetScheduleDetailsWithAvailability(ctx context.Context, scheduleID uint) (*model.ReadScheduleDetailsWithAvailabilityResponse, error) {
+func (sc *ScheduleUsecase) GetScheduleAvailability(ctx context.Context, scheduleID uint) (*model.ReadScheduleDetailsWithAvailabilityResponse, error) {
 	var schedule *entity.Schedule
 	var classAvailabilities []model.ScheduleClassAvailability
 
 	err := tx.Execute(ctx, sc.DB, func(tx *gorm.DB) error {
 		var err error
 
-		schedule, err = sc.getSchedule(tx, scheduleID)
+		schedule, err = sc.HelperGetSchedule(tx, scheduleID)
 		if err != nil {
 			return err
 		}
 
-		classAvailabilities, err = sc.getAvailabilityDetails(tx, schedule)
+		classAvailabilities, err = sc.HelperGetAvailability(tx, schedule)
 		if err != nil {
 			return err
 		}
@@ -179,7 +179,7 @@ func (sc *ScheduleUsecase) GetScheduleDetailsWithAvailability(ctx context.Contex
 	}, nil
 }
 
-func (sc *ScheduleUsecase) getSchedule(tx *gorm.DB, scheduleID uint) (*entity.Schedule, error) {
+func (sc *ScheduleUsecase) HelperGetSchedule(tx *gorm.DB, scheduleID uint) (*entity.Schedule, error) {
 	schedule, err := sc.ScheduleRepository.GetByID(tx, scheduleID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -190,7 +190,7 @@ func (sc *ScheduleUsecase) getSchedule(tx *gorm.DB, scheduleID uint) (*entity.Sc
 	return schedule, nil
 }
 
-func (sc *ScheduleUsecase) getAvailabilityDetails(tx *gorm.DB, schedule *entity.Schedule) ([]model.ScheduleClassAvailability, error) {
+func (sc *ScheduleUsecase) HelperGetAvailability(tx *gorm.DB, schedule *entity.Schedule) ([]model.ScheduleClassAvailability, error) {
 	scheduleCapacities, err := sc.AllocationRepository.FindByScheduleID(tx, schedule.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get schedule capacities: %w", err)
@@ -235,7 +235,7 @@ func (sc *ScheduleUsecase) getAvailabilityDetails(tx *gorm.DB, schedule *entity.
 func (sc *ScheduleUsecase) CreateScheduleWithAllocation(ctx context.Context, request *model.WriteScheduleRequest) error {
 	schedule := mapper.ScheduleMapper.FromWrite(request)
 
-	if err := validateScheduleInput(schedule); err != nil {
+	if err := HelperValidateScheduleInput(schedule); err != nil {
 		return err
 	}
 
@@ -254,7 +254,7 @@ func (sc *ScheduleUsecase) CreateScheduleWithAllocation(ctx context.Context, req
 			return fmt.Errorf("failed to fetch manifests for ship %d: %w", ship.ID, err)
 		}
 
-		allocations := buildAllocationsFromManifests(schedule.ID, manifests)
+		allocations := HelperBuildAllocationsFromManifests(schedule.ID, manifests)
 		if len(allocations) == 0 {
 			return fmt.Errorf("no valid manifest entries found for ship %d", ship.ID)
 		}
@@ -273,7 +273,7 @@ func (sc *ScheduleUsecase) CreateScheduleWithAllocation(ctx context.Context, req
 	return nil
 }
 
-func validateScheduleInput(schedule *entity.Schedule) error {
+func HelperValidateScheduleInput(schedule *entity.Schedule) error {
 	if schedule.ScheduleDatetime.IsZero() {
 		return errors.New("schedule datetime cannot be empty")
 	}
@@ -284,7 +284,7 @@ func validateScheduleInput(schedule *entity.Schedule) error {
 	return nil
 }
 
-func buildAllocationsFromManifests(scheduleID uint, manifests []*entity.Manifest) []*entity.Allocation {
+func HelperBuildAllocationsFromManifests(scheduleID uint, manifests []*entity.Manifest) []*entity.Allocation {
 	allocations := []*entity.Allocation{}
 	for _, manifest := range manifests {
 		if manifest.ClassID == 0 || manifest.Capacity <= 0 {

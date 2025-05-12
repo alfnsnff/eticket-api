@@ -125,7 +125,7 @@ func (scc *ScheduleController) GetQuotaByScheduleID(ctx *gin.Context) {
 		return
 	}
 
-	data, err := scc.ScheduleUsecase.GetScheduleDetailsWithAvailability(ctx, uint(id))
+	data, err := scc.ScheduleUsecase.GetScheduleAvailability(ctx, uint(id))
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve schedule", err.Error()))

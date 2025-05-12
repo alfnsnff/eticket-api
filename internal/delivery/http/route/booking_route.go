@@ -12,8 +12,9 @@ import (
 func NewBookingRouter(db *gorm.DB, group *gin.RouterGroup) {
 	br := repository.NewBookingRepository()
 	tr := repository.NewTicketRepository()
+	sr := repository.NewSessionRepository()
 	hc := &controller.BookingController{
-		BookingUsecase: usecase.NewBookingUsecase(db, br, tr),
+		BookingUsecase: usecase.NewBookingUsecase(db, br, tr, sr),
 	}
 	group.POST("/booking/create", hc.CreateBooking)
 	group.POST("/booking/confirm", hc.ConfirmBooking)

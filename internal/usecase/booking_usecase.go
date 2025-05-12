@@ -18,17 +18,20 @@ type BookingUsecase struct {
 	DB                *gorm.DB
 	BookingRepository *repository.BookingRepository
 	TicketRepository  *repository.TicketRepository
+	SessionRepository *repository.SessionRepository
 }
 
 func NewBookingUsecase(db *gorm.DB,
 	booking_repository *repository.BookingRepository,
 	ticket_repository *repository.TicketRepository,
+	session_repository *repository.SessionRepository,
 
 ) *BookingUsecase {
 	return &BookingUsecase{
 		DB:                db,
 		BookingRepository: booking_repository,
 		TicketRepository:  ticket_repository,
+		SessionRepository: session_repository,
 	}
 }
 
@@ -113,7 +116,7 @@ func (b *BookingUsecase) DeleteBooking(ctx context.Context, id uint) error {
 }
 
 func (b *BookingUsecase) ConfirmBooking(ctx context.Context, request *model.ConfirmBookingRequest) (*model.ConfirmBookingResponse, error) {
-	if err := validateConfirmRequest(request); err != nil {
+	if err := HelperValidateConfirmRequest(request); err != nil {
 		return nil, err
 	}
 
@@ -121,27 +124,33 @@ func (b *BookingUsecase) ConfirmBooking(ctx context.Context, request *model.Conf
 	var confirmedTicketIDs []uint
 
 	err := tx.Execute(ctx, b.DB, func(tx *gorm.DB) error {
-		tickets, err := b.TicketRepository.FindManyByIDs(tx, request.TicketIDs)
+
+		session, err := b.SessionRepository.GetByUUIDWithLock(tx, request.SessionID, true)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve claim session %s within transaction: %w", request.SessionID, err)
+		}
+		if session == nil {
+			return errors.New("claim session not found")
+		}
+
+		tickets, err := b.TicketRepository.FindManyBySessionID(tx, session.ID)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve tickets: %w", err)
 		}
-		if len(tickets) != len(request.TicketIDs) {
-			return errors.New("one or more tickets for confirmation not found")
-		}
 
 		now := time.Now()
-		ticketsToUpdate, total, scheduleID, err := b.validateAndPrepareTickets(tickets, now)
+		ticketsToUpdate, total, scheduleID, err := b.HelperValidateAndPrepareTickets(tickets, now)
 		if err != nil {
 			return err
 		}
 
-		booking := buildBooking(request, scheduleID, now, total)
+		booking := HelperBuildBooking(request, scheduleID, now, total)
 		if err := b.BookingRepository.Create(tx, booking); err != nil {
 			return fmt.Errorf("failed to create booking: %w", err)
 		}
 		confirmedBooking = booking
 
-		confirmedTicketIDs = updateTicketsWithBooking(ticketsToUpdate, booking.ID)
+		confirmedTicketIDs = HelperUpdateTicketsWithBooking(ticketsToUpdate, booking.ID)
 
 		if err := b.TicketRepository.UpdateBulk(tx, ticketsToUpdate); err != nil {
 			return fmt.Errorf("failed to update tickets: %w", err)
@@ -161,16 +170,15 @@ func (b *BookingUsecase) ConfirmBooking(ctx context.Context, request *model.Conf
 	}, nil
 }
 
-func validateConfirmRequest(request *model.ConfirmBookingRequest) error {
-	if len(request.TicketIDs) == 0 ||
-		request.Name == "" || request.IDType == "" || request.IDNumber == "" ||
+func HelperValidateConfirmRequest(request *model.ConfirmBookingRequest) error {
+	if request.Name == "" || request.IDType == "" || request.IDNumber == "" ||
 		request.PhoneNumber == "" || request.Email == "" || request.BirthDate.IsZero() {
 		return errors.New("invalid request: missing required fields")
 	}
 	return nil
 }
 
-func (b *BookingUsecase) validateAndPrepareTickets(
+func (b *BookingUsecase) HelperValidateAndPrepareTickets(
 	tickets []*entity.Ticket,
 	now time.Time,
 ) ([]*entity.Ticket, float32, uint, error) {
@@ -187,13 +195,14 @@ func (b *BookingUsecase) validateAndPrepareTickets(
 			scheduleID = ticket.ScheduleID
 		}
 		ticket.Status = "confirmed"
+		ticket.ClaimSessionID = nil
 		ticket.BookedAt = &now
 		total += ticket.Price
 	}
 	return tickets, total, scheduleID, nil
 }
 
-func buildBooking(request *model.ConfirmBookingRequest, scheduleID uint, now time.Time, total float32) *entity.Booking {
+func HelperBuildBooking(request *model.ConfirmBookingRequest, scheduleID uint, now time.Time, total float32) *entity.Booking {
 	return &entity.Booking{
 		ScheduleID:   scheduleID,
 		CustomerName: request.Name,
@@ -209,7 +218,7 @@ func buildBooking(request *model.ConfirmBookingRequest, scheduleID uint, now tim
 	}
 }
 
-func updateTicketsWithBooking(tickets []*entity.Ticket, bookingID uint) []uint {
+func HelperUpdateTicketsWithBooking(tickets []*entity.Ticket, bookingID uint) []uint {
 	ids := make([]uint, len(tickets))
 	for i, t := range tickets {
 		t.BookingID = &bookingID

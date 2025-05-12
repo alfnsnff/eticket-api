@@ -67,8 +67,8 @@ type ConfirmBookingRequest struct {
 	PhoneNumber string    `json:"phone_number"`
 	Email       string    `json:"email"`
 	BirthDate   time.Time `json:"birth_date"`
-
-	TicketIDs []uint `json:"ticket_ids"` // List of ticket IDs being paid for
+	SessionID   string    `json:"session_id"`
+	// TicketIDs   []uint    `json:"ticket_ids"` // List of ticket IDs being paid for
 }
 
 // ConfirmPaymentResponse represents the result of the payment confirmation.

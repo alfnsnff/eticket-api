@@ -129,7 +129,7 @@ func (shc *SessionController) GetSessionBySessionID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Ship retrieved successfully", nil))
 }
 
-func (csc *SessionController) LockTicket(ctx *gin.Context) {
+func (csc *SessionController) SessionTicketLock(ctx *gin.Context) {
 	request := new(model.LockTicketsRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
@@ -137,7 +137,25 @@ func (csc *SessionController) LockTicket(ctx *gin.Context) {
 		return
 	}
 
-	datas, err := csc.SessionUsecase.LockBookingTickets(ctx, request)
+	datas, err := csc.SessionUsecase.SessionLockTickets(ctx, request)
+
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create class", err.Error()))
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(datas, "Class created successfully", nil))
+}
+
+func (csc *SessionController) SessionTicketDataEntry(ctx *gin.Context) {
+	request := new(model.FillPassengerDataRequest)
+
+	if err := ctx.ShouldBindJSON(request); err != nil {
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+		return
+	}
+
+	datas, err := csc.SessionUsecase.SessionDataEntry(ctx, request)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create class", err.Error()))
