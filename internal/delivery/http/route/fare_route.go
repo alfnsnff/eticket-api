@@ -14,9 +14,9 @@ func NewFareRouter(db *gorm.DB, group *gin.RouterGroup) {
 	rc := &controller.FareController{
 		FareUsecase: usecase.NewFareUsecase(db, rr),
 	}
-	group.POST("/fare", rc.CreateFare)
+	group.POST("/fare/create", rc.CreateFare)
 	group.GET("/fares", rc.GetAllFares)
 	group.GET("/fare/:id", rc.GetFareByID)
-	group.PUT("/fare/:id", rc.UpdateFare)
+	group.PUT("/fare/update/:id", rc.UpdateFare)
 	group.DELETE("/fare/:id", rc.DeleteFare)
 }

@@ -3,19 +3,21 @@ package entity
 import "time"
 
 type Booking struct {
-	ID           uint      `gorm:"primaryKey" json:"id"`
-	ScheduleID   uint      `gorm:"not null;index;" json:"schedule_id"`         // Foreign key
-	IDType       string    `gorm:"type:varchar(24);not null" json:"id_type"`   // Changed to string to support leading zeros
-	IDNumber     string    `gorm:"type:varchar(24);not null" json:"id_number"` // Changed to string to support leading zeros
-	CustomerName string    `gorm:"not null" json:"customer_name"`
-	PhoneNumber  string    `gorm:"type:varchar(15);not null" json:"phone_number"` // Changed to string to support leading zeros
-	Email        string    `gorm:"not null" json:"email"`
-	BirthDate    time.Time `gorm:"not null" json:"birth_date"`
+	ID           uint      `gorm:"column:id;primaryKey"`
+	ScheduleID   uint      `gorm:"column:schedule_id;not null;index;"`
+	IDType       string    `gorm:"column:id_type;type:varchar(24);not null"`
+	IDNumber     string    `gorm:"column:id_number;type:varchar(24);not null"`
+	CustomerName string    `gorm:"column:customer_name;type:varchar(32);not null"`
+	PhoneNumber  string    `gorm:"column:phone_number;type:varchar(14);not null"`
+	Email        string    `gorm:"column:email;not null"`
+	BirthDate    time.Time `gorm:"column:birthdate;not null"`
+	TotalPrice   float32   `gorm:"column:total_price;not null"`
+	Status       string    `gorm:"column:status;type:varchar(24);not null"`
+	BookedAt     time.Time `gorm:"column:booked_at;not null"`
+	CreatedAt    time.Time `gorm:"column:created_at;not null"`
+	UpdatedAt    time.Time `gorm:"column:updated_at;not null"`
+}
 
-	BookingTimestamp time.Time `gorm:"not null" json:"booking_timestamp"`       // Timestamp when the booking was confirmed
-	TotalAmount      float32   `gorm:"not null" json:"total_amount"`            // Total price of all tickets in this booking
-	Status           string    `gorm:"type:varchar(20);not null" json:"status"` // e.g., 'completed', 'cancelled', 'refunded'
-
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+func (b *Booking) TableName() string {
+	return "booking"
 }

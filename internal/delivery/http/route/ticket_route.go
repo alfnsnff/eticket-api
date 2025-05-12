@@ -11,16 +11,16 @@ import (
 
 func NewTicketRouter(db *gorm.DB, group *gin.RouterGroup) {
 	tr := repository.NewTicketRepository()
-	sr := repository.NewScheduleRepository()
+	scr := repository.NewScheduleRepository()
 	fr := repository.NewFareRepository()
+	sr := repository.NewSessionRepository()
 
 	tc := &controller.TicketController{
-		TicketUsecase: usecase.NewTicketUsecase(db, tr, sr, fr),
+		TicketUsecase: usecase.NewTicketUsecase(db, tr, scr, fr, sr),
 	}
-	group.POST("/ticket", tc.CreateTicket)
-	group.POST("/ticket/fill", tc.FillTicketData)
+	group.POST("/ticket/create", tc.CreateTicket)
 	group.GET("/tickets", tc.GetAllTickets)
 	group.GET("/ticket/:id", tc.GetTicketByID)
-	group.PUT("/ticket/:id", tc.UpdateTicket)
+	group.PUT("/ticket//update:id", tc.UpdateTicket)
 	group.DELETE("/ticket/:id", tc.DeleteTicket)
 }

@@ -1,9 +1,0 @@
-server:
-  port: 8080
-database:
-  host: host.docker.internal
-  port: 5432
-  user: postgres
-  password: umbresgurgur
-  name: eticket-api
-  sslmode: disable

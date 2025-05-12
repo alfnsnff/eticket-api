@@ -3,14 +3,15 @@ package entity
 import "time"
 
 type Schedule struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	RouteID   uint      `gorm:"not null;index" json:"route_id"` // Foreign key
-	ShipID    uint      `gorm:"not null;index" json:"ship_id"`
-	Datetime  time.Time `gorm:"not null" json:"datetime"`
-	Status    *string   `gorm:"type:varchar(20)" json:"status"` // e.g., 'active', 'inactive', 'cancelled'
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID               uint      `gorm:"column:id;primaryKey"`
+	RouteID          uint      `gorm:"column:route_id;not null;index"`
+	ShipID           uint      `gorm:"column:ship_id;not null;index"`
+	ScheduleDatetime time.Time `gorm:"column:schedule_datetime;not null"`
+	Status           *string   `gorm:"column:status;type:varchar(24);not null"`
+	CreatedAt        time.Time `gorm:"column:created_at;not null"`
+	UpdatedAt        time.Time `gorm:"column:updated_at;not null"`
+}
 
-	// Route Route `gorm:"foreignKey:RouteID" json:"route"` // Gorm will create the relationship
-	// Ship  Ship  `gorm:"foreignKey:ShipID" json:"ship"`   // Gorm will create the relationship
+func (sch *Schedule) TableName() string {
+	return "schedule"
 }

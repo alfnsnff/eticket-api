@@ -16,9 +16,9 @@ func NewAllocationRouter(db *gorm.DB, group *gin.RouterGroup) {
 	hc := &controller.AllocationController{
 		AllocationUsecase: usecase.NewAllocationUsecase(db, ar, sr, fr),
 	}
-	group.POST("/allocation", hc.CreateAllocation)
+	group.POST("/allocation/create", hc.CreateAllocation)
 	group.GET("/allocations", hc.GetAllAllocations)
 	group.GET("/allocation/:id", hc.GetAllocationByID)
-	group.PUT("/allocation/:id", hc.UpdateAllocation)
+	group.PUT("/allocation/update/:id", hc.UpdateAllocation)
 	group.DELETE("/allocation/:id", hc.DeleteAllocation)
 }

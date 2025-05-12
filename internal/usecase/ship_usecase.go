@@ -25,7 +25,7 @@ func NewShipUsecase(db *gorm.DB, ship_repository *repository.ShipRepository) *Sh
 func (sh *ShipUsecase) CreateShip(ctx context.Context, request *model.WriteShipRequest) error {
 	ship := mapper.ShipMapper.FromWrite(request)
 
-	if ship.Name == "" {
+	if ship.ShipName == "" {
 		return fmt.Errorf("ship name cannot be empty")
 	}
 
@@ -79,7 +79,7 @@ func (sh *ShipUsecase) UpdateShip(ctx context.Context, id uint, request *model.U
 		return fmt.Errorf("ship ID cannot be zero")
 	}
 
-	if ship.Name == "" {
+	if ship.ShipName == "" {
 		return fmt.Errorf("ship name cannot be empty")
 	}
 

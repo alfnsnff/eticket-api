@@ -125,7 +125,7 @@ func (scc *ScheduleController) GetQuotaByScheduleID(ctx *gin.Context) {
 		return
 	}
 
-	data, err := scc.ScheduleUsecase.GetScheduleDetailsWithAvailability(ctx, uint(id))
+	data, err := scc.ScheduleUsecase.GetScheduleAvailability(ctx, uint(id))
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve schedule", err.Error()))
@@ -138,4 +138,20 @@ func (scc *ScheduleController) GetQuotaByScheduleID(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Schedule retrieved successfully", nil))
+}
+
+func (scc *ScheduleController) CreateScheduleWithAllocation(ctx *gin.Context) {
+	request := new(model.WriteScheduleRequest)
+
+	if err := ctx.ShouldBindJSON(request); err != nil {
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+		return
+	}
+
+	if err := scc.ScheduleUsecase.CreateScheduleWithAllocation(ctx, request); err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create schedule", err.Error()))
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Schedule created successfully", nil))
 }

@@ -14,9 +14,9 @@ func NewCapacityRouter(db *gorm.DB, group *gin.RouterGroup) {
 	hc := &controller.ManifestController{
 		ManifestUsecase: usecase.NewManifestUsecase(db, hr),
 	}
-	group.POST("/manifest", hc.CreateManifest)
+	group.POST("/manifest/create", hc.CreateManifest)
 	group.GET("/manifests", hc.GetAllManifests)
 	group.GET("/manifest/:id", hc.GetManifestByID)
-	group.PUT("/manifest/:id", hc.UpdateManifest)
+	group.PUT("/manifest/update/:id", hc.UpdateManifest)
 	group.DELETE("/manifest/:id", hc.DeleteManifest)
 }

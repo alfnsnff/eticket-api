@@ -14,10 +14,9 @@ func NewShipRouter(db *gorm.DB, group *gin.RouterGroup) {
 	hc := &controller.ShipController{
 		ShipUsecase: usecase.NewShipUsecase(db, hr),
 	}
-	group.POST("/ship", hc.CreateShip)
+	group.POST("/ship/create", hc.CreateShip)
 	group.GET("/ships", hc.GetAllShips)
-
 	group.GET("/ship/:id", hc.GetShipByID)
-	group.PUT("/ship/:id", hc.UpdateShip)
+	group.PUT("/ship/update/:id", hc.UpdateShip)
 	group.DELETE("/ship/:id", hc.DeleteShip)
 }

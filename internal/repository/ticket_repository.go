@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"eticket-api/internal/domain/entity"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -32,14 +33,31 @@ func (tr *TicketRepository) GetByID(db *gorm.DB, id uint) (*entity.Ticket, error
 	}
 	return ticket, result.Error
 }
+func (r *TicketRepository) CountByScheduleClassAndStatuses(db *gorm.DB, scheduleID uint, classID uint, statuses []string) (int64, error) {
+	var count int64
 
-func (tr *TicketRepository) CountByScheduleClassAndStatuses(db *gorm.DB, scheduleID uint, classID uint, statuses []string) (int64, error) {
-	ticket := new(entity.Ticket)
-	result := db.Find(&ticket, "schedule_id = ? AND class_id = ? AND status IN ?", scheduleID, classID, statuses)
+	now := time.Now()
+	pendingStatuses := []string{"pending_data_entry", "pending_payment"}
+	query := db.Model(&entity.Ticket{}).
+		Where("schedule_id = ? AND class_id = ?", scheduleID, classID).
+		Joins("LEFT JOIN claim_session ON ticket.claim_session_id = claim_session.id")
+
+	query = query.Where(
+
+		db.Where("ticket.status = ?", "confirmed").
+			Or(db.Where("ticket.status IN (?) AND ticket.claim_session_id IS NOT NULL AND claim_session.expires_at > ?",
+				pendingStatuses,
+				now,
+			)),
+	)
+
+	result := query.Count(&count)
+
 	if result.Error != nil {
 		return 0, result.Error
 	}
-	return result.RowsAffected, nil
+
+	return count, nil
 }
 
 func (tr *TicketRepository) CreateBulk(db *gorm.DB, tickets []*entity.Ticket) error {
@@ -65,4 +83,29 @@ func (tr *TicketRepository) FindManyByIDs(db *gorm.DB, ids []uint) ([]*entity.Ti
 		return nil, result.Error
 	}
 	return tickets, nil
+}
+
+func (tr *TicketRepository) FindManyBySessionID(db *gorm.DB, sessionID uint) ([]*entity.Ticket, error) {
+	tickets := []*entity.Ticket{}
+	result := db.Where("claim_session_id = ?", sessionID).Find(&tickets)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return tickets, nil
+}
+
+func (r *TicketRepository) CancelManyBySessionID(db *gorm.DB, sessionID uint) error {
+	result := db.Model(&entity.Ticket{}).
+		Where("claim_session_id = ?", sessionID).
+		Updates(map[string]interface{}{
+			"status":           "cancelled",
+			"claim_session_id": nil,
+		})
+
+	// Check for database errors during the update operation
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
 }

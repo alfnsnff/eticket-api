@@ -3,13 +3,17 @@ package entity
 import "time"
 
 type Ship struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	Name        string    `gorm:"not null" json:"name"`
-	Status      string    `json:"status"`
-	ShipType    string    `json:"ship_type"`
-	Year        string    `json:"year"`
-	Image       string    `json:"image"`
-	Description string    `json:"Description"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID            uint      `gorm:"column:id;primaryKey" json:"id"`
+	ShipName      string    `gorm:"column:ship_name;not null"`
+	Status        string    `gorm:"column:status;type:varchar(24);not null"`
+	ShipType      string    `gorm:"column:ship_type;type:varchar(24);not null"`
+	YearOperation string    `gorm:"column:year_operation;type:varchar(24);not null"`
+	ImageLink     string    `gorm:"column:image_link;not null"`
+	Description   string    `gorm:"column:description;not null"`
+	CreatedAt     time.Time `gorm:"column:created_at;not null"`
+	UpdatedAt     time.Time `gorm:"column:updated_at;not null"`
+}
+
+func (sh *Ship) TableName() string {
+	return "ship"
 }

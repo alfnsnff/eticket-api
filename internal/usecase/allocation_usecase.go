@@ -74,7 +74,7 @@ func (a *AllocationUsecase) GetAllocationByID(ctx context.Context, id uint) (*mo
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get Allocation by ID: %w", err)
+		return nil, fmt.Errorf("failed to get allocation by ID: %w", err)
 	}
 
 	if allocation == nil {

@@ -9,6 +9,7 @@ import (
 	"eticket-api/internal/repository"
 	tx "eticket-api/pkg/utils/helper"
 	"fmt"
+	"log"
 
 	"gorm.io/gorm"
 )
@@ -52,7 +53,7 @@ func NewScheduleUsecase(
 func (sc *ScheduleUsecase) CreateSchedule(ctx context.Context, request *model.WriteScheduleRequest) error {
 	schedule := mapper.ScheduleMapper.FromWrite(request)
 
-	if schedule.Datetime.IsZero() {
+	if schedule.ScheduleDatetime.IsZero() {
 		return fmt.Errorf("schedule datetime cannot be empty")
 	}
 
@@ -107,7 +108,7 @@ func (sc *ScheduleUsecase) UpdateSchedule(ctx context.Context, id uint, request 
 		return fmt.Errorf("schedule ID cannot be zero")
 	}
 
-	if schedule.Datetime.IsZero() {
+	if schedule.ScheduleDatetime.IsZero() {
 		return fmt.Errorf("schedule datetime cannot be empty")
 	}
 
@@ -147,143 +148,155 @@ func (sc *ScheduleUsecase) GetAllScheduled(ctx context.Context) ([]*model.ReadSc
 	return mapper.ScheduleMapper.ToModels(schedules), nil
 }
 
-// // SearchSchedule searches a schedule by departure, arrival, and date
-// func (s *ScheduleUsecase) SearchSchedule(ctx context.Context, request *model.ScheduleSearchRequest) (*entity.Schedule, error) {
-// 	var schedule *entity.Schedule
-
-// 	err := tx.Execute(ctx, s.DB, func(txDB *gorm.DB) error {
-// 		schedule, err = s.ScheduleRepository.Search(txDB, route.ID, req.Date, req.ShipID)
-// 		return err
-// 	})
-
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to search schedule: %w", err)
-// 	}
-
-// 	return schedule, nil
-// }
-
-// Refactored to use tx.Execute helper for demonstrating transaction usage even on reads.
-func (sc *ScheduleUsecase) GetScheduleDetailsWithAvailability(ctx context.Context, scheduleID uint) (*model.ReadScheduleDetailsWithAvailabilityResponse, error) {
-
+func (sc *ScheduleUsecase) GetScheduleAvailability(ctx context.Context, scheduleID uint) (*model.ReadScheduleDetailsWithAvailabilityResponse, error) {
 	var schedule *entity.Schedule
-	var scheduleCapacities []*entity.Allocation
-	classesAvailability := make([]model.ScheduleClassAvailability, 0) // Initialize outside to be populated inside
+	var classAvailabilities []model.ScheduleClassAvailability
 
-	// --- Wrap all database interactions inside tx.Execute ---
-	err := tx.Execute(ctx, sc.DB, func(txDB *gorm.DB) error {
-		// --- All repository calls within this function MUST use txDB ---
+	err := tx.Execute(ctx, sc.DB, func(tx *gorm.DB) error {
+		var err error
 
-		// 1. Get the basic Schedule details
-		// Use txDB instead of sc.ScheduleRepository.DB
-		var err error                                                   // Declare err locally within the transaction function
-		schedule, err = sc.ScheduleRepository.GetByID(txDB, scheduleID) // Use txDB
+		schedule, err = sc.HelperGetSchedule(tx, scheduleID)
 		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				// Return a specific error that tx.Execute will wrap
-				return errors.New("schedule not found") // Return error to trigger rollback
-			}
-			return fmt.Errorf("failed to get schedule by ID within transaction: %w", err) // Return error to trigger rollback
+			return err
 		}
 
-		// // Get related Ship and Route details for the response
-		// ship, err = sc.ShipRepository.GetByID(txDB, schedule.ShipID) // Use txDB
-		// if err != nil {
-		// 	// Log this error: Data inconsistency
-		// 	return fmt.Errorf("failed to get ship details within transaction: %w", err) // Return error
-		// }
-
-		// 2. Get all ScheduleCapacity entries for this schedule
-		// Use txDB instead of sc.ScheduleCapacityRepository.DB
-		scheduleCapacities, err = sc.AllocationRepository.FindByScheduleID(txDB, scheduleID) // Use txDB
+		classAvailabilities, err = sc.HelperGetAvailability(tx, schedule)
 		if err != nil {
-			return fmt.Errorf("failed to get schedule capacities within transaction: %w", err) // Return error
+			return err
 		}
 
-		// Prepare the slice for class availability details
-		// classesAvailability = make([]model.ScheduleClassAvailability, 0, len(scheduleCapacities)) // Can be done outside or here
-
-		// 3. For each ScheduleCapacity entry (each class on this schedule):
-		for _, scap := range scheduleCapacities {
-			// 3a. Count occupied tickets for this specific schedule and class
-			// Use txDB instead of sc.TicketRepository.DB
-			// No FOR UPDATE needed for this read count
-			occupiedCount, err := sc.TicketRepository.CountByScheduleClassAndStatuses(txDB, scheduleID, scap.ClassID, []string{"pending_data_entry", "pending_payment", "confirmed"}) // Use txDB
-			if err != nil {
-				// Log this error: Database issue counting tickets
-				return fmt.Errorf("failed to count occupied tickets within transaction: %w", err) // Return error
-			}
-
-			// 3b. Calculate available capacity
-			availableCapacity := scap.Quota - int(occupiedCount)
-
-			// 3c. Get Class name
-			// Use txDB instead of sc.ClassRepository.DB
-			class, err := sc.ClassRepository.GetByID(txDB, scap.ClassID) // Use txDB
-			if err != nil {
-				// Log this error: Data inconsistency
-				return fmt.Errorf("failed to get class details within transaction: %w", err) // Return error
-			}
-			if class == nil {
-				// Log this error: Data inconsistency
-				return fmt.Errorf("class not found for ID %d within transaction", scap.ClassID) // Return error
-			}
-
-			// 3d. Look up price using Manifest and Fare
-			// Use txDB instead of sc.ManifestRepository.DB / sc.FareRepository.DB
-			manifest, err := sc.ManifestRepository.GetByShipAndClass(txDB, schedule.ShipID, scap.ClassID) // Use txDB
-			if err != nil {
-				// Log this error: Configuration error?
-				return fmt.Errorf("failed to get manifest within transaction: %w", err) // Return error
-			}
-			if manifest == nil {
-				// Log this error: Configuration error?
-				return fmt.Errorf("manifest not found for ship %d, class %d within transaction", schedule.ShipID, scap.ClassID) // Return error
-			}
-
-			fare, err := sc.FareRepository.GetByManifestAndRoute(txDB, manifest.ID, schedule.RouteID) // Use txDB
-			if err != nil {
-				// Log this error: Configuration error?
-				return fmt.Errorf("failed to get fare within transaction: %w", err) // Return error
-			}
-			if fare == nil {
-				// Log this error: Configuration error?
-				return fmt.Errorf("fare not found for manifest %d, route %d within transaction", manifest.ID, schedule.RouteID) // Return error
-			}
-
-			// 3e. Add to the results slice (can be done inside the transaction func)
-			classesAvailability = append(classesAvailability, model.ScheduleClassAvailability{
-				ClassID:           scap.ClassID,
-				ClassName:         class.Name,
-				TotalCapacity:     scap.Quota,
-				AvailableCapacity: availableCapacity,
-				Price:             fare.Price,
-				Currency:          "IDR", // Or get from config/Fare entity
-			})
-		}
-
-		// Return nil if all operations within the transaction function succeeded
 		return nil
 	})
-	// --- Transaction ends here (commit or rollback) ---
 
-	// Handle any errors that occurred during the transaction
 	if err != nil {
-		// Check for the specific "schedule not found" error returned from inside the transaction
-		if errors.New("schedule not found").Error() == err.Error() { // Compare error strings or use custom error types
-			return nil, errors.New("schedule not found") // Re-return the user-friendly error
-		}
-		return nil, fmt.Errorf("failed to get schedule details with availability transaction: %w", err) // Wrap other errors
+		return nil, fmt.Errorf("failed to get schedule details with availability: %w", err)
 	}
 
-	// 4. Build the final response model (outside the transaction)
-	// The variables populated inside the transaction func (schedule, ship, route, classesAvailability)
-	// are available here if the transaction committed successfully.
-	response := &model.ReadScheduleDetailsWithAvailabilityResponse{
+	return &model.ReadScheduleDetailsWithAvailabilityResponse{
 		ScheduleID:          schedule.ID,
 		RouteID:             schedule.RouteID,
-		ClassesAvailability: classesAvailability,
+		ClassesAvailability: classAvailabilities,
+	}, nil
+}
+
+func (sc *ScheduleUsecase) HelperGetSchedule(tx *gorm.DB, scheduleID uint) (*entity.Schedule, error) {
+	schedule, err := sc.ScheduleRepository.GetByID(tx, scheduleID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("schedule not found")
+		}
+		return nil, fmt.Errorf("failed to get schedule: %w", err)
+	}
+	return schedule, nil
+}
+
+func (sc *ScheduleUsecase) HelperGetAvailability(tx *gorm.DB, schedule *entity.Schedule) ([]model.ScheduleClassAvailability, error) {
+	scheduleCapacities, err := sc.AllocationRepository.FindByScheduleID(tx, schedule.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get schedule capacities: %w", err)
 	}
 
-	return response, nil // Return the response and nil error
+	result := make([]model.ScheduleClassAvailability, 0, len(scheduleCapacities))
+
+	for _, cap := range scheduleCapacities {
+		class, err := sc.ClassRepository.GetByID(tx, cap.ClassID)
+		if err != nil || class == nil {
+			return nil, fmt.Errorf("class not found for ID %d: %w", cap.ClassID, err)
+		}
+
+		occupied, err := sc.TicketRepository.CountByScheduleClassAndStatuses(tx, schedule.ID, cap.ClassID, []string{"pending_data_entry", "pending_payment", "confirmed"})
+		if err != nil {
+			return nil, fmt.Errorf("failed to count occupied tickets: %w", err)
+		}
+
+		manifest, err := sc.ManifestRepository.GetByShipAndClass(tx, schedule.ShipID, cap.ClassID)
+		if err != nil || manifest == nil {
+			return nil, fmt.Errorf("manifest not found for ship %d, class %d: %w", schedule.ShipID, cap.ClassID, err)
+		}
+
+		fare, err := sc.FareRepository.GetByManifestAndRoute(tx, manifest.ID, schedule.RouteID)
+		if err != nil || fare == nil {
+			return nil, fmt.Errorf("fare not found for manifest %d, route %d: %w", manifest.ID, schedule.RouteID, err)
+		}
+
+		result = append(result, model.ScheduleClassAvailability{
+			ClassID:           cap.ClassID,
+			ClassName:         class.ClassName,
+			TotalCapacity:     cap.Quota,
+			AvailableCapacity: cap.Quota - int(occupied),
+			Price:             fare.TicketPrice,
+			Currency:          "IDR",
+		})
+	}
+
+	return result, nil
+}
+
+func (sc *ScheduleUsecase) CreateScheduleWithAllocation(ctx context.Context, request *model.WriteScheduleRequest) error {
+	schedule := mapper.ScheduleMapper.FromWrite(request)
+
+	if err := HelperValidateScheduleInput(schedule); err != nil {
+		return err
+	}
+
+	err := tx.Execute(ctx, sc.DB, func(tx *gorm.DB) error {
+		if err := sc.ScheduleRepository.Create(tx, schedule); err != nil {
+			return fmt.Errorf("failed to create schedule: %w", err)
+		}
+
+		ship, err := sc.ShipRepository.GetByID(tx, schedule.ShipID)
+		if err != nil || ship == nil {
+			return fmt.Errorf("failed to fetch ship %d: %w", schedule.ShipID, err)
+		}
+
+		manifests, err := sc.ManifestRepository.FindByShipID(tx, ship.ID)
+		if err != nil {
+			return fmt.Errorf("failed to fetch manifests for ship %d: %w", ship.ID, err)
+		}
+
+		allocations := HelperBuildAllocationsFromManifests(schedule.ID, manifests)
+		if len(allocations) == 0 {
+			return fmt.Errorf("no valid manifest entries found for ship %d", ship.ID)
+		}
+
+		if err := sc.AllocationRepository.CreateBulk(tx, allocations); err != nil {
+			return fmt.Errorf("failed to create allocations: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("schedule creation transaction failed: %w", err)
+	}
+
+	return nil
+}
+
+func HelperValidateScheduleInput(schedule *entity.Schedule) error {
+	if schedule.ScheduleDatetime.IsZero() {
+		return errors.New("schedule datetime cannot be empty")
+	}
+	if schedule.ShipID == 0 {
+		return errors.New("schedule ship ID cannot be zero")
+	}
+	// Add RouteID or additional checks here
+	return nil
+}
+
+func HelperBuildAllocationsFromManifests(scheduleID uint, manifests []*entity.Manifest) []*entity.Allocation {
+	allocations := []*entity.Allocation{}
+	for _, manifest := range manifests {
+		if manifest.ClassID == 0 || manifest.Capacity <= 0 {
+			log.Printf("Skipping invalid manifest %d for ship %d", manifest.ID, manifest.ShipID)
+			continue
+		}
+		allocation := &entity.Allocation{
+			ScheduleID: scheduleID,
+			ClassID:    manifest.ClassID,
+			Quota:      manifest.Capacity,
+		}
+		allocations = append(allocations, allocation)
+	}
+	return allocations
 }

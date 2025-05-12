@@ -21,11 +21,12 @@ func NewScheduleRouter(db *gorm.DB, group *gin.RouterGroup) {
 	hc := &controller.ScheduleController{
 		ScheduleUsecase: usecase.NewScheduleUsecase(db, ar, cr, fr, mr, rr, shr, scr, tr),
 	}
-	group.POST("/schedule", hc.CreateSchedule)
+	group.POST("/schedule/create", hc.CreateSchedule)
+	group.POST("/schedule/allocation/create", hc.CreateScheduleWithAllocation)
 	group.GET("/schedules", hc.GetAllSchedules)
-	group.GET("/schedules/scheduled", hc.GetAllScheduled)
+	group.GET("/schedules/active", hc.GetAllScheduled)
 	group.GET("/schedule/:id", hc.GetScheduleByID)
 	group.GET("/schedule/quota/:id", hc.GetQuotaByScheduleID)
-	group.PUT("/schedule/:id", hc.UpdateSchedule)
+	group.PUT("/schedule/update/:id", hc.UpdateSchedule)
 	group.DELETE("/schedule/:id", hc.DeleteSchedule)
 }

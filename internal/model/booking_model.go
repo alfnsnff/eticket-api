@@ -4,63 +4,6 @@ import (
 	"time"
 )
 
-// // HarborDTO represents a harbor.
-// type BookingHarbor struct {
-// 	ID   uint   `json:"id"`
-// 	Name string `json:"name"`
-// }
-
-// // RouteDTO represents a travel route.
-// type BookingRoute struct {
-// 	ID              uint          `json:"id"`
-// 	DepartureHarbor BookingHarbor `json:"departure_harbor"`
-// 	ArrivalHarbor   BookingHarbor `json:"arrival_harbor"`
-// }
-
-// // ShipDTO represents a ship.
-// type BookingShip struct {
-// 	ID   uint   `json:"id"`
-// 	Name string `json:"name"`
-// }
-
-// // ScheduleDTO represents a trip schedule.
-// type BookingSchedule struct {
-// 	ID       uint         `json:"id"`
-// 	DateTime time.Time    `json:"datetime"`
-// 	Ship     BookingShip  `json:"ship"`
-// 	Route    BookingRoute `json:"route"`
-// }
-
-// // ClassDTO represents ticket class information.
-// type BookingTicketClass struct {
-// 	ID   uint   `json:"id"`
-// 	Name string `json:"name"`
-// }
-
-// type BookingManifest struct {
-// 	ID    uint        `json:"id"`
-// 	Class TicketClass `json:"class"`
-// }
-
-// type BookingTicketFare struct {
-// 	ID       uint            `json:"id"`
-// 	Price    float32         `json:"price"`
-// 	Manifest BookingManifest `json:"manifest"`
-// }
-
-// type WriteBookingTicketRequest struct {
-// 	FareID        uint   `json:"fare_id"`
-// 	ScheduleID    uint   `json:"schedule_id"`
-// 	PassengerName string `json:"passenger_name"`
-// 	SeatNumber    string `json:"seat_number"`
-// }
-
-// type ReadBookingTicketResponse struct {
-// 	PassengerName string            `json:"passenger_name"`
-// 	SeatNumber    string            `json:"seat_number"`
-// 	Fare          BookingTicketFare `json:"fare"`
-// }
-
 // BookingDTO represents the person who booked the ticket.
 type ReadBookingResponse struct {
 	ID           uint      `json:"id"`
@@ -98,21 +41,54 @@ type UpdateBookingRequest struct {
 	BirthDate    time.Time `json:"birth_date"`
 }
 
-// type Booking struct {
-// 	ID           uint      `gorm:"primaryKey" json:"id"`
-// 	ScheduleID   uint      `gorm:"not null;index;" json:"schedule_id"` // Foreign key
-// 	PersonID     uint      `gorm:"not null" json:"person_id"`
-// 	IDType       string    `gorm:"type:varchar(10);not null" json:"id_type"`   // Changed to string to support leading zeros
-// 	IDNumber     string    `gorm:"type:varchar(10);not null" json:"id_number"` // Changed to string to support leading zeros
-// 	CustomerName string    `gorm:"not null" json:"customer_name"`
-// 	PhoneNumber  string    `gorm:"type:varchar(15);not null" json:"phone_number"` // Changed to string to support leading zeros
-// 	Email        string    `gorm:"not null" json:"email"`
-// 	BirthDate    time.Time `gorm:"not null" json:"birth_date"`
+// ClaimTicketsRequest represents the input for claiming tickets
+type LockTicketsRequest struct {
+	ScheduleID uint       `json:"schedule_id"` // The schedule the user wants tickets for
+	Items      []LockItem `json:"items"`       // List of classes and quantities requested
+}
 
-// 	BookingTimestamp time.Time `gorm:"not null" json:"booking_timestamp"`       // Timestamp when the booking was confirmed
-// 	TotalAmount      float32   `gorm:"not null" json:"total_amount"`            // Total price of all tickets in this booking
-// 	Status           string    `gorm:"type:varchar(20);not null" json:"status"` // e.g., 'completed', 'cancelled', 'refunded'
+// ClaimItem represents a request for a specific class and quantity
+type LockItem struct {
+	ClassID  uint `json:"class_id"` // The class ID
+	Quantity uint `json:"quantity"` // The number of tickets requested for this class
+}
 
-// 	CreatedAt time.Time `json:"created_at"`
-// 	UpdatedAt time.Time `json:"updated_at"`
-// }
+// ClaimTicketsResponse represents the result of a successful claim
+type LockTicketsResponse struct {
+	SessionID        string    `json:"session_id"`         // UUID for the session
+	ClaimedTicketIDs []uint    `json:"claimed_ticket_ids"` // List of claimed ticket IDs
+	ExpiresAt        time.Time `json:"expires_at"`         // Expiration time for the claim
+}
+
+type ConfirmBookingRequest struct {
+	Name        string    `json:"name"`
+	IDType      string    `json:"id_type"`
+	IDNumber    string    `json:"id_number"`
+	PhoneNumber string    `json:"phone_number"`
+	Email       string    `json:"email"`
+	BirthDate   time.Time `json:"birth_date"`
+	SessionID   string    `json:"session_id"`
+	// TicketIDs   []uint    `json:"ticket_ids"` // List of ticket IDs being paid for
+}
+
+// ConfirmPaymentResponse represents the result of the payment confirmation.
+type ConfirmBookingResponse struct {
+	BookingID          uint   `json:"booking_id"`
+	BookingStatus      string `json:"booking_status"`
+	ConfirmedTicketIDs []uint `json:"confirmed_ticket_ids"`
+}
+
+type TicketSelectionResponse struct {
+	ScheduleID uint                        `json:"schedule_id"`
+	ShipName   string                      `json:"ship_name"`
+	Datetime   string                      `json:"datetime"`
+	Tickets    []TicketClassDetailResponse `json:"tickets"`
+	Total      float32                     `json:"total"`
+}
+
+type TicketClassDetailResponse struct {
+	ClassID  uint    `json:"class_id"`
+	Price    float32 `json:"price"`
+	Quantity int     `json:"quantity"`
+	Subtotal float32 `json:"subtotal"`
+}

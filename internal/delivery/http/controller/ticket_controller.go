@@ -105,21 +105,3 @@ func (tc *TicketController) DeleteTicket(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ticket deleted successfully", nil)) // Use response.
 }
-
-func (tc *TicketController) FillTicketData(ctx *gin.Context) {
-	request := new(model.FillPassengerDataRequest)
-
-	if err := ctx.ShouldBindJSON(request); err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
-		return
-	}
-
-	datas, err := tc.TicketUsecase.FillData(ctx, request)
-
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create class", err.Error()))
-		return
-	}
-
-	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(datas, "Class created successfully", nil))
-}

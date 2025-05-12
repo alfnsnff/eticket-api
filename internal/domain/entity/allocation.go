@@ -3,10 +3,14 @@ package entity
 import "time"
 
 type Allocation struct {
-	ID         uint      `gorm:"primaryKey" json:"id"`
-	ScheduleID uint      `gorm:"not null" json:"schedule_id"` // Foreign key
-	ClassID    uint      `gorm:"not null" json:"class_id"`    // Foreign key
-	Quota      int       `gorm:"not null" json:"quota"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID         uint      `gorm:"column:id;primaryKey"`
+	ScheduleID uint      `gorm:"column:schedule_id;not null"`
+	ClassID    uint      `gorm:"column:class_id;not null"`
+	Quota      int       `gorm:"column:quota;not null"`
+	CreatedAt  time.Time `gorm:"column:created_at;not null"`
+	UpdatedAt  time.Time `gorm:"column:updated_at;not null"`
+}
+
+func (a *Allocation) TableName() string {
+	return "allocation"
 }
