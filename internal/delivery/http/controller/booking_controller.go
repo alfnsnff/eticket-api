@@ -127,5 +127,5 @@ func (bc *BookingController) ConfirmBooking(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(datas, "Class created successfully", nil))
+	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(datas, "Booking confirmed successfully", nil))
 }

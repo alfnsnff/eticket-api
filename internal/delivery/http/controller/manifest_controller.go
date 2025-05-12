@@ -27,45 +27,45 @@ func (mc *ManifestController) CreateManifest(ctx *gin.Context) {
 	}
 
 	if err := mc.ManifestUsecase.CreateManifest(ctx, request); err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create manifest", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Ship created successfully", nil))
+	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Manifest created successfully", nil))
 }
 
 func (mc *ManifestController) GetAllManifests(ctx *gin.Context) {
 	datas, err := mc.ManifestUsecase.GetAllManifests(ctx)
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ships", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve manifests", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Ships retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Manifests retrieved successfully", nil))
 }
 
 func (mc *ManifestController) GetManifestByID(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid manifest ID", err.Error()))
 		return
 	}
 
 	data, err := mc.ManifestUsecase.GetManifestByID(ctx, uint(id))
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve manifest", err.Error()))
 		return
 	}
 
 	if data == nil {
-		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Ship not found", nil))
+		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Manifest not found", nil))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Ship retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Manifest retrieved successfully", nil))
 }
 
 func (mc *ManifestController) UpdateManifest(ctx *gin.Context) {
@@ -78,30 +78,30 @@ func (mc *ManifestController) UpdateManifest(ctx *gin.Context) {
 	}
 
 	if id == 0 {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Ship ID is required", nil))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Manifest ID is required", nil))
 		return
 	}
 
 	if err := mc.ManifestUsecase.UpdateManifest(ctx, uint(id), request); err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update manifest", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ship updated successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Manifest updated successfully", nil))
 }
 
 func (mc *ManifestController) DeleteManifest(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid manifest ID", err.Error()))
 		return
 	}
 
 	if err := mc.ManifestUsecase.DeleteManifest(ctx, uint(id)); err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete manifest", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ship deleted successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Manifest deleted successfully", nil))
 }

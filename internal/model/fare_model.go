@@ -23,7 +23,7 @@ type ReadFareResponse struct {
 type WriteFareRequest struct {
 	RouteID     uint    `json:"route_id"`
 	ManifestID  uint    `json:"manifest_id"`
-	TicketPrice float32 `json:"price"`
+	TicketPrice float32 `json:"ticket_price"`
 }
 
 type UpdateFareRequest struct {

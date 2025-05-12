@@ -140,11 +140,11 @@ func (csc *SessionController) SessionTicketLock(ctx *gin.Context) {
 	datas, err := csc.SessionUsecase.SessionLockTickets(ctx, request)
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create class", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create claim session", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(datas, "Class created successfully", nil))
+	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(datas, "Claim session created successfully", nil))
 }
 
 func (csc *SessionController) SessionTicketDataEntry(ctx *gin.Context) {
@@ -158,9 +158,9 @@ func (csc *SessionController) SessionTicketDataEntry(ctx *gin.Context) {
 	datas, err := csc.SessionUsecase.SessionDataEntry(ctx, request)
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create class", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create claim session", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(datas, "Class created successfully", nil))
+	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(datas, "Claim session created successfully", nil))
 }
