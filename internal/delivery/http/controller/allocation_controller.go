@@ -31,7 +31,7 @@ func (mc *AllocationController) CreateAllocation(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Ship created successfully", nil))
+	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Allocation created successfully", nil))
 }
 
 func (mc *AllocationController) GetAllAllocations(ctx *gin.Context) {
@@ -42,30 +42,30 @@ func (mc *AllocationController) GetAllAllocations(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Ships retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Allocations retrieved successfully", nil))
 }
 
 func (mc *AllocationController) GetAllocationByID(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid allocation ID", err.Error()))
 		return
 	}
 
 	data, err := mc.AllocationUsecase.GetAllocationByID(ctx, uint(id))
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve allocation", err.Error()))
 		return
 	}
 
 	if data == nil {
-		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Ship not found", nil))
+		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Allocation not found", nil))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Ship retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Allocation retrieved successfully", nil))
 }
 
 func (mc *AllocationController) UpdateAllocation(ctx *gin.Context) {
@@ -78,30 +78,30 @@ func (mc *AllocationController) UpdateAllocation(ctx *gin.Context) {
 	}
 
 	if id == 0 {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Ship ID is required", nil))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Allocation ID is required", nil))
 		return
 	}
 
 	if err := mc.AllocationUsecase.UpdateAllocation(ctx, uint(id), request); err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update allocation", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ship updated successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Allocation updated successfully", nil))
 }
 
 func (mc *AllocationController) DeleteAllocation(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid alocation ID", err.Error()))
 		return
 	}
 
 	if err := mc.AllocationUsecase.DeleteAllocation(ctx, uint(id)); err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete allocation", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ship deleted successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "allocation deleted successfully", nil))
 }
