@@ -53,8 +53,14 @@ func NewScheduleUsecase(
 func (sc *ScheduleUsecase) CreateSchedule(ctx context.Context, request *model.WriteScheduleRequest) error {
 	schedule := mapper.ScheduleMapper.FromWrite(request)
 
-	if schedule.ScheduleDatetime.IsZero() {
-		return fmt.Errorf("schedule datetime cannot be empty")
+	if schedule.DepartureDatetime.IsZero() {
+		return errors.New("schedule datetime cannot be empty")
+	}
+	if schedule.ArrivalDatetime.IsZero() {
+		return errors.New("schedule datetime cannot be empty")
+	}
+	if schedule.DepartureDatetime == schedule.ArrivalDatetime {
+		return errors.New("schedule datetime cannot be same")
 	}
 
 	// schedule.Status = "schedulled" // Set default status
@@ -108,8 +114,14 @@ func (sc *ScheduleUsecase) UpdateSchedule(ctx context.Context, id uint, request 
 		return fmt.Errorf("schedule ID cannot be zero")
 	}
 
-	if schedule.ScheduleDatetime.IsZero() {
-		return fmt.Errorf("schedule datetime cannot be empty")
+	if schedule.DepartureDatetime.IsZero() {
+		return errors.New("schedule datetime cannot be empty")
+	}
+	if schedule.ArrivalDatetime.IsZero() {
+		return errors.New("schedule datetime cannot be empty")
+	}
+	if schedule.DepartureDatetime == schedule.ArrivalDatetime {
+		return errors.New("schedule datetime cannot be same")
 	}
 
 	return tx.Execute(ctx, sc.DB, func(tx *gorm.DB) error {
@@ -137,7 +149,7 @@ func (sc *ScheduleUsecase) GetAllScheduled(ctx context.Context) ([]*model.ReadSc
 
 	err := tx.Execute(ctx, sc.DB, func(tx *gorm.DB) error {
 		var err error
-		schedules, err = sc.ScheduleRepository.GetAllScheduled(tx)
+		schedules, err = sc.ScheduleRepository.GetActiveSchedule(tx)
 		return err
 	})
 
@@ -274,8 +286,14 @@ func (sc *ScheduleUsecase) CreateScheduleWithAllocation(ctx context.Context, req
 }
 
 func HelperValidateScheduleInput(schedule *entity.Schedule) error {
-	if schedule.ScheduleDatetime.IsZero() {
+	if schedule.DepartureDatetime.IsZero() {
 		return errors.New("schedule datetime cannot be empty")
+	}
+	if schedule.ArrivalDatetime.IsZero() {
+		return errors.New("schedule datetime cannot be empty")
+	}
+	if schedule.DepartureDatetime == schedule.ArrivalDatetime {
+		return errors.New("schedule datetime cannot be same")
 	}
 	if schedule.ShipID == 0 {
 		return errors.New("schedule ship ID cannot be zero")

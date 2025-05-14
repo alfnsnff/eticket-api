@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"eticket-api/internal/domain/entity"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -38,6 +39,19 @@ func (scr *ScheduleRepository) GetAllScheduled(db *gorm.DB) ([]*entity.Schedule,
 
 	// Corrected line: Use "?" as a placeholder and pass the string value as a parameter
 	result := db.Where("status = ?", "scheduled").Find(&schedules)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return schedules, nil
+}
+
+func (scr *ScheduleRepository) GetActiveSchedule(db *gorm.DB) ([]*entity.Schedule, error) {
+	schedules := []*entity.Schedule{}
+
+	// Corrected line: Use "?" as a placeholder and pass the string value as a parameter
+	result := db.Where("departure_datetime > ?", time.Now()).Find(&schedules)
 
 	if result.Error != nil {
 		return nil, result.Error

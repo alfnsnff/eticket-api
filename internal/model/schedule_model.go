@@ -7,9 +7,10 @@ import (
 // ScheduleDTO represents a Schedule.
 type ReadScheduleResponse struct {
 	ID               uint      `json:"id"`
-	ShipID           uint      `json:"ship"`
-	RouteID          uint      `json:"route"`
-	ScheduleDatetime time.Time `json:"datetime"`
+	RouteID          uint      `json:"route_id"`
+	ShipID           uint      `json:"ship_id"`
+	ScheduleDatetime time.Time `json:"departure_datetime"`
+	ArrivalDatetime  time.Time `json:"arrival_datetime"`
 	Status           string    `json:"status"` // e.g., 'active', 'inactive', 'cancelled'
 	CreatedAt        time.Time `json:"created_at"`
 	UpdatedAt        time.Time `json:"updated_at"`
@@ -19,7 +20,8 @@ type ReadScheduleResponse struct {
 type WriteScheduleRequest struct {
 	RouteID          uint      `json:"route_id"`
 	ShipID           uint      `json:"ship_id"`
-	ScheduleDatetime time.Time `json:"datetime"`
+	ScheduleDatetime time.Time `json:"departure_datetime"`
+	ArrivalDatetime  time.Time `json:"arrival_datetime"`
 	Status           string    `json:"status"` // e.g., 'active', 'inactive', 'cancelled'
 }
 
@@ -28,7 +30,8 @@ type UpdateScheduleRequest struct {
 	ID               uint      `json:"id"`
 	RouteID          uint      `json:"route_id"`
 	ShipID           uint      `json:"ship_id"`
-	ScheduleDatetime time.Time `json:"datetime"`
+	ScheduleDatetime time.Time `json:"departure_datetime"`
+	ArrivalDatetime  time.Time `json:"arrival_datetime"`
 	Status           string    `json:"status"` // e.g., 'active', 'inactive', 'cancelled'
 }
 
