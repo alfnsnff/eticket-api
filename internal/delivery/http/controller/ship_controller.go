@@ -3,7 +3,8 @@ package controller
 import (
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase" // Import the response package
-	"eticket-api/pkg/utils/response"
+	"eticket-api/pkg/utils/helper/meta"
+	"eticket-api/pkg/utils/helper/response"
 	"net/http"
 	"strconv"
 
@@ -35,14 +36,16 @@ func (shc *ShipController) CreateShip(ctx *gin.Context) {
 }
 
 func (shc *ShipController) GetAllShips(ctx *gin.Context) {
-	datas, err := shc.ShipUsecase.GetAllShips(ctx)
+	params := meta.GetParams(ctx)
+
+	datas, total, err := shc.ShipUsecase.GetAllShips(ctx, params.Limit, params.Offset)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ships", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Ships retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Ships retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (shc *ShipController) GetShipByID(ctx *gin.Context) {

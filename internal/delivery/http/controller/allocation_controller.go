@@ -2,8 +2,8 @@ package controller
 
 import (
 	"eticket-api/internal/model"
-	"eticket-api/internal/usecase" // Import the response package
-	"eticket-api/pkg/utils/response"
+	"eticket-api/internal/usecase"
+	"eticket-api/pkg/utils/helper/response"
 	"net/http"
 	"strconv"
 

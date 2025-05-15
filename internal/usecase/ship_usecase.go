@@ -34,21 +34,23 @@ func (sh *ShipUsecase) CreateShip(ctx context.Context, request *model.WriteShipR
 	})
 }
 
-func (sh *ShipUsecase) GetAllShips(ctx context.Context) ([]*model.ReadShipResponse, error) {
+func (sh *ShipUsecase) GetAllShips(ctx context.Context, limit int, offset int) ([]*model.ReadShipResponse, int, error) {
 
 	ships := []*entity.Ship{}
+	var total int64
 
 	err := tx.Execute(ctx, sh.DB, func(tx *gorm.DB) error {
 		var err error
-		ships, err = sh.ShipRepository.GetAll(tx)
+		total, err = sh.ShipRepository.Count(tx)
+		ships, err = sh.ShipRepository.GetAll(tx, limit, offset)
 		return err
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get all books: %w", err)
+		return nil, 0, fmt.Errorf("failed to get all books: %w", err)
 	}
 
-	return mapper.ShipMapper.ToModels(ships), nil
+	return mapper.ShipMapper.ToModels(ships), int(total), nil
 }
 
 func (sh *ShipUsecase) GetShipByID(ctx context.Context, id uint) (*model.ReadShipResponse, error) {
