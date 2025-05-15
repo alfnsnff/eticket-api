@@ -33,26 +33,21 @@ func (tr *TicketRepository) GetByID(db *gorm.DB, id uint) (*entity.Ticket, error
 	}
 	return ticket, result.Error
 }
+
 func (r *TicketRepository) CountByScheduleClassAndStatuses(db *gorm.DB, scheduleID uint, classID uint, statuses []string) (int64, error) {
 	var count int64
-
 	now := time.Now()
 	pendingStatuses := []string{"pending_data_entry", "pending_payment"}
+
 	query := db.Model(&entity.Ticket{}).
-		Where("schedule_id = ? AND class_id = ?", scheduleID, classID).
-		Joins("LEFT JOIN claim_session ON ticket.claim_session_id = claim_session.id")
-
-	query = query.Where(
-
-		db.Where("ticket.status = ?", "confirmed").
-			Or(db.Where("ticket.status IN (?) AND ticket.claim_session_id IS NOT NULL AND claim_session.expires_at > ?",
-				pendingStatuses,
-				now,
-			)),
-	)
+		Joins("LEFT JOIN claim_session ON ticket.claim_session_id = claim_session.id").
+		Where("ticket.schedule_id = ? AND ticket.class_id = ?", scheduleID, classID).
+		Where(
+			db.Where("ticket.status = ?", "confirmed").
+				Or("ticket.status IN ? AND ticket.claim_session_id IS NOT NULL AND claim_session.expires_at > ?", pendingStatuses, now),
+		)
 
 	result := query.Count(&count)
-
 	if result.Error != nil {
 		return 0, result.Error
 	}

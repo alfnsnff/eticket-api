@@ -4,10 +4,40 @@ import (
 	"time"
 )
 
+// HarborDTO represents a harbor.
+type ClaimSessionScheduleHarbor struct {
+	ID         uint   `json:"id"`
+	HarborName string `json:"harbor_name"`
+}
+
+// RouteDTO represents a travel route.
+type ClaimSessionScheduleRoute struct {
+	ID              uint           `json:"id"`
+	DepartureHarbor ScheduleHarbor `json:"departure_harbor"`
+	ArrivalHarbor   ScheduleHarbor `json:"arrival_harbor"`
+}
+
+// ShipDTO represents a ship.
+type ClaimSessionScheduleShip struct {
+	ID       uint   `json:"id"`
+	ShipName string `json:"ship_name"`
+}
+
+// ScheduleDTO represents a Schedule.
+type ClaimSessionSchedule struct {
+	ID                uint          `json:"id"`
+	Ship              ScheduleShip  `json:"ship"`
+	Route             ScheduleRoute `json:"route"`
+	DepartureDatetime time.Time     `json:"departure_datetime"`
+	ArrivalDatetime   time.Time     `json:"arrival_datetime"`
+}
+
 // ShipDTO represents a Ship.
 type ReadClaimSessionResponse struct {
 	ID          uint                                 `json:"id"`
 	SessionID   string                               `json:"session_id"`
+	ScheduleID  uint                                 `json:"schedule_id"`
+	Schedule    ClaimSessionSchedule                 `json:"route"`
 	ClaimedAt   time.Time                            `json:"claimed_at"`
 	ExpiresAt   time.Time                            `json:"expires_at"`
 	Prices      []ClaimSessionTicketPricesResponse   `json:"prices"`

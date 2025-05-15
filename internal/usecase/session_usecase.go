@@ -167,9 +167,10 @@ func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model
 		}
 
 		newClaimSession := &entity.ClaimSession{
-			SessionID: createdSessionUUID,
-			ClaimedAt: now,
-			ExpiresAt: expiryTime,
+			SessionID:  createdSessionUUID,
+			ScheduleID: request.ScheduleID,
+			ClaimedAt:  now,
+			ExpiresAt:  expiryTime,
 			// Other fields like CreatedAt/UpdatedAt handled by GORM
 		}
 
@@ -349,6 +350,7 @@ func (cs *SessionUsecase) HelperBuildResponse(session *entity.ClaimSession, tick
 	return &model.ReadClaimSessionResponse{
 		ID:          session.ID,
 		SessionID:   session.SessionID,
+		ScheduleID:  session.ScheduleID,
 		ClaimedAt:   session.ClaimedAt,
 		ExpiresAt:   session.ExpiresAt,
 		Prices:      ticketPrices,

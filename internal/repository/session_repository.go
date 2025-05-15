@@ -40,7 +40,9 @@ func (shr *SessionRepository) GetByID(db *gorm.DB, id uint) (*entity.ClaimSessio
 func (r *SessionRepository) GetByUUID(db *gorm.DB, uuid string) (*entity.ClaimSession, error) {
 	var session entity.ClaimSession
 	// Use the provided db instance (txDB from the use case)
-	result := db.Where("session_id = ?", uuid).First(&session)
+	result := db.Preload("Schedule").Preload("Schedule.Route").
+		Preload("Schedule.Route.DepartureHarbor").
+		Preload("Schedule.Route.ArrivalHarbor").Preload("Schedule.Ship").Where("session_id = ?", uuid).First(&session)
 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
