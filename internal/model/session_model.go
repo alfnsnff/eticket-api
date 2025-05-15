@@ -12,9 +12,9 @@ type ClaimSessionScheduleHarbor struct {
 
 // RouteDTO represents a travel route.
 type ClaimSessionScheduleRoute struct {
-	ID              uint           `json:"id"`
-	DepartureHarbor ScheduleHarbor `json:"departure_harbor"`
-	ArrivalHarbor   ScheduleHarbor `json:"arrival_harbor"`
+	ID              uint                       `json:"id"`
+	DepartureHarbor ClaimSessionScheduleHarbor `json:"departure_harbor"`
+	ArrivalHarbor   ClaimSessionScheduleHarbor `json:"arrival_harbor"`
 }
 
 // ShipDTO represents a ship.
@@ -25,11 +25,11 @@ type ClaimSessionScheduleShip struct {
 
 // ScheduleDTO represents a Schedule.
 type ClaimSessionSchedule struct {
-	ID                uint          `json:"id"`
-	Ship              ScheduleShip  `json:"ship"`
-	Route             ScheduleRoute `json:"route"`
-	DepartureDatetime time.Time     `json:"departure_datetime"`
-	ArrivalDatetime   time.Time     `json:"arrival_datetime"`
+	ID                uint                      `json:"id"`
+	Ship              ClaimSessionScheduleShip  `json:"ship"`
+	Route             ClaimSessionScheduleRoute `json:"route"`
+	DepartureDatetime time.Time                 `json:"departure_datetime"`
+	ArrivalDatetime   time.Time                 `json:"arrival_datetime"`
 }
 
 // ShipDTO represents a Ship.
@@ -37,7 +37,7 @@ type ReadClaimSessionResponse struct {
 	ID          uint                                 `json:"id"`
 	SessionID   string                               `json:"session_id"`
 	ScheduleID  uint                                 `json:"schedule_id"`
-	Schedule    ClaimSessionSchedule                 `json:"route"`
+	Schedule    ClaimSessionSchedule                 `json:"schedule"`
 	ClaimedAt   time.Time                            `json:"claimed_at"`
 	ExpiresAt   time.Time                            `json:"expires_at"`
 	Prices      []ClaimSessionTicketPricesResponse   `json:"prices"`
@@ -70,9 +70,15 @@ type ClaimSessionTicketPricesResponse struct {
 }
 
 type ClaimedSessionTicketDetailResponse struct {
-	TicketID uint    `json:"ticket_id"`
-	ClassID  uint    `json:"class_id"`
-	Price    float32 `json:"price"` // Include price if frontend needs it at this stage
+	TicketID uint                        `json:"ticket_id"`
+	Class    ClaimSessionTicketClassItem `json:"class"`
+	Price    float32                     `json:"price"` // Include price if frontend needs it at this stage
+}
+
+// ShipDTO represents a ship.
+type ClaimSessionTicketClassItem struct {
+	ID        uint   `json:"id"`
+	ClassName string `json:"class_name"`
 }
 
 // ClaimTicketsRequest represents the input for claiming tickets

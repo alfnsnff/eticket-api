@@ -82,7 +82,7 @@ func (tr *TicketRepository) FindManyByIDs(db *gorm.DB, ids []uint) ([]*entity.Ti
 
 func (tr *TicketRepository) FindManyBySessionID(db *gorm.DB, sessionID uint) ([]*entity.Ticket, error) {
 	tickets := []*entity.Ticket{}
-	result := db.Where("claim_session_id = ?", sessionID).Find(&tickets)
+	result := db.Preload("Class").Where("claim_session_id = ?", sessionID).Find(&tickets)
 	if result.Error != nil {
 		return nil, result.Error
 	}
