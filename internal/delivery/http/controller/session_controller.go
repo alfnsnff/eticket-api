@@ -130,7 +130,7 @@ func (shc *SessionController) GetSessionBySessionID(ctx *gin.Context) {
 }
 
 func (csc *SessionController) SessionTicketLock(ctx *gin.Context) {
-	request := new(model.LockTicketsRequest)
+	request := new(model.ClaimedSessionLockTicketsRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
@@ -148,7 +148,7 @@ func (csc *SessionController) SessionTicketLock(ctx *gin.Context) {
 }
 
 func (csc *SessionController) SessionTicketDataEntry(ctx *gin.Context) {
-	request := new(model.FillPassengerDataRequest)
+	request := new(model.ClaimedSessionFillPassengerDataRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))

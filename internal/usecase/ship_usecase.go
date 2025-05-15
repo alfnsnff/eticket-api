@@ -42,6 +42,9 @@ func (sh *ShipUsecase) GetAllShips(ctx context.Context, limit int, offset int) (
 	err := tx.Execute(ctx, sh.DB, func(tx *gorm.DB) error {
 		var err error
 		total, err = sh.ShipRepository.Count(tx)
+		if err != nil {
+			return err
+		}
 		ships, err = sh.ShipRepository.GetAll(tx, limit, offset)
 		return err
 	})
