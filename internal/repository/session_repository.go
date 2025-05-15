@@ -20,7 +20,9 @@ func NewSessionRepository() *SessionRepository {
 
 func (shr *SessionRepository) GetAll(db *gorm.DB) ([]*entity.ClaimSession, error) {
 	sessions := []*entity.ClaimSession{}
-	result := db.Find(&sessions)
+	result := db.Preload("Schedule").Preload("Schedule.Route").
+		Preload("Schedule.Route.DepartureHarbor").
+		Preload("Schedule.Route.ArrivalHarbor").Preload("Schedule.Ship").Find(&sessions)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -29,7 +31,9 @@ func (shr *SessionRepository) GetAll(db *gorm.DB) ([]*entity.ClaimSession, error
 
 func (shr *SessionRepository) GetByID(db *gorm.DB, id uint) (*entity.ClaimSession, error) {
 	session := new(entity.ClaimSession)
-	result := db.First(&session, id)
+	result := db.Preload("Schedule").Preload("Schedule.Route").
+		Preload("Schedule.Route.DepartureHarbor").
+		Preload("Schedule.Route.ArrivalHarbor").Preload("Schedule.Ship").First(&session, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}

@@ -12,8 +12,9 @@ type Schedule struct {
 	CreatedAt         time.Time  `gorm:"column:created_at;not null"`
 	UpdatedAt         time.Time  `gorm:"column:updated_at;not null"`
 
-	Route Route `gorm:"foreignKey:RouteID" json:"route"` // Gorm will create the relationship
-	Ship  Ship  `gorm:"foreignKey:ShipID" json:"ship"`   // Gorm will create the relationship
+	Route         Route          `gorm:"foreignKey:RouteID"` // Gorm will create the relationship
+	Ship          Ship           `gorm:"foreignKey:ShipID"`  // Gorm will create the relationship
+	ClaimSessions []ClaimSession `gorm:"foreignKey:ScheduleID"`
 }
 
 func (sch *Schedule) TableName() string {

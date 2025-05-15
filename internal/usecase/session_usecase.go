@@ -351,6 +351,7 @@ func (cs *SessionUsecase) HelperBuildResponse(session *entity.ClaimSession, tick
 		ID:          session.ID,
 		SessionID:   session.SessionID,
 		ScheduleID:  session.ScheduleID,
+		Schedule:    *mapper.ScheduleSessionMapper.ToModel(&session.Schedule),
 		ClaimedAt:   session.ClaimedAt,
 		ExpiresAt:   session.ExpiresAt,
 		Prices:      ticketPrices,
@@ -367,7 +368,7 @@ func (cs *SessionUsecase) HelperBuildTicketBreakdown(tickets []*entity.Ticket) [
 	for i, v := range tickets {
 		result[i] = model.ClaimedSessionTicketDetailResponse{
 			TicketID: v.ID,
-			ClassID:  v.ClassID,
+			Class:    *mapper.TicketClassToSessionClassMapper.ToModel(&v.Class),
 			Price:    v.Price,
 		}
 	}
