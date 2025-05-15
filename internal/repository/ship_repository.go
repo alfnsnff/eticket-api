@@ -15,9 +15,19 @@ func NewShipRepository() *ShipRepository {
 	return &ShipRepository{}
 }
 
-func (shr *ShipRepository) GetAll(db *gorm.DB) ([]*entity.Ship, error) {
+func (shr *ShipRepository) Count(db *gorm.DB) (int64, error) {
 	ships := []*entity.Ship{}
-	result := db.Find(&ships)
+	var total int64
+	result := db.Find(&ships).Count(&total)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	return total, nil
+}
+
+func (shr *ShipRepository) GetAll(db *gorm.DB, limit int, offset int) ([]*entity.Ship, error) {
+	ships := []*entity.Ship{}
+	result := db.Limit(limit).Offset(offset).Find(&ships)
 	if result.Error != nil {
 		return nil, result.Error
 	}

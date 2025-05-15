@@ -11,6 +11,9 @@ type Schedule struct {
 	Status            *string    `gorm:"column:status;type:varchar(24);not null"`
 	CreatedAt         time.Time  `gorm:"column:created_at;not null"`
 	UpdatedAt         time.Time  `gorm:"column:updated_at;not null"`
+
+	Route Route `gorm:"foreignKey:RouteID" json:"route"` // Gorm will create the relationship
+	Ship  Ship  `gorm:"foreignKey:ShipID" json:"ship"`   // Gorm will create the relationship
 }
 
 func (sch *Schedule) TableName() string {
