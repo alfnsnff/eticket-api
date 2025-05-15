@@ -2,7 +2,9 @@ package mapper
 
 import (
 	"eticket-api/internal/domain/entity"
+	authentity "eticket-api/internal/domain/entity/auth"
 	"eticket-api/internal/model"
+	authmodel "eticket-api/internal/model/auth"
 
 	"github.com/jinzhu/copier"
 )
@@ -94,4 +96,7 @@ var (
 	BookingMapper    = NewMapper[entity.Booking, model.ReadBookingResponse, model.WriteBookingRequest, model.UpdateBookingRequest]()
 	HarborMapper     = NewMapper[entity.Harbor, model.ReadHarborResponse, model.WriteHarborRequest, model.UpdateHarborRequest]()
 	AllocationMapper = NewMapper[entity.Allocation, model.ReadAllocationResponse, model.WriteAllocationRequest, model.UpdateAllocationRequest]()
+	UserMapper       = NewMapper[authentity.User, authmodel.ReadUserResponse, authmodel.WriteUserRequest, authmodel.UpdateuserRequest]()
+	RoleMapper       = NewMapper[authentity.Role, authmodel.ReadRoleResponse, authmodel.WriteRoleRequest, authmodel.UpdateRoleRequest]()
+	UserRoleMapper   = NewMapper[authentity.UserRole, authmodel.ReadUserRoleResponse, authmodel.WriteUserRoleRequest, authmodel.UpdateUserRoleRequest]()
 )

@@ -26,7 +26,7 @@ func NewScheduleRouter(db *gorm.DB, group *gin.RouterGroup) {
 	group.GET("/schedules", hc.GetAllSchedules)
 	group.GET("/schedules/active", hc.GetAllScheduled)
 	group.GET("/schedule/:id", hc.GetScheduleByID)
-	group.GET("/schedule/quota/:id", hc.GetQuotaByScheduleID)
+	group.GET("/schedule/:id/quota", hc.GetQuotaByScheduleID)
 	group.PUT("/schedule/update/:id", hc.UpdateSchedule)
 	group.DELETE("/schedule/:id", hc.DeleteSchedule)
 }

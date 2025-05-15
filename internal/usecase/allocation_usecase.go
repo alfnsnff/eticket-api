@@ -15,7 +15,7 @@ import (
 
 type AllocationUsecase struct {
 	DB                   *gorm.DB
-	allocationRepository *repository.AllocationRepository
+	AllocationRepository *repository.AllocationRepository
 	ScheduleRepository   *repository.ScheduleRepository
 	FareRepository       *repository.FareRepository
 }
@@ -28,7 +28,7 @@ func NewAllocationUsecase(
 ) *AllocationUsecase {
 	return &AllocationUsecase{
 		DB:                   db,
-		allocationRepository: allocation_repository,
+		AllocationRepository: allocation_repository,
 		ScheduleRepository:   schedule_repository,
 		FareRepository:       fare_repository,
 	}
@@ -45,7 +45,7 @@ func (a *AllocationUsecase) CreateAllocation(ctx context.Context, request *model
 		return fmt.Errorf("class ID cannot be zero")
 	}
 	return tx.Execute(ctx, a.DB, func(tx *gorm.DB) error {
-		return a.allocationRepository.Create(tx, allocation)
+		return a.AllocationRepository.Create(tx, allocation)
 	})
 }
 
@@ -54,7 +54,7 @@ func (a *AllocationUsecase) GetAllAllocations(ctx context.Context) ([]*model.Rea
 
 	err := tx.Execute(ctx, a.DB, func(tx *gorm.DB) error {
 		var err error
-		allocations, err = a.allocationRepository.GetAll(tx)
+		allocations, err = a.AllocationRepository.GetAll(tx)
 		return err
 	})
 
@@ -69,7 +69,7 @@ func (a *AllocationUsecase) GetAllocationByID(ctx context.Context, id uint) (*mo
 	allocation := new(entity.Allocation)
 	err := tx.Execute(ctx, a.DB, func(tx *gorm.DB) error {
 		var err error
-		allocation, err = a.allocationRepository.GetByID(tx, id)
+		allocation, err = a.AllocationRepository.GetByID(tx, id)
 		return err
 	})
 
@@ -105,21 +105,21 @@ func (a *AllocationUsecase) UpdateAllocation(ctx context.Context, id uint, reque
 	}
 
 	return tx.Execute(ctx, a.DB, func(tx *gorm.DB) error {
-		return a.allocationRepository.Update(tx, allocation)
+		return a.AllocationRepository.Update(tx, allocation)
 	})
 }
 
 func (a *AllocationUsecase) DeleteAllocation(ctx context.Context, id uint) error {
 
 	return tx.Execute(ctx, a.DB, func(tx *gorm.DB) error {
-		allocation, err := a.allocationRepository.GetByID(tx, id)
+		allocation, err := a.AllocationRepository.GetByID(tx, id)
 		if err != nil {
 			return err
 		}
 		if allocation == nil {
 			return errors.New("allocation not found")
 		}
-		return a.allocationRepository.Delete(tx, allocation)
+		return a.AllocationRepository.Delete(tx, allocation)
 	})
 
 }
