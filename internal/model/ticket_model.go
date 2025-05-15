@@ -43,27 +43,3 @@ type UpdateTicketRequest struct {
 	SeatNumber     string  `json:"seat_number"`
 	Price          float32 `json:"price"`
 }
-
-type PassengerDataInput struct {
-	TicketID      uint    `json:"ticket_id"`
-	PassengerName string  `json:"passenger_name"`
-	IDType        string  `json:"id_type"`
-	IDNumber      string  `json:"id_number"`
-	SeatNumber    *string `json:"seat_number"`
-}
-
-type FillPassengerDataRequest struct {
-	SessionID     string               `json:"session_id"`
-	PassengerData []PassengerDataInput `json:"passenger_data"`
-}
-
-type FillPassengerDataResponse struct {
-	UpdatedTicketIDs []uint                `json:"updated_ticket_ids"`
-	FailedTickets    []TicketUpdateFailure `json:"failed_tickets"`
-}
-
-type TicketUpdateFailure struct {
-	TicketID uint   `json:"ticket_id"`
-	Reason   string `json:"reason"`
-	Test     []uint
-}

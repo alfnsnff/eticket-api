@@ -137,7 +137,7 @@ func (cs *SessionUsecase) GetBySessionID(ctx context.Context, sessionUUID string
 	return cs.HelperBuildResponse(session, tickets), nil
 }
 
-func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model.LockTicketsRequest) (*model.LockTicketsResponse, error) {
+func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model.ClaimedSessionLockTicketsRequest) (*model.ClaimedSessionLockTicketsResponse, error) {
 	if err := cs.HelperValidateLockRequest(request); err != nil {
 		return nil, err
 	}
@@ -198,14 +198,14 @@ func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model
 		return nil, fmt.Errorf("failed to claim tickets: %w", err)
 	}
 
-	return &model.LockTicketsResponse{
+	return &model.ClaimedSessionLockTicketsResponse{
 		ClaimedTicketIDs: claimedTicketIDs,
 		ExpiresAt:        expiryTime,
 		SessionID:        createdSessionUUID,
 	}, nil
 }
 
-func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.FillPassengerDataRequest) (*model.FillPassengerDataResponse, error) {
+func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.ClaimedSessionFillPassengerDataRequest) (*model.ClaimedSessionFillPassengerDataResponse, error) {
 	if len(request.PassengerData) == 0 {
 		return nil, errors.New("invalid request: UserID and passenger data are required")
 	}
@@ -213,7 +213,7 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.F
 	_, passengerMap := HelperExtractPassengerData(request)
 
 	var updatedIDs []uint
-	var failed []model.TicketUpdateFailure
+	var failed []model.ClaimedSessionTicketUpdateFailure
 
 	err := tx.Execute(ctx, cs.DB, func(tx *gorm.DB) error {
 		session, err := cs.SessionRepository.GetByUUIDWithLock(tx, request.SessionID, true)
@@ -250,20 +250,20 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.F
 		return nil, fmt.Errorf("fill passenger data failed: %w", err)
 	}
 
-	return &model.FillPassengerDataResponse{
+	return &model.ClaimedSessionFillPassengerDataResponse{
 		UpdatedTicketIDs: updatedIDs,
 		FailedTickets:    failed,
 	}, nil
 }
 
-func (cs *SessionUsecase) HelperValidateLockRequest(request *model.LockTicketsRequest) error {
+func (cs *SessionUsecase) HelperValidateLockRequest(request *model.ClaimedSessionLockTicketsRequest) error {
 	if request.ScheduleID == 0 || len(request.Items) == 0 {
 		return errors.New("invalid claim request")
 	}
 	return nil
 }
 
-func (cs *SessionUsecase) HelperLockAndCheckAvailability(tx *gorm.DB, request *model.LockTicketsRequest) (map[uint]int64, error) {
+func (cs *SessionUsecase) HelperLockAndCheckAvailability(tx *gorm.DB, request *model.ClaimedSessionLockTicketsRequest) (map[uint]int64, error) {
 	checks := make(map[uint]int64)
 	for _, item := range request.Items {
 		if item.Quantity == 0 {
@@ -293,7 +293,7 @@ func (cs *SessionUsecase) HelperLockAndCheckAvailability(tx *gorm.DB, request *m
 	return checks, nil
 }
 
-func (cs *SessionUsecase) HelperBuildTickets(tx *gorm.DB, request *model.LockTicketsRequest) ([]*entity.Ticket, error) {
+func (cs *SessionUsecase) HelperBuildTickets(tx *gorm.DB, request *model.ClaimedSessionLockTicketsRequest) ([]*entity.Ticket, error) {
 	schedule, err := cs.ScheduleRepository.GetByID(tx, request.ScheduleID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get schedule: %w", err)
@@ -334,13 +334,15 @@ func (cs *SessionUsecase) HelperBuildTickets(tx *gorm.DB, request *model.LockTic
 
 // buildSessionResponse generates a consistent ReadClaimSessionResponse, optionally using ticket info.
 func (cs *SessionUsecase) HelperBuildResponse(session *entity.ClaimSession, tickets []*entity.Ticket) *model.ReadClaimSessionResponse {
-	var ticketDetails []model.ClaimSessionTicketPricesResponse
+	var ticketPrices []model.ClaimSessionTicketPricesResponse
+	var ticketDetails []model.ClaimedSessionTicketDetailResponse
 	var total float32
 
 	if len(tickets) > 0 {
-		ticketDetails, total = cs.HelperBuildTicketBreakdown(tickets)
+		ticketPrices, total = cs.HelperBuildPriceBreakdown(tickets)
+		ticketDetails = cs.HelperBuildTicketBreakdown(tickets)
 	} else {
-		ticketDetails = []model.ClaimSessionTicketPricesResponse{}
+		ticketPrices = []model.ClaimSessionTicketPricesResponse{}
 		total = 0
 	}
 
@@ -349,6 +351,7 @@ func (cs *SessionUsecase) HelperBuildResponse(session *entity.ClaimSession, tick
 		SessionID:   session.SessionID,
 		ClaimedAt:   session.ClaimedAt,
 		ExpiresAt:   session.ExpiresAt,
+		Prices:      ticketPrices,
 		Tickets:     ticketDetails,
 		TotalAmount: total,
 		CreatedAt:   session.CreatedAt,
@@ -357,7 +360,20 @@ func (cs *SessionUsecase) HelperBuildResponse(session *entity.ClaimSession, tick
 }
 
 // buildTicketPriceBreakdown groups tickets by class and calculates subtotals and total.
-func (cs *SessionUsecase) HelperBuildTicketBreakdown(tickets []*entity.Ticket) ([]model.ClaimSessionTicketPricesResponse, float32) {
+func (cs *SessionUsecase) HelperBuildTicketBreakdown(tickets []*entity.Ticket) []model.ClaimedSessionTicketDetailResponse {
+	result := make([]model.ClaimedSessionTicketDetailResponse, len(tickets))
+	for i, v := range tickets {
+		result[i] = model.ClaimedSessionTicketDetailResponse{
+			TicketID: v.ID,
+			ClassID:  v.ClassID,
+			Price:    v.Price,
+		}
+	}
+	return result
+}
+
+// buildTicketPriceBreakdown groups tickets by class and calculates subtotals and total.
+func (cs *SessionUsecase) HelperBuildPriceBreakdown(tickets []*entity.Ticket) ([]model.ClaimSessionTicketPricesResponse, float32) {
 	ticketSummary := make(map[uint]*model.ClaimSessionTicketPricesResponse)
 	var total float32
 
@@ -400,9 +416,9 @@ func (cs *SessionUsecase) HelperBuildSessionListResponse(sessions []*entity.Clai
 	return result
 }
 
-func HelperExtractPassengerData(request *model.FillPassengerDataRequest) ([]uint, map[uint]model.PassengerDataInput) {
+func HelperExtractPassengerData(request *model.ClaimedSessionFillPassengerDataRequest) ([]uint, map[uint]model.ClaimedSessionPassengerDataInput) {
 	ticketIDs := make([]uint, len(request.PassengerData))
-	passengerMap := make(map[uint]model.PassengerDataInput)
+	passengerMap := make(map[uint]model.ClaimedSessionPassengerDataInput)
 	for i, data := range request.PassengerData {
 		ticketIDs[i] = data.TicketID
 		passengerMap[data.TicketID] = data
@@ -412,9 +428,9 @@ func HelperExtractPassengerData(request *model.FillPassengerDataRequest) ([]uint
 
 func (cs *SessionUsecase) HelperValidateAndUpdateTickets(
 	tickets []*entity.Ticket,
-	dataMap map[uint]model.PassengerDataInput,
+	dataMap map[uint]model.ClaimedSessionPassengerDataInput,
 	now time.Time,
-) ([]uint, []model.TicketUpdateFailure, []*entity.Ticket) {
+) ([]uint, []model.ClaimedSessionTicketUpdateFailure, []*entity.Ticket) {
 
 	retrievedTicketsMap := make(map[uint]*entity.Ticket)
 	for _, ticket := range tickets {
@@ -422,30 +438,30 @@ func (cs *SessionUsecase) HelperValidateAndUpdateTickets(
 	}
 
 	var updatedIDs []uint
-	var failed []model.TicketUpdateFailure
+	var failed []model.ClaimedSessionTicketUpdateFailure
 	var toUpdate []*entity.Ticket
 
 	for id, data := range dataMap {
 		ticket, exists := retrievedTicketsMap[id]
 		if !exists {
 
-			failed = append(failed, model.TicketUpdateFailure{TicketID: id, Reason: "Ticket not found in session"})
+			failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Ticket not found in session"})
 			continue
 		}
 		if ticket.Status != "pending_data_entry" {
-			failed = append(failed, model.TicketUpdateFailure{TicketID: id, Reason: fmt.Sprintf("Status is %s", ticket.Status)})
+			failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: fmt.Sprintf("Status is %s", ticket.Status)})
 			continue
 		}
 		if data.PassengerName == "" {
-			failed = append(failed, model.TicketUpdateFailure{TicketID: id, Reason: "Passenger name required"})
+			failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Passenger name required"})
 			continue
 		}
 		if data.IDType == "" {
-			failed = append(failed, model.TicketUpdateFailure{TicketID: id, Reason: "ID Type required"})
+			failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "ID Type required"})
 			continue
 		}
 		if data.IDNumber == "" {
-			failed = append(failed, model.TicketUpdateFailure{TicketID: id, Reason: "ID Number required"})
+			failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "ID Number required"})
 			continue
 		}
 		ticket.PassengerName = &data.PassengerName

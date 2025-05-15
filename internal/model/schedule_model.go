@@ -25,33 +25,33 @@ type ScheduleShip struct {
 
 // ScheduleDTO represents a Schedule.
 type ReadScheduleResponse struct {
-	ID               uint          `json:"id"`
-	Ship             ScheduleShip  `json:"ship"`
-	Route            ScheduleRoute `json:"route"`
-	ScheduleDatetime time.Time     `json:"departure_datetime"`
-	ArrivalDatetime  time.Time     `json:"arrival_datetime"`
-	Status           string        `json:"status"` // e.g., 'active', 'inactive', 'cancelled'
-	CreatedAt        time.Time     `json:"created_at"`
-	UpdatedAt        time.Time     `json:"updated_at"`
+	ID                uint          `json:"id"`
+	Ship              ScheduleShip  `json:"ship"`
+	Route             ScheduleRoute `json:"route"`
+	DepartureDatetime time.Time     `json:"departure_datetime"`
+	ArrivalDatetime   time.Time     `json:"arrival_datetime"`
+	Status            string        `json:"status"` // e.g., 'active', 'inactive', 'cancelled'
+	CreatedAt         time.Time     `json:"created_at"`
+	UpdatedAt         time.Time     `json:"updated_at"`
 }
 
 // ScheduleDTO represents a Schedule.
 type WriteScheduleRequest struct {
-	RouteID          uint      `json:"route_id"`
-	ShipID           uint      `json:"ship_id"`
-	ScheduleDatetime time.Time `json:"departure_datetime"`
-	ArrivalDatetime  time.Time `json:"arrival_datetime"`
-	Status           string    `json:"status"` // e.g., 'active', 'inactive', 'cancelled'
+	RouteID           uint      `json:"route_id"`
+	ShipID            uint      `json:"ship_id"`
+	DepartureDatetime time.Time `json:"departure_datetime"`
+	ArrivalDatetime   time.Time `json:"arrival_datetime"`
+	Status            string    `json:"status"` // e.g., 'active', 'inactive', 'cancelled'
 }
 
 // ScheduleDTO represents a Schedule.
 type UpdateScheduleRequest struct {
-	ID               uint      `json:"id"`
-	RouteID          uint      `json:"route_id"`
-	ShipID           uint      `json:"ship_id"`
-	ScheduleDatetime time.Time `json:"departure_datetime"`
-	ArrivalDatetime  time.Time `json:"arrival_datetime"`
-	Status           string    `json:"status"` // e.g., 'active', 'inactive', 'cancelled'
+	ID                uint      `json:"id"`
+	RouteID           uint      `json:"route_id"`
+	ShipID            uint      `json:"ship_id"`
+	DepartureDatetime time.Time `json:"departure_datetime"`
+	ArrivalDatetime   time.Time `json:"arrival_datetime"`
+	Status            string    `json:"status"` // e.g., 'active', 'inactive', 'cancelled'
 }
 
 // ScheduleClassAvailability represents the availability and price for a specific class on a schedule
