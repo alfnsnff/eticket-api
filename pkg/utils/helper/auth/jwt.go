@@ -11,10 +11,10 @@ import (
 	"github.com/google/uuid"
 )
 
-var cfg = config.AppConfig.Auth
+// var cfg = config.AppConfig.Auth
 
 // Load the JWT signing key from environment variables (DO NOT hardcode in production)
-var jwtSecretKey = []byte(cfg.SecretKey)
+var jwtSecretKey = []byte(config.AppConfig.Auth.SecretKey)
 
 type Claims struct {
 	UserID   uint   `json:"user_id"` // 👈 No longer shadows RegisteredClaims.ID
@@ -24,7 +24,7 @@ type Claims struct {
 
 // GenerateAccessToken creates a signed JWT access token (short-lived).
 func GenerateAccessToken(user *authentity.User) (string, error) {
-	expirationTime := time.Now().Add(cfg.AccessTokenExpiry * time.Minute)
+	expirationTime := time.Now().Add(config.AppConfig.Auth.AccessTokenExpiry)
 
 	claims := &Claims{
 		UserID:   user.ID,
@@ -49,7 +49,7 @@ func GenerateAccessToken(user *authentity.User) (string, error) {
 
 // GenerateRefreshToken creates a signed JWT refresh token (long-lived).
 func GenerateRefreshToken(user *authentity.User) (string, error) {
-	expirationTime := time.Now().Add(7 * 24 * time.Hour)
+	expirationTime := time.Now().Add(config.AppConfig.Auth.RefreshTokenExpiry)
 
 	claims := &Claims{
 		UserID: user.ID,
@@ -96,7 +96,7 @@ func ValidateToken(tokenString string) (*Claims, error) {
 		return nil, errors.New("failed to extract claims")
 	}
 
-	if claims.ExpiresAt != nil && claims.ExpiresAt.Before(time.Now()) {
+	if claims.ExpiresAt != nil && claims.ExpiresAt.Before(time.Now().UTC()) {
 		return nil, errors.New("token expired")
 	}
 

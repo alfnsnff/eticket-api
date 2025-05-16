@@ -75,7 +75,8 @@ func main() {
 	}()
 
 	// Set up Gin router
-	gin.SetMode(gin.ReleaseMode)
+	// gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.DebugMode)
 	router := gin.Default()
 	origins := []string{"http://localhost:3000", "https://tiket-hebat.vercel.app"}
 
