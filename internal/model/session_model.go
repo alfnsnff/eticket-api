@@ -106,6 +106,8 @@ type ClaimedSessionPassengerDataInput struct {
 	PassengerName string  `json:"passenger_name"`
 	IDType        string  `json:"id_type"`
 	IDNumber      string  `json:"id_number"`
+	PassengerAge  int     `json:"passenger_age"`
+	Address       string  `json:"address"`
 	SeatNumber    *string `json:"seat_number"`
 }
 

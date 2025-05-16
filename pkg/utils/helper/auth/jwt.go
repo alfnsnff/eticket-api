@@ -16,9 +16,8 @@ var cfg = config.AppConfig.Auth
 // Load the JWT signing key from environment variables (DO NOT hardcode in production)
 var jwtSecretKey = []byte(cfg.SecretKey)
 
-// Claims defines custom JWT claims including standard claims.
 type Claims struct {
-	ID       uint   `json:"user_id"`
+	UserID   uint   `json:"user_id"` // 👈 No longer shadows RegisteredClaims.ID
 	Username string `json:"username"`
 	jwt.RegisteredClaims
 }
@@ -28,13 +27,14 @@ func GenerateAccessToken(user *authentity.User) (string, error) {
 	expirationTime := time.Now().Add(cfg.AccessTokenExpiry * time.Minute)
 
 	claims := &Claims{
-		ID:       user.ID,
+		UserID:   user.ID,
 		Username: user.Username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Issuer:    "eticket-api",              // Change to your app name
 			Subject:   fmt.Sprintf("%d", user.ID), // User ID as subject
+			ID:        uuid.New().String(),        // Unique ID for potential revocation tracking
 		},
 	}
 
@@ -52,7 +52,7 @@ func GenerateRefreshToken(user *authentity.User) (string, error) {
 	expirationTime := time.Now().Add(7 * 24 * time.Hour)
 
 	claims := &Claims{
-		ID: user.ID,
+		UserID: user.ID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

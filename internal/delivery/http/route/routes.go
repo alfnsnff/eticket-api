@@ -25,6 +25,7 @@ func Setup(router *gin.Engine, db *gorm.DB) {
 	protectedRouter.Use(middleware.Authenticate())
 	NewShipRouter(db, protectedRouter)
 
+	authrouter.NewAuthRouter(db, publicRouter)
 	authrouter.NewRoleRouter(db, publicRouter)
 	authrouter.NewUserRouter(db, publicRouter)
 	authrouter.NewUserRoleRouter(db, publicRouter)
