@@ -33,9 +33,9 @@ func (fr *FareRepository) GetByID(db *gorm.DB, id uint) (*entity.Fare, error) {
 	return fare, result.Error
 }
 
-func (fr *FareRepository) GetByManifestAndRoute(ctx *gorm.DB, manifestID uint, routeID uint) (*entity.Fare, error) {
+func (fr *FareRepository) GetByManifestAndRoute(db *gorm.DB, manifestID uint, routeID uint) (*entity.Fare, error) {
 	fare := new(entity.Fare)
-	result := ctx.Where("manifest_id = ? AND route_id = ?", manifestID, routeID).First(fare)
+	result := db.Where("manifest_id = ? AND route_id = ?", manifestID, routeID).First(fare)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}

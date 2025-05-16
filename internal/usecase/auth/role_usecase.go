@@ -16,7 +16,7 @@ type RoleUsecase struct {
 	RoleRepository *authrepository.RoleRepository
 }
 
-func NewAllocationUsecase(
+func NewRoleUsecase(
 	db *gorm.DB,
 	role_repository *authrepository.RoleRepository,
 ) *RoleUsecase {

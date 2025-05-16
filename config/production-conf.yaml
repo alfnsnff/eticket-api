@@ -1,5 +1,11 @@
 server:
   port: 8080
+
+auth:
+  secret_key: "salty_chocolate"
+  AccessTokenExpiry: 15 #minutes
+  RefreshTokenExpiry: 1 #days
+
 database:
   host: aws-0-ap-southeast-1.pooler.supabase.com
   port: 5432

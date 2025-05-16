@@ -12,11 +12,12 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-func NewPsqlDB(cfg *config.Config) (*gorm.DB, error) {
+func NewPsqlDB() (*gorm.DB, error) {
 	// Build the DSN (Data Source Name)
+	cfg := config.AppConfig.Database
 	dsn := fmt.Sprintf(
 		"user=%s password=%s dbname=%s host=%s port=%d sslmode=%s",
-		cfg.Database.User, cfg.Database.Password, cfg.Database.Name, cfg.Database.Host, cfg.Database.Port, cfg.Database.SSLMode,
+		cfg.User, cfg.Password, cfg.Name, cfg.Host, cfg.Port, cfg.SSLMode,
 	)
 
 	// Configure GORM with custom settings
