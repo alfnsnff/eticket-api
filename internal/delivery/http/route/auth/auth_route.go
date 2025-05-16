@@ -9,12 +9,12 @@ import (
 	"gorm.io/gorm"
 )
 
-func NewAuthRouter(db *gorm.DB, group *gin.RouterGroup) {
+func NewAuthRouter(db *gorm.DB, public *gin.RouterGroup, protect *gin.RouterGroup) {
 	ar := authrepository.NewAuthRepository()
 	ur := authrepository.NewUserRepository()
 	hc := &authcontroller.AuthController{
 		AuthUsecase: authusecase.NewAuthUsecase(db, ar, ur),
 	}
-	group.POST("/auth/login", hc.Login)
-	group.POST("/auth/logout", hc.Logout)
+	public.POST("/auth/login", hc.Login)
+	protect.POST("/auth/logout", hc.Logout)
 }

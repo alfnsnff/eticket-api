@@ -3,8 +3,8 @@ server:
 
 auth:
   secret_key: "salty_chocolate"
-  AccessTokenExpiry: 15 #minutes
-  RefreshTokenExpiry: 1 #days
+  access_token_expiry: "15m"
+  refresh_token_expiry: "24h"
 
 database:
   host: localhost
