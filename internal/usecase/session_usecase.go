@@ -468,7 +468,17 @@ func (cs *SessionUsecase) HelperValidateAndUpdateTickets(
 			failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "ID Number required"})
 			continue
 		}
+		if data.PassengerAge == 0 {
+			failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Passenger age required"})
+			continue
+		}
+		if data.Address == "" {
+			failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Passenger address required"})
+			continue
+		}
 		ticket.PassengerName = &data.PassengerName
+		ticket.PassengerAge = &data.PassengerAge
+		ticket.Address = &data.Address
 		ticket.IDType = &data.IDType
 		ticket.IDNumber = &data.IDNumber
 		ticket.SeatNumber = data.SeatNumber

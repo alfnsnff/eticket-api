@@ -41,6 +41,7 @@ func main() {
 		&authentity.Role{},
 		&authentity.User{},
 		&authentity.UserRole{},
+		&authentity.RefreshToken{},
 	); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
