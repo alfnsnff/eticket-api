@@ -11,7 +11,7 @@ type UserRoleRepository struct {
 	repository.Repository[entity.UserRole]
 }
 
-func NewClassRepository() *UserRoleRepository {
+func NewUserRoleRepository() *UserRoleRepository {
 	return &UserRoleRepository{}
 }
 

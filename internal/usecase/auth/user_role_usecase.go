@@ -20,12 +20,14 @@ type UserRoleUsecase struct {
 
 func NewUserRoleUsecase(
 	db *gorm.DB,
-	role_repository *authrepository.UserRepository,
+	role_repository *authrepository.RoleRepository,
+	user_repository *authrepository.UserRepository,
 	user_role_repository *authrepository.UserRoleRepository,
 ) *UserRoleUsecase {
 	return &UserRoleUsecase{
 		DB:                 db,
-		UserRepository:     role_repository,
+		RoleRepository:     role_repository,
+		UserRepository:     user_repository,
 		UserRoleRepository: user_role_repository,
 	}
 }

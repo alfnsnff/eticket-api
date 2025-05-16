@@ -23,3 +23,12 @@ func (rr *UserRepository) GetAll(db *gorm.DB) ([]*entity.User, error) {
 	}
 	return users, nil
 }
+
+func (rr *UserRepository) GetByUsername(db *gorm.DB, username string) (*entity.User, error) {
+	user := new(entity.User)
+	result := db.Where("username = ? ", username).First(&user)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return user, nil
+}

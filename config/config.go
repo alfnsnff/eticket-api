@@ -1,14 +1,22 @@
 package config
 
 import (
+	"eticket-api/pkg/utils/conf"
 	"fmt"
+	"log"
+	"os"
+	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
+
+var AppConfig Config
 
 type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
+	Auth     AuthConfig
 }
 
 type ServerConfig struct {
@@ -24,24 +32,28 @@ type DatabaseConfig struct {
 	SSLMode  string `mapstructure:"sslmode"`
 }
 
+type AuthConfig struct {
+	SecretKey          string        `mapstructure:"secret_key"`
+	AccessTokenExpiry  time.Duration `mapstructure:"access_token_expiry"`
+	RefreshTokenExpiry time.Duration `mapstructure:"refresh_token_expiry"`
+}
+
 // LoadConfig loads the configuration from a YAML file using Viper.
-func LoadConfig(filePath string) (*Config, error) {
-	// Initialize Viper
+func LoadConfig() error {
 	v := viper.New()
+	if err := godotenv.Load(); err != nil {
+		log.Printf("INFO: Could not load .env file: %v", err)
+	}
+	configPath := conf.GetConf(os.Getenv("ENV"))
+	v.SetConfigFile(configPath)
 
-	// Set Viper to read from the file
-	v.SetConfigFile(filePath)
-
-	// Read in the configuration file
 	if err := v.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+		return fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	// Unmarshal the configuration into the Config struct
-	var cfg Config
-	if err := v.Unmarshal(&cfg); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	if err := v.Unmarshal(&AppConfig); err != nil {
+		return fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
-	return &cfg, nil
+	return nil
 }

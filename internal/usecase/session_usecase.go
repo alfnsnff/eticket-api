@@ -382,11 +382,12 @@ func (cs *SessionUsecase) HelperBuildPriceBreakdown(tickets []*entity.Ticket) ([
 
 	for _, ticket := range tickets {
 		classID := ticket.ClassID
+		class := ticket.Class
 		price := ticket.Price
 
 		if _, exists := ticketSummary[classID]; !exists {
 			ticketSummary[classID] = &model.ClaimSessionTicketPricesResponse{
-				ClassID:  classID,
+				Class:    *mapper.TicketClassToSessionClassMapper.ToModel(&class),
 				Price:    price,
 				Quantity: 0,
 				Subtotal: 0,

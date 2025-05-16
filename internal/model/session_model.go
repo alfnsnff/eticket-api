@@ -63,10 +63,11 @@ type UpdateClaimSessionRequest struct {
 }
 
 type ClaimSessionTicketPricesResponse struct {
-	ClassID  uint    `json:"class_id"`
 	Price    float32 `json:"price"`
 	Quantity int     `json:"quantity"`
 	Subtotal float32 `json:"subtotal"`
+
+	Class ClaimSessionTicketClassItem `json:"class"`
 }
 
 type ClaimedSessionTicketDetailResponse struct {
