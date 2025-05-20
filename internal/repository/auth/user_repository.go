@@ -32,3 +32,12 @@ func (rr *UserRepository) GetByUsername(db *gorm.DB, username string) (*entity.U
 	}
 	return user, nil
 }
+
+func (rr *UserRepository) GetByID(db *gorm.DB, id uint) (*entity.User, error) {
+	user := new(entity.User)
+	result := db.First(&user, id)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return user, nil
+}

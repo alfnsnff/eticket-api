@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	authentity "eticket-api/internal/domain/entity/auth"
 	authmodel "eticket-api/internal/model/auth"
 	"eticket-api/internal/model/mapper"
 	authrepository "eticket-api/internal/repository/auth"
@@ -57,44 +58,82 @@ func (u *UserUsecase) CreateUser(ctx context.Context, request *authmodel.WriteUs
 	})
 }
 
-// Login authenticates a user and returns access and refresh tokens.
-func (uc *UserUsecase) Login(ctx context.Context, request *authmodel.UserLoginRequest) (string, string, error) {
-	if request.Username == "" || request.Password == "" {
-		return "", "", errors.New("username and password are required")
-	}
+func (ur *UserUsecase) GetAllUsers(ctx context.Context) ([]*authmodel.ReadUserResponse, error) {
+	users := []*authentity.User{}
 
-	var accessToken, refreshToken string
-
-	err := tx.Execute(ctx, uc.DB, func(txDB *gorm.DB) error {
-		user, repoErr := uc.UserRepository.GetByUsername(txDB, request.Username)
-		if repoErr != nil {
-			return fmt.Errorf("failed to retrieve user: %w", repoErr)
-		}
-		if user == nil {
-			return errors.New("invalid credentials")
-		}
-
-		if !auth.CheckPasswordHash(request.Password, user.Password) {
-			return errors.New("invalid credentials")
-		}
-
+	err := tx.Execute(ctx, ur.DB, func(tx *gorm.DB) error {
 		var err error
-		accessToken, err = auth.GenerateAccessToken(user)
-		if err != nil {
-			return fmt.Errorf("failed to generate access token: %w", err)
-		}
-
-		refreshToken, err = auth.GenerateRefreshToken(user)
-		if err != nil {
-			return fmt.Errorf("failed to generate refresh token: %w", err)
-		}
-
-		return nil // ✅ Only return error inside tx
+		users, err = ur.UserRepository.GetAll(tx)
+		return err
 	})
 
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 
-	return accessToken, refreshToken, nil
+	if users == nil {
+		return nil, errors.New("user role not found")
+	}
+
+	return mapper.UserMapper.ToModels(users), nil
+}
+
+func (ur *UserUsecase) GetUserByID(ctx context.Context, id uint) (*authmodel.ReadUserResponse, error) {
+	user := new(authentity.User)
+
+	err := tx.Execute(ctx, ur.DB, func(tx *gorm.DB) error {
+		var err error
+		user, err = ur.UserRepository.GetByID(tx, id)
+		return err
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if user == nil {
+		return nil, errors.New("user role not found")
+	}
+
+	return mapper.UserMapper.ToModel(user), nil
+}
+
+func (ur *UserUsecase) UpdateUser(ctx context.Context, id uint, request *authmodel.UpdateUserRequest) error {
+	user := mapper.UserMapper.FromUpdate(request)
+	user.ID = id
+
+	if user.ID == 0 {
+		return fmt.Errorf("role ID cannot be zero")
+	}
+
+	if user.Username == "" {
+		return fmt.Errorf("role name cannot be empty")
+	}
+
+	if user.Email == "" {
+		return fmt.Errorf("desription cannot be empty")
+	}
+
+	if user.Password == "" {
+		return fmt.Errorf("desription cannot be empty")
+	}
+
+	return tx.Execute(ctx, ur.DB, func(tx *gorm.DB) error {
+		return ur.UserRepository.Update(tx, user)
+	})
+}
+
+func (ur *UserUsecase) DeleteUser(ctx context.Context, id uint) error {
+
+	return tx.Execute(ctx, ur.DB, func(tx *gorm.DB) error {
+		role, err := ur.UserRepository.GetByID(tx, id)
+		if err != nil {
+			return err
+		}
+		if role == nil {
+			return errors.New("route not found")
+		}
+		return ur.UserRepository.Delete(tx, role)
+	})
+
 }
