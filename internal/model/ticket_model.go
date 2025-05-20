@@ -13,7 +13,7 @@ type ReadTicketResponse struct {
 	Status         string    `json:"status"`
 	BookingID      uint      `json:"booking_id"`
 	PassengerName  string    `json:"passenger_name"`
-	PassengerAge   string    `json:"passenger_age"`
+	PassengerAge   int       `json:"passenger_age"`
 	Address        string    `json:"address"`
 	SeatNumber     string    `json:"seat_number"`
 	Price          float32   `json:"price"`
