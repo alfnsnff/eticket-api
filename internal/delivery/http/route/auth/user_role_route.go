@@ -17,4 +17,8 @@ func NewUserRoleRouter(db *gorm.DB, group *gin.RouterGroup) {
 		UserRoleUsecase: authusecase.NewUserRoleUsecase(db, rr, ur, usr),
 	}
 	group.POST("/user/role/assign", hc.CreateUserRole)
+	group.GET("/user/roles", hc.GetAllUserRoles)
+	group.GET("/user/role/:id", hc.GetUserRoleByID)
+	group.PUT("/user/role/update/:id", hc.UpdateUserRole)
+	group.DELETE("/user/role/:id", hc.DeleteUserRole)
 }

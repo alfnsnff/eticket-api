@@ -23,3 +23,12 @@ func (rr *RoleRepository) GetAll(db *gorm.DB) ([]*entity.Role, error) {
 	}
 	return roles, nil
 }
+
+func (rr *RoleRepository) GetByID(db *gorm.DB, id uint) (*entity.Role, error) {
+	role := new(entity.Role)
+	result := db.First(&role, id)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return role, nil
+}

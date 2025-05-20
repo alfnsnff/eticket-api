@@ -98,7 +98,7 @@ var (
 	BookingMapper                   = NewMapper[entity.Booking, model.ReadBookingResponse, model.WriteBookingRequest, model.UpdateBookingRequest]()
 	HarborMapper                    = NewMapper[entity.Harbor, model.ReadHarborResponse, model.WriteHarborRequest, model.UpdateHarborRequest]()
 	AllocationMapper                = NewMapper[entity.Allocation, model.ReadAllocationResponse, model.WriteAllocationRequest, model.UpdateAllocationRequest]()
-	UserMapper                      = NewMapper[authentity.User, authmodel.ReadUserResponse, authmodel.WriteUserRequest, authmodel.UpdateuserRequest]()
+	UserMapper                      = NewMapper[authentity.User, authmodel.ReadUserResponse, authmodel.WriteUserRequest, authmodel.UpdateUserRequest]()
 	RoleMapper                      = NewMapper[authentity.Role, authmodel.ReadRoleResponse, authmodel.WriteRoleRequest, authmodel.UpdateRoleRequest]()
 	UserRoleMapper                  = NewMapper[authentity.UserRole, authmodel.ReadUserRoleResponse, authmodel.WriteUserRoleRequest, authmodel.UpdateUserRoleRequest]()
 )

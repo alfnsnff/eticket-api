@@ -16,7 +16,7 @@ func NewAuthRepository() *AuthRepository {
 	return &AuthRepository{}
 }
 
-func (ar *AuthRepository) GetAll(db *gorm.DB) ([]*entity.RefreshToken, error) {
+func (ar *AuthRepository) GetAllRefreshToken(db *gorm.DB) ([]*entity.RefreshToken, error) {
 	tokens := []*entity.RefreshToken{}
 	result := db.Find(&tokens)
 	if result.Error != nil {
@@ -25,7 +25,7 @@ func (ar *AuthRepository) GetAll(db *gorm.DB) ([]*entity.RefreshToken, error) {
 	return tokens, nil
 }
 
-func (ar *AuthRepository) RevokeByID(db *gorm.DB, id uuid.UUID) error {
+func (ar *AuthRepository) RevokeRefreshTokenByID(db *gorm.DB, id uuid.UUID) error {
 	return db.Model(&entity.RefreshToken{}).
 		Where("id = ?", id).
 		Update("revoked", true).Error

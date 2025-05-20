@@ -96,5 +96,5 @@ func (uc *AuthUsecase) Login(ctx context.Context, request *authmodel.UserLoginRe
 }
 
 func (uc *AuthUsecase) RevokeRefreshToken(ctx context.Context, tokenID uuid.UUID) error {
-	return uc.AuthRepository.RevokeByID(uc.DB, tokenID)
+	return uc.AuthRepository.RevokeRefreshTokenByID(uc.DB, tokenID)
 }

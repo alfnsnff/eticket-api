@@ -20,7 +20,7 @@ type WriteUserRequest struct {
 }
 
 // AllocationDTO represents a Allocation.
-type UpdateuserRequest struct {
+type UpdateUserRequest struct {
 	ID       uint   `json:"id"`
 	Username string `json:"username"` // e.g., "admin", "editor"
 	Email    string `json:"email"`

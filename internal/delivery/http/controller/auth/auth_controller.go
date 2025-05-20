@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"eticket-api/config"
 	authmodel "eticket-api/internal/model/auth"
 	authusecase "eticket-api/internal/usecase/auth"
 	"eticket-api/pkg/utils/helper/auth"
@@ -35,8 +36,8 @@ func (uc *AuthController) Login(ctx *gin.Context) {
 	}
 
 	// OPTIONAL: Set as HTTP-only secure cookies
-	ctx.SetCookie("access_token", accessToken, 1*60, "/", "", true, true)
-	ctx.SetCookie("refresh_token", refreshToken, 1*24*60*60, "/", "", true, true)
+	ctx.SetCookie("access_token", accessToken, int(config.AppConfig.Auth.AccessTokenExpiry), "/", "", true, true)
+	ctx.SetCookie("refresh_token", refreshToken, int(config.AppConfig.Auth.RefreshTokenExpiry), "/", "", true, true)
 
 	// OR: Return tokens in JSON (useful for SPA apps)
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Login successful", nil))

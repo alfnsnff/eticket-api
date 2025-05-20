@@ -15,4 +15,8 @@ func NewUserRouter(db *gorm.DB, group *gin.RouterGroup) {
 		UserUsecase: authusecase.NewUserUsecase(db, ur),
 	}
 	group.POST("/user/create", hc.CreateUser)
+	group.GET("/users", hc.GetAllUsers)
+	group.GET("/user/:id", hc.GetUserByID)
+	group.PUT("/user/update/:id", hc.UpdateUser)
+	group.DELETE("/user/:id", hc.DeleteUser)
 }
