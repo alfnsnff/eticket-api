@@ -35,14 +35,15 @@ jobs:
           resourceGroup: ${{ secrets.RESOURCE_GROUP }}
           location: southeastasia  
           imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/myapp:${{ github.sha }}
-          environmentVariables: |
-            SECRET_KEY=${{ secrets.SECRET_KEY }}
-            DATABASE_HOST=${{ secrets.DATABASE_HOST }}
-            DATABASE_PORT=${{ secrets.DATABASE_PORT }}
-            DATABASE_NAME=${{ secrets.DATABASE_NAME }}
-            DATABASE_USER=${{ secrets.DATABASE_USER }}
-            DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}
+          environmentVariables: >
+            SECRET_KEY=${{ secrets.SECRET_KEY }},
+            DATABASE_HOST=${{ secrets.DATABASE_HOST }},
+            DATABASE_PORT=${{ secrets.DATABASE_PORT }},
+            DATABASE_NAME=${{ secrets.DATABASE_NAME }},
+            DATABASE_USER=${{ secrets.DATABASE_USER }},
+            DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }},
             DATABASE_SSLMODE=${{ secrets.DATABASE_SSLMODE }}
+
 
           # Use the secure secrets here
           registryUrl: ${{ secrets.ACR_NAME }}.azurecr.io
