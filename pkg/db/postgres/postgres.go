@@ -12,17 +12,16 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-func NewPsqlDB() (*gorm.DB, error) {
+func New(cfg *config.Config) (*gorm.DB, error) {
 	// Build the DSN (Data Source Name)
-	cfg := config.AppConfig.Database
 	dsn := fmt.Sprintf(
 		"user=%s password=%s dbname=%s host=%s port=%d sslmode=%s",
-		cfg.User, cfg.Password, cfg.Name, cfg.Host, cfg.Port, cfg.SSLMode,
+		cfg.DB.User, cfg.DB.Password, cfg.DB.Name, cfg.DB.Host, cfg.DB.Port, cfg.DB.SSLMode,
 	)
 
 	// Configure GORM with custom settings
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+	pg, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
 		NamingStrategy: schema.NamingStrategy{
 			SingularTable: true, // Use singular table names
 		},
@@ -32,7 +31,7 @@ func NewPsqlDB() (*gorm.DB, error) {
 	}
 
 	// Set connection pool settings
-	sqlDB, err := db.DB()
+	sqlDB, err := pg.DB()
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure database pool: %w", err)
 	}
@@ -42,5 +41,5 @@ func NewPsqlDB() (*gorm.DB, error) {
 	sqlDB.SetConnMaxLifetime(5 * time.Minute)
 
 	log.Println("Database connected successfully")
-	return db, nil
+	return pg, nil
 }

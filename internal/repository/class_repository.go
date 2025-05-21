@@ -15,9 +15,19 @@ func NewClassRepository() *ClassRepository {
 	return &ClassRepository{}
 }
 
-func (cr *ClassRepository) GetAll(db *gorm.DB) ([]*entity.Class, error) {
+func (cr *ClassRepository) Count(db *gorm.DB) (int64, error) {
 	classes := []*entity.Class{}
-	result := db.Find(&classes)
+	var total int64
+	result := db.Find(&classes).Count(&total)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	return total, nil
+}
+
+func (cr *ClassRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Class, error) {
+	classes := []*entity.Class{}
+	result := db.Limit(limit).Offset(offset).Find(&classes)
 	if result.Error != nil {
 		return nil, result.Error
 	}

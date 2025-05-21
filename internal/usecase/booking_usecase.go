@@ -7,7 +7,7 @@ import (
 	"eticket-api/internal/model"
 	"eticket-api/internal/model/mapper"
 	"eticket-api/internal/repository"
-	tx "eticket-api/pkg/utils/helper"
+	"eticket-api/pkg/utils/tx"
 	"fmt"
 	"time"
 
@@ -15,20 +15,21 @@ import (
 )
 
 type BookingUsecase struct {
-	DB                *gorm.DB
+	Tx                tx.TxManager
 	BookingRepository *repository.BookingRepository
 	TicketRepository  *repository.TicketRepository
 	SessionRepository *repository.SessionRepository
 }
 
-func NewBookingUsecase(db *gorm.DB,
+func NewBookingUsecase(
+	tx tx.TxManager,
 	booking_repository *repository.BookingRepository,
 	ticket_repository *repository.TicketRepository,
 	session_repository *repository.SessionRepository,
 
 ) *BookingUsecase {
 	return &BookingUsecase{
-		DB:                db,
+		Tx:                tx,
 		BookingRepository: booking_repository,
 		TicketRepository:  ticket_repository,
 		SessionRepository: session_repository,
@@ -42,31 +43,35 @@ func (b *BookingUsecase) CreateBooking(ctx context.Context, request *model.Write
 		return fmt.Errorf("booking name cannot be empty")
 	}
 
-	return tx.Execute(ctx, b.DB, func(tx *gorm.DB) error {
+	return b.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		return b.BookingRepository.Create(tx, booking)
 	})
 }
 
-func (b *BookingUsecase) GetAllBookings(ctx context.Context) ([]*model.ReadBookingResponse, error) {
+func (b *BookingUsecase) GetAllBookings(ctx context.Context, limit, offset int) ([]*model.ReadBookingResponse, int, error) {
 	bookings := []*entity.Booking{}
-
-	err := tx.Execute(ctx, b.DB, func(tx *gorm.DB) error {
+	var total int64
+	err := b.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
-		bookings, err = b.BookingRepository.GetAll(tx)
+		total, err = b.BookingRepository.Count(tx)
+		if err != nil {
+			return err
+		}
+		bookings, err = b.BookingRepository.GetAll(tx, limit, offset)
 		return err
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get all books: %w", err)
+		return nil, 0, fmt.Errorf("failed to get all books: %w", err)
 	}
 
-	return mapper.BookingMapper.ToModels(bookings), nil
+	return mapper.BookingMapper.ToModels(bookings), int(total), nil
 }
 
 func (b *BookingUsecase) GetBookingByID(ctx context.Context, id uint) (*model.ReadBookingResponse, error) {
 	booking := new(entity.Booking)
 
-	err := tx.Execute(ctx, b.DB, func(tx *gorm.DB) error {
+	err := b.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
 		booking, err = b.BookingRepository.GetByID(tx, id)
 		return err
@@ -94,7 +99,7 @@ func (b *BookingUsecase) UpdateBooking(ctx context.Context, id uint, request *mo
 		return fmt.Errorf("booking name cannot be empty")
 	}
 
-	return tx.Execute(ctx, b.DB, func(tx *gorm.DB) error {
+	return b.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		return b.BookingRepository.Update(tx, booking)
 	})
 }
@@ -102,7 +107,7 @@ func (b *BookingUsecase) UpdateBooking(ctx context.Context, id uint, request *mo
 // Deletebooking deletes a booking by its ID
 func (b *BookingUsecase) DeleteBooking(ctx context.Context, id uint) error {
 
-	return tx.Execute(ctx, b.DB, func(tx *gorm.DB) error {
+	return b.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		booking, err := b.BookingRepository.GetByID(tx, id)
 		if err != nil {
 			return err
@@ -123,7 +128,7 @@ func (b *BookingUsecase) ConfirmBooking(ctx context.Context, request *model.Conf
 	var confirmedBooking *entity.Booking
 	var confirmedTicketIDs []uint
 
-	err := tx.Execute(ctx, b.DB, func(tx *gorm.DB) error {
+	err := b.Tx.Execute(ctx, func(tx *gorm.DB) error {
 
 		session, err := b.SessionRepository.GetByUUIDWithLock(tx, request.SessionID, true)
 		if err != nil {

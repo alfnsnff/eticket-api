@@ -2,19 +2,29 @@ package route
 
 import (
 	authcontroller "eticket-api/internal/delivery/http/controller/auth"
-	authrepository "eticket-api/internal/repository/auth"
-	authusecase "eticket-api/internal/usecase/auth"
+	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/injector"
+	usecase "eticket-api/internal/usecase/auth"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func NewAuthRouter(db *gorm.DB, public *gin.RouterGroup, protect *gin.RouterGroup) {
-	ar := authrepository.NewAuthRepository()
-	ur := authrepository.NewUserRepository()
-	hc := &authcontroller.AuthController{
-		AuthUsecase: authusecase.NewAuthUsecase(db, ar, ur),
+func NewAuthRouter(ic *injector.Container, rg *gin.RouterGroup) {
+	ar := ic.AuthRepository
+	ur := ic.UserRepository
+	tm := ic.TokenManager
+	auc := &authcontroller.AuthController{
+		Cfg:          ic.Cfg,
+		TokenManager: ic.TokenManager,
+		AuthUsecase:  usecase.NewAuthUsecase(ic.AuthUsecase.Tx, ar, ur, tm),
 	}
-	public.POST("/auth/login", hc.Login)
-	protect.POST("/auth/logout", hc.Logout)
+
+	public := rg.Group("") // No middleware
+	public.POST("/auth/login", auc.Login)
+
+	protected := rg.Group("")
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	protected.Use(middleware.Authenticate())
+
+	protected.POST("/auth/logout", auc.Logout)
 }

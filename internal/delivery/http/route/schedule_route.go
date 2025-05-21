@@ -2,31 +2,38 @@ package route
 
 import (
 	"eticket-api/internal/delivery/http/controller"
-	"eticket-api/internal/repository"
+	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/injector"
 	"eticket-api/internal/usecase"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func NewScheduleRouter(db *gorm.DB, group *gin.RouterGroup) {
-	ar := repository.NewAllocationRepository()
-	cr := repository.NewClassRepository()
-	fr := repository.NewFareRepository()
-	mr := repository.NewManifestRepository()
-	rr := repository.NewRouteRepository()
-	shr := repository.NewShipRepository()
-	scr := repository.NewScheduleRepository()
-	tr := repository.NewTicketRepository()
-	hc := &controller.ScheduleController{
-		ScheduleUsecase: usecase.NewScheduleUsecase(db, ar, cr, fr, mr, rr, shr, scr, tr),
+func NewScheduleRouter(ic *injector.Container, rg *gin.RouterGroup) {
+	ar := ic.AllocationRepository
+	cr := ic.ClassRepository
+	fr := ic.FareRepository
+	mr := ic.ManifestRepository
+	rr := ic.RouteRepository
+	shr := ic.ShipRepository
+	scr := ic.ScheduleRepository
+	tr := ic.TicketRepository
+	scc := &controller.ScheduleController{
+		ScheduleUsecase: usecase.NewScheduleUsecase(ic.ScheduleUsecase.Tx, ar, cr, fr, mr, rr, shr, scr, tr),
 	}
-	group.POST("/schedule/create", hc.CreateSchedule)
-	group.POST("/schedule/allocation/create", hc.CreateScheduleWithAllocation)
-	group.GET("/schedules", hc.GetAllSchedules)
-	group.GET("/schedules/active", hc.GetAllScheduled)
-	group.GET("/schedule/:id", hc.GetScheduleByID)
-	group.GET("/schedule/:id/quota", hc.GetQuotaByScheduleID)
-	group.PUT("/schedule/update/:id", hc.UpdateSchedule)
-	group.DELETE("/schedule/:id", hc.DeleteSchedule)
+
+	public := rg.Group("") // No middleware
+	public.GET("/schedules", scc.GetAllSchedules)
+	public.GET("/schedules/active", scc.GetAllScheduled)
+	public.GET("/schedule/:id", scc.GetScheduleByID)
+	public.GET("/schedule/:id/quota", scc.GetQuotaByScheduleID)
+
+	protected := rg.Group("")
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	protected.Use(middleware.Authenticate())
+
+	protected.POST("/schedule/create", scc.CreateSchedule)
+	protected.POST("/schedule/allocation/create", scc.CreateScheduleWithAllocation)
+	protected.PUT("/schedule/update/:id", scc.UpdateSchedule)
+	protected.DELETE("/schedule/:id", scc.DeleteSchedule)
 }

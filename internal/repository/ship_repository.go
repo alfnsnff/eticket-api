@@ -25,7 +25,7 @@ func (shr *ShipRepository) Count(db *gorm.DB) (int64, error) {
 	return total, nil
 }
 
-func (shr *ShipRepository) GetAll(db *gorm.DB, limit int, offset int) ([]*entity.Ship, error) {
+func (shr *ShipRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Ship, error) {
 	ships := []*entity.Ship{}
 	result := db.Limit(limit).Offset(offset).Find(&ships)
 	if result.Error != nil {

@@ -15,9 +15,19 @@ func NewFareRepository() *FareRepository {
 	return &FareRepository{}
 }
 
-func (fr *FareRepository) GetAll(db *gorm.DB) ([]*entity.Fare, error) {
+func (fr *FareRepository) Count(db *gorm.DB) (int64, error) {
 	fares := []*entity.Fare{}
-	result := db.Find(&fares)
+	var total int64
+	result := db.Find(&fares).Count(&total)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	return total, nil
+}
+
+func (fr *FareRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Fare, error) {
+	fares := []*entity.Fare{}
+	result := db.Limit(limit).Offset(offset).Find(&fares)
 	if result.Error != nil {
 		return nil, result.Error
 	}

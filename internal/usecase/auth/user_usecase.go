@@ -7,24 +7,24 @@ import (
 	authmodel "eticket-api/internal/model/auth"
 	"eticket-api/internal/model/mapper"
 	authrepository "eticket-api/internal/repository/auth"
-	tx "eticket-api/pkg/utils/helper"
-	"eticket-api/pkg/utils/helper/auth"
+	"eticket-api/pkg/utils"
+	"eticket-api/pkg/utils/tx"
 	"fmt"
 
 	"gorm.io/gorm"
 )
 
 type UserUsecase struct {
-	DB             *gorm.DB
+	Tx             tx.TxManager
 	UserRepository *authrepository.UserRepository
 }
 
 func NewUserUsecase(
-	db *gorm.DB,
+	tx tx.TxManager,
 	user_repository *authrepository.UserRepository,
 ) *UserUsecase {
 	return &UserUsecase{
-		DB:             db,
+		Tx:             tx,
 		UserRepository: user_repository,
 	}
 }
@@ -48,8 +48,8 @@ func (u *UserUsecase) CreateUser(ctx context.Context, request *authmodel.WriteUs
 		return fmt.Errorf("full name cannot be empty")
 	}
 
-	return tx.Execute(ctx, u.DB, func(tx *gorm.DB) error {
-		hashedPassword, err := auth.HashPassword(request.Password) // Use the helper from utils
+	return u.Tx.Execute(ctx, func(tx *gorm.DB) error {
+		hashedPassword, err := utils.HashPassword(request.Password) // Use the helper from utils
 		if err != nil {
 			return fmt.Errorf("failed to hash password: %w", err)
 		}
@@ -58,32 +58,32 @@ func (u *UserUsecase) CreateUser(ctx context.Context, request *authmodel.WriteUs
 	})
 }
 
-func (ur *UserUsecase) GetAllUsers(ctx context.Context) ([]*authmodel.ReadUserResponse, error) {
+func (u *UserUsecase) GetAllUsers(ctx context.Context, limit, offset int) ([]*authmodel.ReadUserResponse, int, error) {
 	users := []*authentity.User{}
-
-	err := tx.Execute(ctx, ur.DB, func(tx *gorm.DB) error {
+	var total int64
+	err := u.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
-		users, err = ur.UserRepository.GetAll(tx)
+		total, err = u.UserRepository.Count(tx)
+		if err != nil {
+			return err
+		}
+		users, err = u.UserRepository.GetAll(tx)
 		return err
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, 0, fmt.Errorf("failed to get users: %w", err)
 	}
 
-	if users == nil {
-		return nil, errors.New("user role not found")
-	}
-
-	return mapper.UserMapper.ToModels(users), nil
+	return mapper.UserMapper.ToModels(users), int(total), nil
 }
 
-func (ur *UserUsecase) GetUserByID(ctx context.Context, id uint) (*authmodel.ReadUserResponse, error) {
+func (u *UserUsecase) GetUserByID(ctx context.Context, id uint) (*authmodel.ReadUserResponse, error) {
 	user := new(authentity.User)
 
-	err := tx.Execute(ctx, ur.DB, func(tx *gorm.DB) error {
+	err := u.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
-		user, err = ur.UserRepository.GetByID(tx, id)
+		user, err = u.UserRepository.GetByID(tx, id)
 		return err
 	})
 
@@ -98,7 +98,7 @@ func (ur *UserUsecase) GetUserByID(ctx context.Context, id uint) (*authmodel.Rea
 	return mapper.UserMapper.ToModel(user), nil
 }
 
-func (ur *UserUsecase) UpdateUser(ctx context.Context, id uint, request *authmodel.UpdateUserRequest) error {
+func (u *UserUsecase) UpdateUser(ctx context.Context, id uint, request *authmodel.UpdateUserRequest) error {
 	user := mapper.UserMapper.FromUpdate(request)
 	user.ID = id
 
@@ -118,22 +118,22 @@ func (ur *UserUsecase) UpdateUser(ctx context.Context, id uint, request *authmod
 		return fmt.Errorf("desription cannot be empty")
 	}
 
-	return tx.Execute(ctx, ur.DB, func(tx *gorm.DB) error {
-		return ur.UserRepository.Update(tx, user)
+	return u.Tx.Execute(ctx, func(tx *gorm.DB) error {
+		return u.UserRepository.Update(tx, user)
 	})
 }
 
-func (ur *UserUsecase) DeleteUser(ctx context.Context, id uint) error {
+func (u *UserUsecase) DeleteUser(ctx context.Context, id uint) error {
 
-	return tx.Execute(ctx, ur.DB, func(tx *gorm.DB) error {
-		role, err := ur.UserRepository.GetByID(tx, id)
+	return u.Tx.Execute(ctx, func(tx *gorm.DB) error {
+		role, err := u.UserRepository.GetByID(tx, id)
 		if err != nil {
 			return err
 		}
 		if role == nil {
 			return errors.New("route not found")
 		}
-		return ur.UserRepository.Delete(tx, role)
+		return u.UserRepository.Delete(tx, role)
 	})
 
 }

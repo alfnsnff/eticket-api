@@ -15,9 +15,19 @@ func NewRouteRepository() *RouteRepository {
 	return &RouteRepository{}
 }
 
-func (rr *RouteRepository) GetAll(db *gorm.DB) ([]*entity.Route, error) {
+func (rr *RouteRepository) Count(db *gorm.DB) (int64, error) {
 	routes := []*entity.Route{}
-	result := db.Find(&routes)
+	var total int64
+	result := db.Find(&routes).Count(&total)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	return total, nil
+}
+
+func (rr *RouteRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Route, error) {
+	routes := []*entity.Route{}
+	result := db.Limit(limit).Offset(offset).Find(&routes)
 	if result.Error != nil {
 		return nil, result.Error
 	}

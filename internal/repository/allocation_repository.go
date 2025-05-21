@@ -16,9 +16,19 @@ func NewAllocationRepository() *AllocationRepository {
 	return &AllocationRepository{}
 }
 
-func (ar *AllocationRepository) GetAll(db *gorm.DB) ([]*entity.Allocation, error) {
+func (ar *AllocationRepository) Count(db *gorm.DB) (int64, error) {
 	allocations := []*entity.Allocation{}
-	result := db.Find(&allocations)
+	var total int64
+	result := db.Find(&allocations).Count(&total)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	return total, nil
+}
+
+func (ar *AllocationRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Allocation, error) {
+	allocations := []*entity.Allocation{}
+	result := db.Limit(limit).Offset(offset).Find(&allocations)
 	if result.Error != nil {
 		return nil, result.Error
 	}

@@ -3,6 +3,7 @@ package controller
 import (
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase"
+	"eticket-api/pkg/utils/helper/meta"
 	"eticket-api/pkg/utils/helper/response"
 	"net/http"
 	"strconv"
@@ -35,14 +36,15 @@ func (cc *ClassController) CreateClass(ctx *gin.Context) {
 }
 
 func (cc *ClassController) GetAllClasses(ctx *gin.Context) {
-	datas, err := cc.ClassUsecase.GetAllClasses(ctx)
+	params := meta.GetParams(ctx)
+	datas, total, err := cc.ClassUsecase.GetAllClasses(ctx, params.Limit, params.Offset)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve classes", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Classes retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Classes retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (cc *ClassController) GetClassByID(ctx *gin.Context) {

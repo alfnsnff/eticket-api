@@ -3,6 +3,7 @@ package controller
 import (
 	authmodel "eticket-api/internal/model/auth"
 	authusecase "eticket-api/internal/usecase/auth"
+	"eticket-api/pkg/utils/helper/meta"
 	"eticket-api/pkg/utils/helper/response"
 	"net/http"
 	"strconv"
@@ -36,38 +37,38 @@ func (rc *RoleController) CreateRole(ctx *gin.Context) {
 }
 
 func (rc *RoleController) GetAllRoles(ctx *gin.Context) {
-
-	datas, err := rc.RoleUsecase.GetAllRoles(ctx)
+	params := meta.GetParams(ctx)
+	datas, total, err := rc.RoleUsecase.GetAllRoles(ctx, params.Limit, params.Offset)
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ships", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve roles", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Roles retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Roles retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (rc *RoleController) GetRoleByID(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid role ID", err.Error()))
 		return
 	}
 
 	data, err := rc.RoleUsecase.GetRoleByID(ctx, uint(id))
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve role", err.Error()))
 		return
 	}
 
 	if data == nil {
-		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Ship not found", nil))
+		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Role not found", nil))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Ship retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Role retrieved successfully", nil))
 }
 
 func (rc *RoleController) UpdateRole(ctx *gin.Context) {
@@ -80,30 +81,30 @@ func (rc *RoleController) UpdateRole(ctx *gin.Context) {
 	}
 
 	if id == 0 {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Ship ID is required", nil))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Role ID is required", nil))
 		return
 	}
 
 	if err := rc.RoleUsecase.UpdateRole(ctx, uint(id), request); err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update role", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ship updated successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Role updated successfully", nil))
 }
 
 func (rc *RoleController) DeleteRole(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid role ID", err.Error()))
 		return
 	}
 
 	if err := rc.RoleUsecase.DeleteRole(ctx, uint(id)); err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete role", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ship deleted successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Role deleted successfully", nil))
 }

@@ -2,21 +2,28 @@ package route
 
 import (
 	"eticket-api/internal/delivery/http/controller"
-	"eticket-api/internal/repository"
+	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/injector"
 	"eticket-api/internal/usecase"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func NewFareRouter(db *gorm.DB, group *gin.RouterGroup) {
-	rr := repository.NewFareRepository()
-	rc := &controller.FareController{
-		FareUsecase: usecase.NewFareUsecase(db, rr),
+func NewFareRouter(ic *injector.Container, rg *gin.RouterGroup) {
+	rr := ic.FareRepository
+	fc := &controller.FareController{
+		FareUsecase: usecase.NewFareUsecase(ic.FareUsecase.Tx, rr),
 	}
-	group.POST("/fare/create", rc.CreateFare)
-	group.GET("/fares", rc.GetAllFares)
-	group.GET("/fare/:id", rc.GetFareByID)
-	group.PUT("/fare/update/:id", rc.UpdateFare)
-	group.DELETE("/fare/:id", rc.DeleteFare)
+
+	public := rg.Group("") // No middleware
+	public.GET("/fares", fc.GetAllFares)
+	public.GET("/fare/:id", fc.GetFareByID)
+
+	protected := rg.Group("")
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	protected.Use(middleware.Authenticate())
+
+	protected.POST("/fare/create", fc.CreateFare)
+	protected.PUT("/fare/update/:id", fc.UpdateFare)
+	protected.DELETE("/fare/:id", fc.DeleteFare)
 }

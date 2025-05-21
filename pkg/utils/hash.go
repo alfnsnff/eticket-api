@@ -1,4 +1,4 @@
-package auth // Place this in a shared utility package
+package utils // Place this in a shared utility package
 
 import (
 	"fmt"

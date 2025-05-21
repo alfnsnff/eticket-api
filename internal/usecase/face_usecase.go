@@ -7,20 +7,23 @@ import (
 	"eticket-api/internal/model"
 	"eticket-api/internal/model/mapper"
 	"eticket-api/internal/repository"
-	tx "eticket-api/pkg/utils/helper"
+	"eticket-api/pkg/utils/tx"
 	"fmt"
 
 	"gorm.io/gorm"
 )
 
 type FareUsecase struct {
-	DB             *gorm.DB
+	Tx             tx.TxManager
 	FareRepository *repository.FareRepository
 }
 
-func NewFareUsecase(db *gorm.DB, fare_repository *repository.FareRepository) *FareUsecase {
+func NewFareUsecase(
+	tx tx.TxManager,
+	fare_repository *repository.FareRepository,
+) *FareUsecase {
 	return &FareUsecase{
-		DB:             db,
+		Tx:             tx,
 		FareRepository: fare_repository,
 	}
 }
@@ -38,31 +41,35 @@ func (f *FareUsecase) CreateFare(ctx context.Context, request *model.WriteFareRe
 		return fmt.Errorf("fare cannot be zero")
 	}
 
-	return tx.Execute(ctx, f.DB, func(tx *gorm.DB) error {
+	return f.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		return f.FareRepository.Create(tx, fare)
 	})
 }
 
-func (f *FareUsecase) GetAllFares(ctx context.Context) ([]*model.ReadFareResponse, error) {
+func (f *FareUsecase) GetAllFares(ctx context.Context, limit, offset int) ([]*model.ReadFareResponse, int, error) {
 	fares := []*entity.Fare{}
-
-	err := tx.Execute(ctx, f.DB, func(tx *gorm.DB) error {
+	var total int64
+	err := f.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
-		fares, err = f.FareRepository.GetAll(tx)
+		total, err = f.FareRepository.Count(tx)
+		if err != nil {
+			return err
+		}
+		fares, err = f.FareRepository.GetAll(tx, limit, offset)
 		return err
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get all Fares: %w", err)
+		return nil, 0, fmt.Errorf("failed to get all Fares: %w", err)
 	}
 
-	return mapper.FareMapper.ToModels(fares), nil
+	return mapper.FareMapper.ToModels(fares), int(total), nil
 }
 
 func (f *FareUsecase) GetFareByID(ctx context.Context, id uint) (*model.ReadFareResponse, error) {
 	fare := new(entity.Fare)
 
-	err := tx.Execute(ctx, f.DB, func(tx *gorm.DB) error {
+	err := f.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
 		fare, err = f.FareRepository.GetByID(tx, id)
 		return err
@@ -96,14 +103,14 @@ func (f *FareUsecase) UpdateFare(ctx context.Context, id uint, request *model.Up
 		return fmt.Errorf("fare cannot be zero")
 	}
 
-	return tx.Execute(ctx, f.DB, func(tx *gorm.DB) error {
+	return f.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		return f.FareRepository.Update(tx, fare)
 	})
 }
 
 func (f *FareUsecase) DeleteFare(ctx context.Context, id uint) error {
 
-	return tx.Execute(ctx, f.DB, func(tx *gorm.DB) error {
+	return f.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		fare, err := f.FareRepository.GetByID(tx, id)
 		if err != nil {
 			return err

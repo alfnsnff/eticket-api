@@ -7,20 +7,23 @@ import (
 	"eticket-api/internal/model"
 	"eticket-api/internal/model/mapper"
 	"eticket-api/internal/repository"
-	tx "eticket-api/pkg/utils/helper"
+	"eticket-api/pkg/utils/tx"
 	"fmt"
 
 	"gorm.io/gorm"
 )
 
 type RouteUsecase struct {
-	DB              *gorm.DB
+	Tx              tx.TxManager
 	RouteRepository *repository.RouteRepository
 }
 
-func NewRouteUsecase(db *gorm.DB, route_repository *repository.RouteRepository) *RouteUsecase {
+func NewRouteUsecase(
+	tx tx.TxManager,
+	route_repository *repository.RouteRepository,
+) *RouteUsecase {
 	return &RouteUsecase{
-		DB:              db,
+		Tx:              tx,
 		RouteRepository: route_repository,
 	}
 }
@@ -32,31 +35,35 @@ func (r *RouteUsecase) CreateRoute(ctx context.Context, request *model.WriteRout
 		return fmt.Errorf("harbor ID cannot be empty")
 	}
 
-	return tx.Execute(ctx, r.DB, func(tx *gorm.DB) error {
+	return r.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		return r.RouteRepository.Create(tx, route)
 	})
 }
 
-func (r *RouteUsecase) GetAllRoutes(ctx context.Context) ([]*model.ReadRouteResponse, error) {
+func (r *RouteUsecase) GetAllRoutes(ctx context.Context, limit, offset int) ([]*model.ReadRouteResponse, int, error) {
 	routes := []*entity.Route{}
-
-	err := tx.Execute(ctx, r.DB, func(tx *gorm.DB) error {
+	var total int64
+	err := r.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
-		routes, err = r.RouteRepository.GetAll(tx)
+		total, err = r.RouteRepository.Count(tx)
+		if err != nil {
+			return err
+		}
+		routes, err = r.RouteRepository.GetAll(tx, limit, offset)
 		return err
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get all routes: %w", err)
+		return nil, 0, fmt.Errorf("failed to get all routes: %w", err)
 	}
 
-	return mapper.RouteMapper.ToModels(routes), nil
+	return mapper.RouteMapper.ToModels(routes), int(total), nil
 }
 
 func (r *RouteUsecase) GetRouteByID(ctx context.Context, id uint) (*model.ReadRouteResponse, error) {
 	route := new(entity.Route)
 
-	err := tx.Execute(ctx, r.DB, func(tx *gorm.DB) error {
+	err := r.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
 		route, err = r.RouteRepository.GetByID(tx, id)
 		return err
@@ -85,14 +92,14 @@ func (r *RouteUsecase) UpdateRoute(ctx context.Context, id uint, request *model.
 		return fmt.Errorf("harbor ID cannot be empty")
 	}
 
-	return tx.Execute(ctx, r.DB, func(tx *gorm.DB) error {
+	return r.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		return r.RouteRepository.Update(tx, route)
 	})
 }
 
 func (r *RouteUsecase) DeleteRoute(ctx context.Context, id uint) error {
 
-	return tx.Execute(ctx, r.DB, func(tx *gorm.DB) error {
+	return r.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		route, err := r.RouteRepository.GetByID(tx, id)
 		if err != nil {
 			return err

@@ -15,9 +15,19 @@ func NewHarborRepository() *HarborRepository {
 	return &HarborRepository{}
 }
 
-func (hr *HarborRepository) GetAll(db *gorm.DB) ([]*entity.Harbor, error) {
+func (hr *HarborRepository) Count(db *gorm.DB) (int64, error) {
 	harbors := []*entity.Harbor{}
-	result := db.Find(&harbors)
+	var total int64
+	result := db.Find(&harbors).Count(&total)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	return total, nil
+}
+
+func (hr *HarborRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Harbor, error) {
+	harbors := []*entity.Harbor{}
+	result := db.Limit(limit).Offset(offset).Find(&harbors)
 	if result.Error != nil {
 		return nil, result.Error
 	}

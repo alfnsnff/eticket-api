@@ -4,7 +4,7 @@ import (
 	"eticket-api/config"
 	authmodel "eticket-api/internal/model/auth"
 	authusecase "eticket-api/internal/usecase/auth"
-	"eticket-api/pkg/utils/helper/auth"
+	"eticket-api/pkg/jwt"
 	"eticket-api/pkg/utils/helper/response"
 	"net/http"
 
@@ -13,12 +13,22 @@ import (
 )
 
 type AuthController struct {
-	AuthUsecase *authusecase.AuthUsecase
+	Cfg          *config.Config
+	TokenManager *jwt.TokenManager
+	AuthUsecase  *authusecase.AuthUsecase
 }
 
 // NewUserRoleController creates a new UserRoleController instance
-func NewAuthController(auth_usecase *authusecase.AuthUsecase) *AuthController {
-	return &AuthController{AuthUsecase: auth_usecase}
+func NewAuthController(
+	cfg *config.Config,
+	tm *jwt.TokenManager,
+	auth_usecase *authusecase.AuthUsecase,
+) *AuthController {
+	return &AuthController{
+		Cfg:          cfg,
+		TokenManager: tm,
+		AuthUsecase:  auth_usecase,
+	}
 }
 
 func (uc *AuthController) Login(ctx *gin.Context) {
@@ -36,8 +46,8 @@ func (uc *AuthController) Login(ctx *gin.Context) {
 	}
 
 	// OPTIONAL: Set as HTTP-only secure cookies
-	ctx.SetCookie("access_token", accessToken, int(config.AppConfig.Auth.AccessTokenExpiry), "/", "", true, true)
-	ctx.SetCookie("refresh_token", refreshToken, int(config.AppConfig.Auth.RefreshTokenExpiry), "/", "", true, true)
+	ctx.SetCookie("access_token", accessToken, int(uc.Cfg.Auth.AccessTokenExpiry), "/", "", true, true)
+	ctx.SetCookie("refresh_token", refreshToken, int(uc.Cfg.Auth.RefreshTokenExpiry), "/", "", true, true)
 
 	// OR: Return tokens in JSON (useful for SPA apps)
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Login successful", nil))
@@ -51,7 +61,7 @@ func (uc *AuthController) Logout(ctx *gin.Context) {
 	}
 
 	// Validate token and get claims
-	claims, err := auth.ValidateToken(refreshToken)
+	claims, err := uc.TokenManager.ValidateToken(refreshToken)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Invalid refresh token", err.Error()))
 		return

@@ -15,9 +15,19 @@ func NewBookingRepository() *BookingRepository {
 	return &BookingRepository{}
 }
 
-func (br *BookingRepository) GetAll(db *gorm.DB) ([]*entity.Booking, error) {
+func (br *BookingRepository) Count(db *gorm.DB) (int64, error) {
 	bookings := []*entity.Booking{}
-	result := db.Find(&bookings)
+	var total int64
+	result := db.Find(&bookings).Count(&total)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	return total, nil
+}
+
+func (br *BookingRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Booking, error) {
+	bookings := []*entity.Booking{}
+	result := db.Limit(limit).Offset(offset).Find(&bookings)
 	if result.Error != nil {
 		return nil, result.Error
 	}

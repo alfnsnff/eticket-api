@@ -3,6 +3,7 @@ package controller
 import (
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase" // Import the response package
+	"eticket-api/pkg/utils/helper/meta"
 	"eticket-api/pkg/utils/helper/response"
 	"net/http"
 	"strconv"
@@ -27,45 +28,46 @@ func (shc *SessionController) CreateSession(ctx *gin.Context) {
 	}
 
 	if err := shc.SessionUsecase.CreateSession(ctx, request); err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create claim session", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Ship created successfully", nil))
+	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Claim session created successfully", nil))
 }
 
 func (shc *SessionController) GetAllSessions(ctx *gin.Context) {
-	datas, err := shc.SessionUsecase.GetAllSessions(ctx)
+	params := meta.GetParams(ctx)
+	datas, total, err := shc.SessionUsecase.GetAllSessions(ctx, params.Limit, params.Offset)
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ships", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve claim sessions", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Ships retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Claim sessions retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (shc *SessionController) GetSessionByID(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid claim session ID", err.Error()))
 		return
 	}
 
 	data, err := shc.SessionUsecase.GetSessionByID(ctx, uint(id))
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve claim session", err.Error()))
 		return
 	}
 
 	if data == nil {
-		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Ship not found", nil))
+		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Claim session not found", nil))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Ship retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Claim session retrieved successfully", nil))
 }
 
 func (shc *SessionController) UpdateSession(ctx *gin.Context) {
@@ -78,55 +80,55 @@ func (shc *SessionController) UpdateSession(ctx *gin.Context) {
 	}
 
 	if id == 0 {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Ship ID is required", nil))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Claim session ID is required", nil))
 		return
 	}
 
 	if err := shc.SessionUsecase.UpdateSession(ctx, uint(id), request); err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update claim session", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ship updated successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Claim session updated successfully", nil))
 }
 
 func (shc *SessionController) DeleteSession(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid claim session ID", err.Error()))
 		return
 	}
 
 	if err := shc.SessionUsecase.DeleteSession(ctx, uint(id)); err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete claim session", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ship deleted successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Claim session deleted successfully", nil))
 }
 
 func (shc *SessionController) GetSessionBySessionID(ctx *gin.Context) {
 	id := ctx.Param("sessionid")
 
 	if id == "" {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", "sessionid is empty"))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid claim session ID", "sessionid is empty"))
 		return
 	}
 
 	data, err := shc.SessionUsecase.GetBySessionID(ctx, id)
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve claim session", err.Error()))
 		return
 	}
 
 	if data == nil {
-		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Ship not found", nil))
+		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Claim session not found", nil))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Ship retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Claim session retrieved successfully", nil))
 }
 
 func (csc *SessionController) SessionTicketLock(ctx *gin.Context) {

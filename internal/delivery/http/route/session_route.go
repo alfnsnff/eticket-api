@@ -2,29 +2,36 @@ package route
 
 import (
 	"eticket-api/internal/delivery/http/controller"
-	"eticket-api/internal/repository"
+	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/injector"
 	"eticket-api/internal/usecase"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func NewSessionRouter(db *gorm.DB, group *gin.RouterGroup) {
-	sr := repository.NewSessionRepository()
-	tr := repository.NewTicketRepository()
-	scr := repository.NewScheduleRepository()
-	ar := repository.NewAllocationRepository()
-	mr := repository.NewManifestRepository()
-	fr := repository.NewFareRepository()
-	hc := &controller.SessionController{
-		SessionUsecase: usecase.NewSessionUsecase(db, sr, tr, scr, ar, mr, fr),
+func NewSessionRouter(ic *injector.Container, rg *gin.RouterGroup) {
+	csr := ic.SessionRepository
+	tr := ic.TicketRepository
+	scr := ic.ScheduleRepository
+	ar := ic.AllocationRepository
+	mr := ic.ManifestRepository
+	fr := ic.FareRepository
+	sc := &controller.SessionController{
+		SessionUsecase: usecase.NewSessionUsecase(ic.SessionUsecase.Tx, csr, tr, scr, ar, mr, fr),
 	}
-	group.POST("/session/create", hc.CreateSession)
-	group.POST("/session/ticket/lock", hc.SessionTicketLock)
-	group.POST("/session/ticket/data/entry", hc.SessionTicketDataEntry)
-	group.GET("/sessions", hc.GetAllSessions)
-	group.GET("/session/:id", hc.GetSessionByID)
-	group.GET("/session/uuid/:sessionid", hc.GetSessionBySessionID)
-	group.PUT("/session/update/:id", hc.UpdateSession)
-	group.DELETE("/session/:id", hc.DeleteSession)
+
+	public := rg.Group("") // No middleware
+	public.POST("/session/ticket/lock", sc.SessionTicketLock)
+	public.POST("/session/ticket/data/entry", sc.SessionTicketDataEntry)
+	public.GET("/sessions", sc.GetAllSessions)
+	public.GET("/session/:id", sc.GetSessionByID)
+	public.GET("/session/uuid/:sessionid", sc.GetSessionBySessionID)
+
+	protected := rg.Group("")
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	protected.Use(middleware.Authenticate())
+
+	protected.POST("/session/create", sc.CreateSession)
+	protected.PUT("/session/update/:id", sc.UpdateSession)
+	protected.DELETE("/session/:id", sc.DeleteSession)
 }

@@ -7,7 +7,7 @@ import (
 	"eticket-api/internal/model"
 	"eticket-api/internal/model/mapper"
 	"eticket-api/internal/repository"
-	tx "eticket-api/pkg/utils/helper"
+	"eticket-api/pkg/utils/tx"
 	"fmt"
 	"time"
 
@@ -16,7 +16,7 @@ import (
 )
 
 type SessionUsecase struct {
-	DB                   *gorm.DB
+	Tx                   tx.TxManager
 	SessionRepository    *repository.SessionRepository
 	TicketRepository     *repository.TicketRepository
 	ScheduleRepository   *repository.ScheduleRepository
@@ -25,7 +25,8 @@ type SessionUsecase struct {
 	FareRepository       *repository.FareRepository
 }
 
-func NewSessionUsecase(db *gorm.DB,
+func NewSessionUsecase(
+	tx tx.TxManager,
 	sessionRepo *repository.SessionRepository,
 	ticketRepo *repository.TicketRepository,
 	schedule_repository *repository.ScheduleRepository,
@@ -34,7 +35,7 @@ func NewSessionUsecase(db *gorm.DB,
 	fare_repository *repository.FareRepository,
 ) *SessionUsecase {
 	return &SessionUsecase{
-		DB:                   db,
+		Tx:                   tx,
 		SessionRepository:    sessionRepo,
 		TicketRepository:     ticketRepo,
 		ScheduleRepository:   schedule_repository,
@@ -47,44 +48,54 @@ func NewSessionUsecase(db *gorm.DB,
 func (cs *SessionUsecase) CreateSession(ctx context.Context, request *model.WriteClaimSessionRequest) error {
 	session := mapper.SessionMapper.FromWrite(request)
 
-	return tx.Execute(ctx, cs.DB, func(tx *gorm.DB) error {
+	return cs.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		return cs.SessionRepository.Create(tx, session)
 	})
 }
 
-func (cs *SessionUsecase) GetAllSessions(ctx context.Context) ([]*model.ReadClaimSessionResponse, error) {
+func (cs *SessionUsecase) GetAllSessions(ctx context.Context, limit, offset int) ([]*model.ReadClaimSessionResponse, int, error) {
 	sessions := []*entity.ClaimSession{}
-
-	err := tx.Execute(ctx, cs.DB, func(tx *gorm.DB) error {
+	var total int64
+	err := cs.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
-		sessions, err = cs.SessionRepository.GetAll(tx)
+		total, err = cs.SessionRepository.Count(tx)
+		if err != nil {
+			return err
+		}
+		sessions, err = cs.SessionRepository.GetAll(tx, limit, offset)
 		return err
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get all sessions: %w", err)
+		return nil, 0, fmt.Errorf("failed to get all sessions: %w", err)
 	}
 
-	return cs.HelperBuildSessionListResponse(sessions), nil
+	return cs.HelperBuildSessionListResponse(ctx, sessions), int(total), nil
 }
 
 func (cs *SessionUsecase) GetSessionByID(ctx context.Context, id uint) (*model.ReadClaimSessionResponse, error) {
-	var session *entity.ClaimSession
+	session := new(entity.ClaimSession)
+	tickets := []*entity.Ticket{}
 
-	err := tx.Execute(ctx, cs.DB, func(tx *gorm.DB) error {
+	err := cs.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
 		session, err = cs.SessionRepository.GetByID(tx, id)
-		return err
+		if err != nil {
+			return err
+		}
+		if session == nil {
+			return errors.New("session not found")
+		}
+
+		tickets, err = cs.TicketRepository.FindManyBySessionID(tx, session.ID)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve tickets for session %d: %w", session.ID, err)
+		}
+
+		return nil
 	})
+
 	if err != nil {
 		return nil, err
-	}
-	if session == nil {
-		return nil, errors.New("session not found")
-	}
-
-	tickets, err := cs.TicketRepository.FindManyBySessionID(cs.DB, session.ID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve tickets for session %d: %w", session.ID, err)
 	}
 
 	return cs.HelperBuildResponse(session, tickets), nil
@@ -98,13 +109,13 @@ func (cs *SessionUsecase) UpdateSession(ctx context.Context, id uint, request *m
 		return fmt.Errorf("session ID cannot be zero")
 	}
 
-	return tx.Execute(ctx, cs.DB, func(tx *gorm.DB) error {
+	return cs.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		return cs.SessionRepository.Update(tx, session)
 	})
 }
 
 func (cs *SessionUsecase) DeleteSession(ctx context.Context, id uint) error {
-	return tx.Execute(ctx, cs.DB, func(tx *gorm.DB) error {
+	return cs.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		session, err := cs.SessionRepository.GetByID(tx, id)
 		if err != nil {
 			return err
@@ -121,17 +132,29 @@ func (cs *SessionUsecase) GetBySessionID(ctx context.Context, sessionUUID string
 		return nil, errors.New("invalid request: SessionID is required")
 	}
 
-	session, err := cs.SessionRepository.GetByUUID(cs.DB, sessionUUID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve session %s: %w", sessionUUID, err)
-	}
-	if session == nil {
-		return nil, errors.New("session not found")
-	}
+	session := new(entity.ClaimSession)
+	tickets := []*entity.Ticket{}
 
-	tickets, err := cs.TicketRepository.FindManyBySessionID(cs.DB, session.ID)
+	err := cs.Tx.Execute(ctx, func(tx *gorm.DB) error {
+		var err error
+		session, err = cs.SessionRepository.GetByUUID(tx, sessionUUID)
+		if err != nil {
+			return err
+		}
+		if session == nil {
+			return errors.New("session not found")
+		}
+
+		tickets, err = cs.TicketRepository.FindManyBySessionID(tx, session.ID)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve tickets for session %d: %w", session.ID, err)
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve tickets for session %d: %w", session.ID, err)
+		return nil, err
 	}
 
 	return cs.HelperBuildResponse(session, tickets), nil
@@ -146,7 +169,7 @@ func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model
 	var expiryTime time.Time
 	var createdSessionUUID string // To hold the generated UUID
 
-	err := tx.Execute(ctx, cs.DB, func(tx *gorm.DB) error {
+	err := cs.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		_, err := cs.HelperLockAndCheckAvailability(tx, request)
 		if err != nil {
 			return err
@@ -216,7 +239,7 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 	var updatedIDs []uint
 	var failed []model.ClaimedSessionTicketUpdateFailure
 
-	err := tx.Execute(ctx, cs.DB, func(tx *gorm.DB) error {
+	err := cs.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		session, err := cs.SessionRepository.GetByUUIDWithLock(tx, request.SessionID, true)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve claim session %s within transaction: %w", request.SessionID, err)
@@ -408,14 +431,21 @@ func (cs *SessionUsecase) HelperBuildPriceBreakdown(tickets []*entity.Ticket) ([
 }
 
 // buildSessionListResponse maps a list of Session entities to response models.
-func (cs *SessionUsecase) HelperBuildSessionListResponse(sessions []*entity.ClaimSession) []*model.ReadClaimSessionResponse {
+func (cs *SessionUsecase) HelperBuildSessionListResponse(ctx context.Context, sessions []*entity.ClaimSession) []*model.ReadClaimSessionResponse {
 	result := make([]*model.ReadClaimSessionResponse, len(sessions))
 	for i, session := range sessions {
-		tickets, err := cs.TicketRepository.FindManyBySessionID(cs.DB, session.ID)
+		err := cs.Tx.Execute(ctx, func(tx *gorm.DB) error {
+			tickets, err := cs.TicketRepository.FindManyBySessionID(tx, session.ID)
+			if err != nil {
+				return nil
+			}
+			result[i] = cs.HelperBuildResponse(session, tickets)
+			return nil
+		})
+
 		if err != nil {
 			return nil
 		}
-		result[i] = cs.HelperBuildResponse(session, tickets)
 	}
 	return result
 }

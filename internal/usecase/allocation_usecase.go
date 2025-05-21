@@ -7,27 +7,27 @@ import (
 	"eticket-api/internal/model"
 	"eticket-api/internal/model/mapper"
 	"eticket-api/internal/repository"
-	tx "eticket-api/pkg/utils/helper"
+	"eticket-api/pkg/utils/tx"
 	"fmt"
 
 	"gorm.io/gorm"
 )
 
 type AllocationUsecase struct {
-	DB                   *gorm.DB
+	Tx                   tx.TxManager
 	AllocationRepository *repository.AllocationRepository
 	ScheduleRepository   *repository.ScheduleRepository
 	FareRepository       *repository.FareRepository
 }
 
 func NewAllocationUsecase(
-	db *gorm.DB,
+	tx tx.TxManager,
 	allocation_repository *repository.AllocationRepository,
 	schedule_repository *repository.ScheduleRepository,
 	fare_repository *repository.FareRepository,
 ) *AllocationUsecase {
 	return &AllocationUsecase{
-		DB:                   db,
+		Tx:                   tx,
 		AllocationRepository: allocation_repository,
 		ScheduleRepository:   schedule_repository,
 		FareRepository:       fare_repository,
@@ -44,30 +44,34 @@ func (a *AllocationUsecase) CreateAllocation(ctx context.Context, request *model
 	if allocation.ClassID == 0 {
 		return fmt.Errorf("class ID cannot be zero")
 	}
-	return tx.Execute(ctx, a.DB, func(tx *gorm.DB) error {
+	return a.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		return a.AllocationRepository.Create(tx, allocation)
 	})
 }
 
-func (a *AllocationUsecase) GetAllAllocations(ctx context.Context) ([]*model.ReadAllocationResponse, error) {
+func (a *AllocationUsecase) GetAllAllocations(ctx context.Context, limit, offset int) ([]*model.ReadAllocationResponse, int, error) {
 	allocations := []*entity.Allocation{}
-
-	err := tx.Execute(ctx, a.DB, func(tx *gorm.DB) error {
+	var total int64
+	err := a.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
-		allocations, err = a.AllocationRepository.GetAll(tx)
+		total, err = a.AllocationRepository.Count(tx)
+		if err != nil {
+			return err
+		}
+		allocations, err = a.AllocationRepository.GetAll(tx, limit, offset)
 		return err
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get all allocations: %w", err)
+		return nil, 0, fmt.Errorf("failed to get all allocations: %w", err)
 	}
 
-	return mapper.AllocationMapper.ToModels(allocations), nil
+	return mapper.AllocationMapper.ToModels(allocations), int(total), nil
 }
 
 func (a *AllocationUsecase) GetAllocationByID(ctx context.Context, id uint) (*model.ReadAllocationResponse, error) {
 	allocation := new(entity.Allocation)
-	err := tx.Execute(ctx, a.DB, func(tx *gorm.DB) error {
+	err := a.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
 		allocation, err = a.AllocationRepository.GetByID(tx, id)
 		return err
@@ -104,14 +108,14 @@ func (a *AllocationUsecase) UpdateAllocation(ctx context.Context, id uint, reque
 		return fmt.Errorf("quota name cannot be zero")
 	}
 
-	return tx.Execute(ctx, a.DB, func(tx *gorm.DB) error {
+	return a.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		return a.AllocationRepository.Update(tx, allocation)
 	})
 }
 
 func (a *AllocationUsecase) DeleteAllocation(ctx context.Context, id uint) error {
 
-	return tx.Execute(ctx, a.DB, func(tx *gorm.DB) error {
+	return a.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		allocation, err := a.AllocationRepository.GetByID(tx, id)
 		if err != nil {
 			return err
