@@ -39,10 +39,7 @@ type (
 
 func New() (*Config, error) {
 	// Load from .env if present (helpful for local dev)
-	err := godotenv.Load()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load env: %w", err)
-	}
+	_ = godotenv.Load()
 
 	v := viper.New()
 
