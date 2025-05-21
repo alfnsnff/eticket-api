@@ -3,6 +3,7 @@ package controller
 import (
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase"
+	"eticket-api/pkg/utils/helper/meta"
 	"eticket-api/pkg/utils/helper/response"
 	"net/http"
 	"strconv"
@@ -35,14 +36,15 @@ func (hc *HarborController) CreateHarbor(ctx *gin.Context) {
 }
 
 func (hc *HarborController) GetAllHarbors(ctx *gin.Context) {
-	datas, err := hc.HarborUsecase.GetAllHarbors(ctx)
+	params := meta.GetParams(ctx)
+	datas, total, err := hc.HarborUsecase.GetAllHarbors(ctx, params.Limit, params.Offset)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve harbors", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Harbors retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Harbors retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (hc *HarborController) GetHarborByID(ctx *gin.Context) {

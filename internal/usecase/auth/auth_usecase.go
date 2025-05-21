@@ -3,11 +3,12 @@ package usecase
 import (
 	"context"
 	"errors"
-	entity "eticket-api/internal/domain/entity/auth"
+	authentity "eticket-api/internal/domain/entity/auth"
 	authmodel "eticket-api/internal/model/auth"
 	authrepository "eticket-api/internal/repository/auth"
-	tx "eticket-api/pkg/utils/helper"
-	"eticket-api/pkg/utils/helper/auth"
+	"eticket-api/pkg/jwt"
+	"eticket-api/pkg/utils"
+	"eticket-api/pkg/utils/tx"
 	"fmt"
 	"time"
 
@@ -16,20 +17,23 @@ import (
 )
 
 type AuthUsecase struct {
-	DB             *gorm.DB
+	Tx             tx.TxManager
 	AuthRepository *authrepository.AuthRepository
 	UserRepository *authrepository.UserRepository
+	TokenManager   *jwt.TokenManager
 }
 
 func NewAuthUsecase(
-	db *gorm.DB,
+	tx tx.TxManager,
 	auth_repository *authrepository.AuthRepository,
 	user_repository *authrepository.UserRepository,
+	tm *jwt.TokenManager,
 ) *AuthUsecase {
 	return &AuthUsecase{
-		DB:             db,
+		Tx:             tx,
 		AuthRepository: auth_repository,
 		UserRepository: user_repository,
+		TokenManager:   tm,
 	}
 }
 
@@ -41,7 +45,7 @@ func (uc *AuthUsecase) Login(ctx context.Context, request *authmodel.UserLoginRe
 
 	var accessToken, refreshToken string
 
-	err := tx.Execute(ctx, uc.DB, func(txDB *gorm.DB) error {
+	err := uc.Tx.Execute(ctx, func(txDB *gorm.DB) error {
 		user, repoErr := uc.UserRepository.GetByUsername(txDB, request.Username)
 		if repoErr != nil {
 			return fmt.Errorf("failed to retrieve user: %w", repoErr)
@@ -50,28 +54,28 @@ func (uc *AuthUsecase) Login(ctx context.Context, request *authmodel.UserLoginRe
 			return errors.New("invalid credentials")
 		}
 
-		if !auth.CheckPasswordHash(request.Password, user.Password) {
+		if !utils.CheckPasswordHash(request.Password, user.Password) {
 			return errors.New("invalid credentials")
 		}
 
 		var err error
-		accessToken, err = auth.GenerateAccessToken(user)
+		accessToken, err = uc.TokenManager.GenerateAccessToken(user)
 		if err != nil {
 			return fmt.Errorf("failed to generate access token: %w", err)
 		}
 
-		refreshToken, err = auth.GenerateRefreshToken(user)
+		refreshToken, err = uc.TokenManager.GenerateRefreshToken(user)
 		if err != nil {
 			return fmt.Errorf("failed to generate refresh token: %w", err)
 		}
 
 		// ✅ Validate and extract claims from the refresh token
-		claims, err := auth.ValidateToken(refreshToken)
+		claims, err := uc.TokenManager.ValidateToken(refreshToken)
 		if err != nil {
 			return fmt.Errorf("failed to parse refresh token: %w", err)
 		}
 
-		refreshTokenEntity := &entity.RefreshToken{
+		refreshTokenEntity := &authentity.RefreshToken{
 			ID:        uuid.MustParse(claims.ID),
 			UserID:    user.ID,
 			Revoked:   false,
@@ -95,6 +99,13 @@ func (uc *AuthUsecase) Login(ctx context.Context, request *authmodel.UserLoginRe
 	return accessToken, refreshToken, nil
 }
 
-func (uc *AuthUsecase) RevokeRefreshToken(ctx context.Context, tokenID uuid.UUID) error {
-	return uc.AuthRepository.RevokeRefreshTokenByID(uc.DB, tokenID)
+// func (uc *AuthUsecase) RevokeRefreshToken(ctx context.Context, tokenID uuid.UUID) error {
+// 	return uc.AuthRepository.RevokeRefreshTokenByID(, tokenID)
+// }
+
+func (au *AuthUsecase) RevokeRefreshToken(ctx context.Context, tokenID uuid.UUID) error {
+	return au.Tx.Execute(ctx, func(tx *gorm.DB) error {
+		au.AuthRepository.RevokeRefreshTokenByID(tx, tokenID)
+		return nil
+	})
 }

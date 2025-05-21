@@ -15,9 +15,19 @@ func NewManifestRepository() *ManifestRepository {
 	return &ManifestRepository{}
 }
 
-func (mr *ManifestRepository) GetAll(db *gorm.DB) ([]*entity.Manifest, error) {
+func (mr *ManifestRepository) Count(db *gorm.DB) (int64, error) {
 	manifests := []*entity.Manifest{}
-	result := db.Find(&manifests)
+	var total int64
+	result := db.Find(&manifests).Count(&total)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	return total, nil
+}
+
+func (mr *ManifestRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Manifest, error) {
+	manifests := []*entity.Manifest{}
+	result := db.Limit(limit).Offset(offset).Find(&manifests)
 	if result.Error != nil {
 		return nil, result.Error
 	}

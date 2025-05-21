@@ -15,7 +15,17 @@ func NewUserRepository() *UserRepository {
 	return &UserRepository{}
 }
 
-func (rr *UserRepository) GetAll(db *gorm.DB) ([]*entity.User, error) {
+func (ur *UserRepository) Count(db *gorm.DB) (int64, error) {
+	users := []*entity.User{}
+	var total int64
+	result := db.Find(&users).Count(&total)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	return total, nil
+}
+
+func (ur *UserRepository) GetAll(db *gorm.DB) ([]*entity.User, error) {
 	users := []*entity.User{}
 	result := db.Find(&users)
 	if result.Error != nil {
@@ -24,7 +34,7 @@ func (rr *UserRepository) GetAll(db *gorm.DB) ([]*entity.User, error) {
 	return users, nil
 }
 
-func (rr *UserRepository) GetByUsername(db *gorm.DB, username string) (*entity.User, error) {
+func (ur *UserRepository) GetByUsername(db *gorm.DB, username string) (*entity.User, error) {
 	user := new(entity.User)
 	result := db.Where("username = ? ", username).First(&user)
 	if result.Error != nil {
@@ -33,7 +43,7 @@ func (rr *UserRepository) GetByUsername(db *gorm.DB, username string) (*entity.U
 	return user, nil
 }
 
-func (rr *UserRepository) GetByID(db *gorm.DB, id uint) (*entity.User, error) {
+func (ur *UserRepository) GetByID(db *gorm.DB, id uint) (*entity.User, error) {
 	user := new(entity.User)
 	result := db.First(&user, id)
 	if result.Error != nil {

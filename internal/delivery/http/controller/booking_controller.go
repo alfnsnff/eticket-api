@@ -3,6 +3,7 @@ package controller
 import (
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase"
+	"eticket-api/pkg/utils/helper/meta"
 	"eticket-api/pkg/utils/helper/response"
 	"net/http"
 	"strconv"
@@ -38,14 +39,15 @@ func (bc *BookingController) CreateBooking(ctx *gin.Context) {
 }
 
 func (bc *BookingController) GetAllBookings(ctx *gin.Context) {
-	datas, err := bc.BookingUsecase.GetAllBookings(ctx)
+	params := meta.GetParams(ctx)
+	datas, total, err := bc.BookingUsecase.GetAllBookings(ctx, params.Limit, params.Offset)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve bookings", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Bookings retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Bookings retrieved successfully", total, params.Limit, params.Page))
 }
 
 // GetBookingByID retrieves a booking by its ID

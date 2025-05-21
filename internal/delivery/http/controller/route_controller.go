@@ -3,6 +3,7 @@ package controller
 import (
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase"
+	"eticket-api/pkg/utils/helper/meta"
 	"eticket-api/pkg/utils/helper/response"
 	"net/http"
 	"strconv"
@@ -35,14 +36,15 @@ func (rc *RouteController) CreateRoute(ctx *gin.Context) {
 }
 
 func (rc *RouteController) GetAllRoutes(ctx *gin.Context) {
-	datas, err := rc.RouteUsecase.GetAllRoutes(ctx)
+	params := meta.GetParams(ctx)
+	datas, total, err := rc.RouteUsecase.GetAllRoutes(ctx, params.Limit, params.Offset)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve routes", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Routes retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Routes retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (rc *RouteController) GetRouteByID(ctx *gin.Context) {

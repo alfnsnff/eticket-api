@@ -2,21 +2,28 @@ package route
 
 import (
 	authcontroller "eticket-api/internal/delivery/http/controller/auth"
-	authrepository "eticket-api/internal/repository/auth"
-	authusecase "eticket-api/internal/usecase/auth"
+	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/injector"
+	usecase "eticket-api/internal/usecase/auth"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func NewUserRouter(db *gorm.DB, group *gin.RouterGroup) {
-	ur := authrepository.NewUserRepository()
-	hc := &authcontroller.UserController{
-		UserUsecase: authusecase.NewUserUsecase(db, ur),
+func NewUserRouter(ic *injector.Container, rg *gin.RouterGroup) {
+	ur := ic.UserRepository
+	uc := &authcontroller.UserController{
+		UserUsecase: usecase.NewUserUsecase(ic.UserUsecase.Tx, ur),
 	}
-	group.POST("/user/create", hc.CreateUser)
-	group.GET("/users", hc.GetAllUsers)
-	group.GET("/user/:id", hc.GetUserByID)
-	group.PUT("/user/update/:id", hc.UpdateUser)
-	group.DELETE("/user/:id", hc.DeleteUser)
+
+	public := rg.Group("") // No middleware
+	public.GET("/users", uc.GetAllUsers)
+	public.GET("/user/:id", uc.GetUserByID)
+
+	protected := rg.Group("")
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	protected.Use(middleware.Authenticate())
+
+	protected.POST("/user/create", uc.CreateUser)
+	protected.PUT("/user/update/:id", uc.UpdateUser)
+	protected.DELETE("/user/:id", uc.DeleteUser)
 }

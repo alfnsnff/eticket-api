@@ -18,18 +18,28 @@ func NewSessionRepository() *SessionRepository {
 	return &SessionRepository{}
 }
 
-func (shr *SessionRepository) GetAll(db *gorm.DB) ([]*entity.ClaimSession, error) {
+func (csr *SessionRepository) Count(db *gorm.DB) (int64, error) {
+	sessions := []*entity.ClaimSession{}
+	var total int64
+	result := db.Find(&sessions).Count(&total)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	return total, nil
+}
+
+func (csr *SessionRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.ClaimSession, error) {
 	sessions := []*entity.ClaimSession{}
 	result := db.Preload("Schedule").Preload("Schedule.Route").
 		Preload("Schedule.Route.DepartureHarbor").
-		Preload("Schedule.Route.ArrivalHarbor").Preload("Schedule.Ship").Find(&sessions)
+		Preload("Schedule.Route.ArrivalHarbor").Preload("Schedule.Ship").Limit(limit).Offset(offset).Find(&sessions)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 	return sessions, nil
 }
 
-func (shr *SessionRepository) GetByID(db *gorm.DB, id uint) (*entity.ClaimSession, error) {
+func (csr *SessionRepository) GetByID(db *gorm.DB, id uint) (*entity.ClaimSession, error) {
 	session := new(entity.ClaimSession)
 	result := db.Preload("Schedule").Preload("Schedule.Route").
 		Preload("Schedule.Route.DepartureHarbor").
@@ -41,7 +51,7 @@ func (shr *SessionRepository) GetByID(db *gorm.DB, id uint) (*entity.ClaimSessio
 }
 
 // GetByUUID retrieves a ClaimSession entity by its SessionUUID.
-func (r *SessionRepository) GetByUUID(db *gorm.DB, uuid string) (*entity.ClaimSession, error) {
+func (csr *SessionRepository) GetByUUID(db *gorm.DB, uuid string) (*entity.ClaimSession, error) {
 	var session entity.ClaimSession
 	// Use the provided db instance (txDB from the use case)
 	result := db.Preload("Schedule").Preload("Schedule.Route").
@@ -59,7 +69,7 @@ func (r *SessionRepository) GetByUUID(db *gorm.DB, uuid string) (*entity.ClaimSe
 }
 
 // GetByUUIDWithLock retrieves a ClaimSession entity by its SessionUUID with a lock.
-func (r *SessionRepository) GetByUUIDWithLock(db *gorm.DB, uuid string, forUpdate bool) (*entity.ClaimSession, error) {
+func (csr *SessionRepository) GetByUUIDWithLock(db *gorm.DB, uuid string, forUpdate bool) (*entity.ClaimSession, error) {
 	var session entity.ClaimSession
 	query := db.Where("session_id = ?", uuid)
 
@@ -82,7 +92,7 @@ func (r *SessionRepository) GetByUUIDWithLock(db *gorm.DB, uuid string, forUpdat
 	return &session, nil // Return pointer to the found entity
 }
 
-func (r *SessionRepository) FindExpired(db *gorm.DB, expiryTime time.Time, limit int) ([]*entity.ClaimSession, error) {
+func (csr *SessionRepository) FindExpired(db *gorm.DB, expiryTime time.Time, limit int) ([]*entity.ClaimSession, error) {
 	var sessions []*entity.ClaimSession
 
 	result := db.Where("expires_at <= ?", expiryTime).Limit(limit).Find(&sessions)

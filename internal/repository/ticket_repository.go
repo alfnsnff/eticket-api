@@ -16,9 +16,19 @@ func NewTicketRepository() *TicketRepository {
 	return &TicketRepository{}
 }
 
-func (tr *TicketRepository) GetAll(db *gorm.DB) ([]*entity.Ticket, error) {
+func (tr *TicketRepository) Count(db *gorm.DB) (int64, error) {
 	tickets := []*entity.Ticket{}
-	result := db.Find(&tickets)
+	var total int64
+	result := db.Find(&tickets).Count(&total)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	return total, nil
+}
+
+func (tr *TicketRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Ticket, error) {
+	tickets := []*entity.Ticket{}
+	result := db.Limit(limit).Offset(offset).Find(&tickets)
 	if result.Error != nil {
 		return nil, result.Error
 	}

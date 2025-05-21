@@ -3,6 +3,7 @@ package controller
 import (
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase"
+	"eticket-api/pkg/utils/helper/meta"
 	"eticket-api/pkg/utils/helper/response"
 	"net/http"
 	"strconv"
@@ -35,14 +36,16 @@ func (tc *TicketController) CreateTicket(ctx *gin.Context) {
 }
 
 func (tc *TicketController) GetAllTickets(ctx *gin.Context) {
-	datas, err := tc.TicketUsecase.GetAllTickets(ctx)
+	params := meta.GetParams(ctx)
+
+	datas, total, err := tc.TicketUsecase.GetAllTickets(ctx, params.Limit, params.Offset)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve tickets", err.Error())) // Use response.
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Tickets retrieved successfully", nil)) // Use response.
+	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Tickets retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (tc *TicketController) GetTicketByID(ctx *gin.Context) {

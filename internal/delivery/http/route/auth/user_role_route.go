@@ -2,23 +2,30 @@ package route
 
 import (
 	authcontroller "eticket-api/internal/delivery/http/controller/auth"
-	authrepository "eticket-api/internal/repository/auth"
-	authusecase "eticket-api/internal/usecase/auth"
+	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/injector"
+	usecase "eticket-api/internal/usecase/auth"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func NewUserRoleRouter(db *gorm.DB, group *gin.RouterGroup) {
-	rr := authrepository.NewRoleRepository()
-	ur := authrepository.NewUserRepository()
-	usr := authrepository.NewUserRoleRepository()
-	hc := &authcontroller.UserRoleController{
-		UserRoleUsecase: authusecase.NewUserRoleUsecase(db, rr, ur, usr),
+func NewUserRoleRouter(ic *injector.Container, rg *gin.RouterGroup) {
+	rr := ic.RoleRepository
+	ur := ic.UserRepository
+	urr := ic.UserRoleRepository
+	urc := &authcontroller.UserRoleController{
+		UserRoleUsecase: usecase.NewUserRoleUsecase(ic.UserRoleUsecase.Tx, rr, ur, urr),
 	}
-	group.POST("/user/role/assign", hc.CreateUserRole)
-	group.GET("/user/roles", hc.GetAllUserRoles)
-	group.GET("/user/role/:id", hc.GetUserRoleByID)
-	group.PUT("/user/role/update/:id", hc.UpdateUserRole)
-	group.DELETE("/user/role/:id", hc.DeleteUserRole)
+
+	public := rg.Group("") // No middleware
+	public.GET("/user/roles", urc.GetAllUserRoles)
+	public.GET("/user/role/:id", urc.GetUserRoleByID)
+
+	protected := rg.Group("")
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	protected.Use(middleware.Authenticate())
+
+	protected.POST("/user/role/assign", urc.CreateUserRole)
+	protected.PUT("/user/role/update/:id", urc.UpdateUserRole)
+	protected.DELETE("/user/role/:id", urc.DeleteUserRole)
 }

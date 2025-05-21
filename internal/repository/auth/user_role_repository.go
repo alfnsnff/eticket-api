@@ -15,7 +15,17 @@ func NewUserRoleRepository() *UserRoleRepository {
 	return &UserRoleRepository{}
 }
 
-func (rr *UserRoleRepository) GetAll(db *gorm.DB) ([]*entity.UserRole, error) {
+func (urr *UserRoleRepository) Count(db *gorm.DB) (int64, error) {
+	userRoles := []*entity.UserRole{}
+	var total int64
+	result := db.Find(&userRoles).Count(&total)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	return total, nil
+}
+
+func (urr *UserRoleRepository) GetAll(db *gorm.DB) ([]*entity.UserRole, error) {
 	user_roles := []*entity.UserRole{}
 	result := db.Find(&user_roles)
 	if result.Error != nil {
@@ -24,7 +34,7 @@ func (rr *UserRoleRepository) GetAll(db *gorm.DB) ([]*entity.UserRole, error) {
 	return user_roles, nil
 }
 
-func (rr *UserRoleRepository) GetByID(db *gorm.DB, id uint) (*entity.UserRole, error) {
+func (urr *UserRoleRepository) GetByID(db *gorm.DB, id uint) (*entity.UserRole, error) {
 	user_role := new(entity.UserRole)
 	result := db.Find(&user_role)
 	if result.Error != nil {

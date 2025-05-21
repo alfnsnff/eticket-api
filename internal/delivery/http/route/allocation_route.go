@@ -2,23 +2,30 @@ package route
 
 import (
 	"eticket-api/internal/delivery/http/controller"
-	"eticket-api/internal/repository"
+	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/injector"
 	"eticket-api/internal/usecase"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func NewAllocationRouter(db *gorm.DB, group *gin.RouterGroup) {
-	ar := repository.NewAllocationRepository()
-	sr := repository.NewScheduleRepository()
-	fr := repository.NewFareRepository()
-	hc := &controller.AllocationController{
-		AllocationUsecase: usecase.NewAllocationUsecase(db, ar, sr, fr),
+func NewAllocationRouter(ic *injector.Container, rg *gin.RouterGroup) {
+	ar := ic.AllocationRepository
+	scr := ic.ScheduleRepository
+	fr := ic.FareRepository
+	ac := &controller.AllocationController{
+		AllocationUsecase: usecase.NewAllocationUsecase(ic.AllocationUsecase.Tx, ar, scr, fr),
 	}
-	group.POST("/allocation/create", hc.CreateAllocation)
-	group.GET("/allocations", hc.GetAllAllocations)
-	group.GET("/allocation/:id", hc.GetAllocationByID)
-	group.PUT("/allocation/update/:id", hc.UpdateAllocation)
-	group.DELETE("/allocation/:id", hc.DeleteAllocation)
+
+	public := rg.Group("") // No middleware
+	public.GET("/allocations", ac.GetAllAllocations)
+	public.GET("/allocation/:id", ac.GetAllocationByID)
+
+	protected := rg.Group("")
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	protected.Use(middleware.Authenticate())
+
+	protected.POST("/allocation/create", ac.CreateAllocation)
+	protected.PUT("/allocation/update/:id", ac.UpdateAllocation)
+	protected.DELETE("/allocation/:id", ac.DeleteAllocation)
 }

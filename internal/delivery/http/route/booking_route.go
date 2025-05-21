@@ -2,24 +2,31 @@ package route
 
 import (
 	"eticket-api/internal/delivery/http/controller"
-	"eticket-api/internal/repository"
+	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/injector"
 	"eticket-api/internal/usecase"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func NewBookingRouter(db *gorm.DB, group *gin.RouterGroup) {
-	br := repository.NewBookingRepository()
-	tr := repository.NewTicketRepository()
-	sr := repository.NewSessionRepository()
-	hc := &controller.BookingController{
-		BookingUsecase: usecase.NewBookingUsecase(db, br, tr, sr),
+func NewBookingRouter(ic *injector.Container, rg *gin.RouterGroup) {
+	br := ic.BookingRepository
+	tr := ic.TicketRepository
+	csr := ic.SessionRepository
+	bc := &controller.BookingController{
+		BookingUsecase: usecase.NewBookingUsecase(ic.BookingUsecase.Tx, br, tr, csr),
 	}
-	group.POST("/booking/create", hc.CreateBooking)
-	group.POST("/booking/confirm", hc.ConfirmBooking)
-	group.GET("/bookings", hc.GetAllBookings)
-	group.GET("/booking/:id", hc.GetBookingByID)
-	group.PUT("/booking/update/:id", hc.UpdateBooking)
-	group.DELETE("/booking/:id", hc.DeleteBooking)
+
+	public := rg.Group("") // No middleware
+	public.POST("/booking/confirm", bc.ConfirmBooking)
+	public.GET("/bookings", bc.GetAllBookings)
+	public.GET("/booking/:id", bc.GetBookingByID)
+
+	protected := rg.Group("")
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	protected.Use(middleware.Authenticate())
+
+	protected.POST("/booking/create", bc.CreateBooking)
+	protected.PUT("/booking/update/:id", bc.UpdateBooking)
+	protected.DELETE("/booking/:id", bc.DeleteBooking)
 }

@@ -2,21 +2,27 @@ package route
 
 import (
 	authcontroller "eticket-api/internal/delivery/http/controller/auth"
-	authrepository "eticket-api/internal/repository/auth"
-	authusecase "eticket-api/internal/usecase/auth"
+	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/injector"
+	usecase "eticket-api/internal/usecase/auth"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func NewRoleRouter(db *gorm.DB, group *gin.RouterGroup) {
-	rr := authrepository.NewRoleRepository()
-	hc := &authcontroller.RoleController{
-		RoleUsecase: authusecase.NewRoleUsecase(db, rr),
+func NewRoleRouter(ic *injector.Container, rg *gin.RouterGroup) {
+	ror := ic.RoleRepository
+	roc := &authcontroller.RoleController{
+		RoleUsecase: usecase.NewRoleUsecase(ic.RoleUsecase.Tx, ror),
 	}
-	group.POST("/role/create", hc.CreateRole)
-	group.GET("/roles", hc.GetAllRoles)
-	group.GET("/role/:id", hc.GetRoleByID)
-	group.PUT("/role/update/:id", hc.UpdateRole)
-	group.DELETE("/role/:id", hc.DeleteRole)
+	public := rg.Group("") // No middleware
+	public.GET("/roles", roc.GetAllRoles)
+	public.GET("/role/:id", roc.GetRoleByID)
+
+	protected := rg.Group("")
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	protected.Use(middleware.Authenticate())
+
+	protected.POST("/role/create", roc.CreateRole)
+	protected.PUT("/role/update/:id", roc.UpdateRole)
+	protected.DELETE("/role/:id", roc.DeleteRole)
 }

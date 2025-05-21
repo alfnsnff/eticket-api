@@ -3,6 +3,7 @@ package controller
 import (
 	authmodel "eticket-api/internal/model/auth"
 	authusecase "eticket-api/internal/usecase/auth"
+	"eticket-api/pkg/utils/helper/meta"
 	"eticket-api/pkg/utils/helper/response"
 	"net/http"
 	"strconv"
@@ -15,7 +16,7 @@ type UserRoleController struct {
 }
 
 // NewUserRoleRoleController creates a new UserRoleRoleController instance
-func NewUserRoleRoleController(role_usecase *authusecase.UserRoleUsecase) *UserRoleController {
+func NewUserRoleController(role_usecase *authusecase.UserRoleUsecase) *UserRoleController {
 	return &UserRoleController{UserRoleUsecase: role_usecase}
 }
 
@@ -36,38 +37,38 @@ func (urc *UserRoleController) CreateUserRole(ctx *gin.Context) {
 }
 
 func (urc *UserRoleController) GetAllUserRoles(ctx *gin.Context) {
-
-	datas, err := urc.UserRoleUsecase.GetAllUserRoles(ctx)
+	params := meta.GetParams(ctx)
+	datas, total, err := urc.UserRoleUsecase.GetAllUserRoles(ctx, params.Limit, params.Offset)
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ships", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve user roles", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "UserRoles retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "User roles retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (urc *UserRoleController) GetUserRoleByID(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid user role ID", err.Error()))
 		return
 	}
 
 	data, err := urc.UserRoleUsecase.GetUserRoleByID(ctx, uint(id))
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve user role", err.Error()))
 		return
 	}
 
 	if data == nil {
-		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Ship not found", nil))
+		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("User role not found", nil))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Ship retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "User role retrieved successfully", nil))
 }
 
 func (urc *UserRoleController) UpdateUserRole(ctx *gin.Context) {
@@ -80,30 +81,30 @@ func (urc *UserRoleController) UpdateUserRole(ctx *gin.Context) {
 	}
 
 	if id == 0 {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Ship ID is required", nil))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("User role ID is required", nil))
 		return
 	}
 
 	if err := urc.UserRoleUsecase.UpdateUserRole(ctx, uint(id), request); err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update user role", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ship updated successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "User role updated successfully", nil))
 }
 
 func (urc *UserRoleController) DeleteUserRole(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ship ID", err.Error()))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid user role ID", err.Error()))
 		return
 	}
 
 	if err := urc.UserRoleUsecase.DeleteUserRole(ctx, uint(id)); err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete ship", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete user role", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ship deleted successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "User role deleted successfully", nil))
 }

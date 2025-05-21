@@ -7,7 +7,7 @@ import (
 	"eticket-api/internal/model"
 	"eticket-api/internal/model/mapper"
 	"eticket-api/internal/repository"
-	tx "eticket-api/pkg/utils/helper"
+	"eticket-api/pkg/utils/tx"
 	"fmt"
 	"log"
 
@@ -15,7 +15,7 @@ import (
 )
 
 type ScheduleUsecase struct {
-	DB                   *gorm.DB
+	Tx                   tx.TxManager
 	AllocationRepository *repository.AllocationRepository
 	ClassRepository      *repository.ClassRepository
 	FareRepository       *repository.FareRepository
@@ -27,7 +27,7 @@ type ScheduleUsecase struct {
 }
 
 func NewScheduleUsecase(
-	db *gorm.DB,
+	tx tx.TxManager,
 	allocation_repository *repository.AllocationRepository,
 	class_repository *repository.ClassRepository,
 	fare_repository *repository.FareRepository,
@@ -38,7 +38,7 @@ func NewScheduleUsecase(
 	ticket_repository *repository.TicketRepository,
 ) *ScheduleUsecase {
 	return &ScheduleUsecase{
-		DB:                   db,
+		Tx:                   tx,
 		AllocationRepository: allocation_repository,
 		ClassRepository:      class_repository,
 		FareRepository:       fare_repository,
@@ -65,31 +65,35 @@ func (sc *ScheduleUsecase) CreateSchedule(ctx context.Context, request *model.Wr
 
 	// schedule.Status = "schedulled" // Set default status
 
-	return tx.Execute(ctx, sc.DB, func(tx *gorm.DB) error {
+	return sc.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		return sc.ScheduleRepository.Create(tx, schedule)
 	})
 }
 
-func (sc *ScheduleUsecase) GetAllSchedules(ctx context.Context) ([]*model.ReadScheduleResponse, error) {
+func (sc *ScheduleUsecase) GetAllSchedules(ctx context.Context, limit, offset int) ([]*model.ReadScheduleResponse, int, error) {
 	schedules := []*entity.Schedule{}
-
-	err := tx.Execute(ctx, sc.DB, func(tx *gorm.DB) error {
+	var total int64
+	err := sc.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
-		schedules, err = sc.ScheduleRepository.GetAll(tx)
+		total, err = sc.ScheduleRepository.Count(tx)
+		if err != nil {
+			return err
+		}
+		schedules, err = sc.ScheduleRepository.GetAll(tx, limit, offset)
 		return err
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get all schedules: %w", err)
+		return nil, 0, fmt.Errorf("failed to get all schedules: %w", err)
 	}
 
-	return mapper.ScheduleMapper.ToModels(schedules), nil
+	return mapper.ScheduleMapper.ToModels(schedules), int(total), nil
 }
 
 func (sc *ScheduleUsecase) GetScheduleByID(ctx context.Context, id uint) (*model.ReadScheduleResponse, error) {
 	schedule := new(entity.Schedule)
 
-	err := tx.Execute(ctx, sc.DB, func(tx *gorm.DB) error {
+	err := sc.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
 		schedule, err = sc.ScheduleRepository.GetByID(tx, id)
 		return err
@@ -124,14 +128,14 @@ func (sc *ScheduleUsecase) UpdateSchedule(ctx context.Context, id uint, request 
 		return errors.New("schedule datetime cannot be same")
 	}
 
-	return tx.Execute(ctx, sc.DB, func(tx *gorm.DB) error {
+	return sc.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		return sc.ScheduleRepository.Update(tx, schedule)
 	})
 }
 
 func (sc *ScheduleUsecase) DeleteSchedule(ctx context.Context, id uint) error {
 
-	return tx.Execute(ctx, sc.DB, func(tx *gorm.DB) error {
+	return sc.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		schedule, err := sc.ScheduleRepository.GetByID(tx, id)
 		if err != nil {
 			return err
@@ -147,7 +151,7 @@ func (sc *ScheduleUsecase) DeleteSchedule(ctx context.Context, id uint) error {
 func (sc *ScheduleUsecase) GetAllScheduled(ctx context.Context) ([]*model.ReadScheduleResponse, error) {
 	schedules := []*entity.Schedule{}
 
-	err := tx.Execute(ctx, sc.DB, func(tx *gorm.DB) error {
+	err := sc.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
 		schedules, err = sc.ScheduleRepository.GetActiveSchedule(tx)
 		return err
@@ -164,7 +168,7 @@ func (sc *ScheduleUsecase) GetScheduleAvailability(ctx context.Context, schedule
 	var schedule *entity.Schedule
 	var classAvailabilities []model.ScheduleClassAvailability
 
-	err := tx.Execute(ctx, sc.DB, func(tx *gorm.DB) error {
+	err := sc.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
 
 		schedule, err = sc.HelperGetSchedule(tx, scheduleID)
@@ -251,7 +255,7 @@ func (sc *ScheduleUsecase) CreateScheduleWithAllocation(ctx context.Context, req
 		return err
 	}
 
-	err := tx.Execute(ctx, sc.DB, func(tx *gorm.DB) error {
+	err := sc.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		if err := sc.ScheduleRepository.Create(tx, schedule); err != nil {
 			return fmt.Errorf("failed to create schedule: %w", err)
 		}

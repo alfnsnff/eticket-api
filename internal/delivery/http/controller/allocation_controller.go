@@ -3,6 +3,7 @@ package controller
 import (
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase"
+	"eticket-api/pkg/utils/helper/meta"
 	"eticket-api/pkg/utils/helper/response"
 	"net/http"
 	"strconv"
@@ -35,14 +36,16 @@ func (mc *AllocationController) CreateAllocation(ctx *gin.Context) {
 }
 
 func (mc *AllocationController) GetAllAllocations(ctx *gin.Context) {
-	datas, err := mc.AllocationUsecase.GetAllAllocations(ctx)
+	params := meta.GetParams(ctx)
+
+	datas, total, err := mc.AllocationUsecase.GetAllAllocations(ctx, params.Limit, params.Offset)
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ships", err.Error()))
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve allocations", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Allocations retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Allocations retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (mc *AllocationController) GetAllocationByID(ctx *gin.Context) {

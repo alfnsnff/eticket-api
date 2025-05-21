@@ -3,6 +3,7 @@ package controller
 import (
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase" // Import the response package
+	"eticket-api/pkg/utils/helper/meta"
 	"eticket-api/pkg/utils/helper/response"
 	"net/http"
 	"strconv"
@@ -35,14 +36,15 @@ func (mc *ManifestController) CreateManifest(ctx *gin.Context) {
 }
 
 func (mc *ManifestController) GetAllManifests(ctx *gin.Context) {
-	datas, err := mc.ManifestUsecase.GetAllManifests(ctx)
+	params := meta.GetParams(ctx)
+	datas, total, err := mc.ManifestUsecase.GetAllManifests(ctx, params.Limit, params.Offset)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve manifests", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Manifests retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Manifests retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (mc *ManifestController) GetManifestByID(ctx *gin.Context) {

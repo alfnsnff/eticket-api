@@ -7,19 +7,25 @@ import (
 	"eticket-api/internal/model"
 	"eticket-api/internal/model/mapper"
 	"eticket-api/internal/repository"
-	tx "eticket-api/pkg/utils/helper"
+	"eticket-api/pkg/utils/tx"
 	"fmt"
 
 	"gorm.io/gorm"
 )
 
 type ShipUsecase struct {
-	DB             *gorm.DB
+	Tx             tx.TxManager
 	ShipRepository *repository.ShipRepository
 }
 
-func NewShipUsecase(db *gorm.DB, ship_repository *repository.ShipRepository) *ShipUsecase {
-	return &ShipUsecase{DB: db, ShipRepository: ship_repository}
+func NewShipUsecase(
+	tx tx.TxManager,
+	ship_repository *repository.ShipRepository,
+) *ShipUsecase {
+	return &ShipUsecase{
+		Tx:             tx,
+		ShipRepository: ship_repository,
+	}
 }
 
 func (sh *ShipUsecase) CreateShip(ctx context.Context, request *model.WriteShipRequest) error {
@@ -29,17 +35,17 @@ func (sh *ShipUsecase) CreateShip(ctx context.Context, request *model.WriteShipR
 		return fmt.Errorf("ship name cannot be empty")
 	}
 
-	return tx.Execute(ctx, sh.DB, func(tx *gorm.DB) error {
+	return sh.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		return sh.ShipRepository.Create(tx, ship)
 	})
 }
 
-func (sh *ShipUsecase) GetAllShips(ctx context.Context, limit int, offset int) ([]*model.ReadShipResponse, int, error) {
+func (sh *ShipUsecase) GetAllShips(ctx context.Context, limit, offset int) ([]*model.ReadShipResponse, int, error) {
 
 	ships := []*entity.Ship{}
 	var total int64
 
-	err := tx.Execute(ctx, sh.DB, func(tx *gorm.DB) error {
+	err := sh.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
 		total, err = sh.ShipRepository.Count(tx)
 		if err != nil {
@@ -59,7 +65,7 @@ func (sh *ShipUsecase) GetAllShips(ctx context.Context, limit int, offset int) (
 func (sh *ShipUsecase) GetShipByID(ctx context.Context, id uint) (*model.ReadShipResponse, error) {
 	ship := new(entity.Ship)
 
-	err := tx.Execute(ctx, sh.DB, func(tx *gorm.DB) error {
+	err := sh.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
 		ship, err = sh.ShipRepository.GetByID(tx, id)
 		return err
@@ -88,7 +94,7 @@ func (sh *ShipUsecase) UpdateShip(ctx context.Context, id uint, request *model.U
 		return fmt.Errorf("ship name cannot be empty")
 	}
 
-	return tx.Execute(ctx, sh.DB, func(tx *gorm.DB) error {
+	return sh.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		return sh.ShipRepository.Update(tx, ship)
 	})
 
@@ -96,7 +102,7 @@ func (sh *ShipUsecase) UpdateShip(ctx context.Context, id uint, request *model.U
 
 func (sh *ShipUsecase) DeleteShip(ctx context.Context, id uint) error {
 
-	return tx.Execute(ctx, sh.DB, func(tx *gorm.DB) error {
+	return sh.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		ship, err := sh.ShipRepository.GetByID(tx, id)
 		if err != nil {
 			return err

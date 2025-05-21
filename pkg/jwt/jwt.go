@@ -1,4 +1,4 @@
-package auth
+package jwt
 
 import (
 	"errors"
@@ -11,20 +11,29 @@ import (
 	"github.com/google/uuid"
 )
 
-// var cfg = config.AppConfig.Auth
-
-// Load the JWT signing key from environment variables (DO NOT hardcode in production)
-var jwtSecretKey = []byte(config.AppConfig.Auth.SecretKey)
+type TokenManager struct {
+	secretKey          []byte
+	accessTokenExpiry  time.Duration
+	refreshTokenExpiry time.Duration
+}
 
 type Claims struct {
-	UserID   uint   `json:"user_id"` // 👈 No longer shadows RegisteredClaims.ID
-	Username string `json:"username"`
+	UserID   uint   `json:"user_id"`
+	Username string `json:"username,omitempty"` // optional for refresh
 	jwt.RegisteredClaims
 }
 
-// GenerateAccessToken creates a signed JWT access token (short-lived).
-func GenerateAccessToken(user *authentity.User) (string, error) {
-	expirationTime := time.Now().Add(config.AppConfig.Auth.AccessTokenExpiry)
+// Constructor (call this in Run() or main)
+func NewTokenManager(cfg *config.Config) *TokenManager {
+	return &TokenManager{
+		secretKey:          []byte(cfg.Auth.SecretKey),
+		accessTokenExpiry:  cfg.Auth.AccessTokenExpiry,
+		refreshTokenExpiry: cfg.Auth.RefreshTokenExpiry,
+	}
+}
+
+func (tm *TokenManager) GenerateAccessToken(user *authentity.User) (string, error) {
+	expirationTime := time.Now().Add(tm.accessTokenExpiry)
 
 	claims := &Claims{
 		UserID:   user.ID,
@@ -32,24 +41,18 @@ func GenerateAccessToken(user *authentity.User) (string, error) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "eticket-api",              // Change to your app name
-			Subject:   fmt.Sprintf("%d", user.ID), // User ID as subject
-			ID:        uuid.New().String(),        // Unique ID for potential revocation tracking
+			Issuer:    "eticket-api",
+			Subject:   fmt.Sprintf("%d", user.ID),
+			ID:        uuid.New().String(),
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	accesstoken, err := token.SignedString(jwtSecretKey)
-	if err != nil {
-		return "", fmt.Errorf("failed to sign access token: %w", err)
-	}
-
-	return accesstoken, nil
+	return token.SignedString(tm.secretKey)
 }
 
-// GenerateRefreshToken creates a signed JWT refresh token (long-lived).
-func GenerateRefreshToken(user *authentity.User) (string, error) {
-	expirationTime := time.Now().Add(config.AppConfig.Auth.RefreshTokenExpiry)
+func (tm *TokenManager) GenerateRefreshToken(user *authentity.User) (string, error) {
+	expirationTime := time.Now().Add(tm.refreshTokenExpiry)
 
 	claims := &Claims{
 		UserID: user.ID,
@@ -58,26 +61,20 @@ func GenerateRefreshToken(user *authentity.User) (string, error) {
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Issuer:    "eticket-api",
 			Subject:   fmt.Sprintf("%d", user.ID),
-			ID:        uuid.New().String(), // Unique ID for potential revocation tracking
+			ID:        uuid.New().String(),
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	refreshtoken, err := token.SignedString(jwtSecretKey)
-	if err != nil {
-		return "", fmt.Errorf("failed to sign refresh token: %w", err)
-	}
-
-	return refreshtoken, nil
+	return token.SignedString(tm.secretKey)
 }
 
-// ValidateToken verifies a JWT token string and extracts the claims.
-func ValidateToken(tokenString string) (*Claims, error) {
+func (tm *TokenManager) ValidateToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return jwtSecretKey, nil
+		return tm.secretKey, nil
 	})
 
 	if err != nil {

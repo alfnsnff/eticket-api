@@ -2,21 +2,28 @@ package route
 
 import (
 	"eticket-api/internal/delivery/http/controller"
-	"eticket-api/internal/repository"
+	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/injector"
 	"eticket-api/internal/usecase"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func NewClassRouter(db *gorm.DB, group *gin.RouterGroup) {
-	cr := repository.NewClassRepository()
+func NewClassRouter(ic *injector.Container, rg *gin.RouterGroup) {
+	cr := ic.ClassRepository
 	cc := &controller.ClassController{
-		ClassUsecase: usecase.NewClassUsecase(db, cr),
+		ClassUsecase: usecase.NewClassUsecase(ic.ClassUsecase.Tx, cr),
 	}
-	group.POST("/class/create", cc.CreateClass)
-	group.GET("/classes", cc.GetAllClasses)
-	group.GET("/class/:id", cc.GetClassByID)
-	group.PUT("/class/update/:id", cc.UpdateClass)
-	group.DELETE("/class/:id", cc.DeleteClass)
+
+	public := rg.Group("") // No middleware
+	public.GET("/classes", cc.GetAllClasses)
+	public.GET("/class/:id", cc.GetClassByID)
+
+	protected := rg.Group("")
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	protected.Use(middleware.Authenticate())
+
+	protected.POST("/class/create", cc.CreateClass)
+	protected.PUT("/class/update/:id", cc.UpdateClass)
+	protected.DELETE("/class/:id", cc.DeleteClass)
 }
