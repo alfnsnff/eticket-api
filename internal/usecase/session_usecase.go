@@ -229,7 +229,7 @@ func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model
 	}, nil
 }
 
-func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.ClaimedSessionFillPassengerDataRequest) (*model.ClaimedSessionFillPassengerDataResponse, error) {
+func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.ClaimedSessionFillPassengerDataRequest, sessioID string) (*model.ClaimedSessionFillPassengerDataResponse, error) {
 	if len(request.PassengerData) == 0 {
 		return nil, errors.New("invalid request: UserID and passenger data are required")
 	}
@@ -240,9 +240,9 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 	var failed []model.ClaimedSessionTicketUpdateFailure
 
 	err := cs.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		session, err := cs.SessionRepository.GetByUUIDWithLock(tx, request.SessionID, true)
+		session, err := cs.SessionRepository.GetByUUIDWithLock(tx, sessioID, true)
 		if err != nil {
-			return fmt.Errorf("failed to retrieve claim session %s within transaction: %w", request.SessionID, err)
+			return fmt.Errorf("failed to retrieve claim session %s within transaction: %w", sessioID, err)
 		}
 		if session == nil {
 			return errors.New("claim session not found")

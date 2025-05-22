@@ -75,7 +75,7 @@ func (uc *AuthController) Logout(ctx *gin.Context) {
 	}
 
 	// Revoke the token in DB
-	err = uc.AuthUsecase.RevokeRefreshToken(ctx.Request.Context(), tokenID)
+	err = uc.AuthUsecase.RevokeRefreshToken(ctx, tokenID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to revoke token", err.Error()))
 		return

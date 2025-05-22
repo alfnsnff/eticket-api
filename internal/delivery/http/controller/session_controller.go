@@ -152,6 +152,11 @@ func (csc *SessionController) SessionTicketLock(ctx *gin.Context) {
 }
 
 func (csc *SessionController) SessionTicketDataEntry(ctx *gin.Context) {
+	sessionID, err := ctx.Cookie("session_id")
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Missing session id", err.Error()))
+		return
+	}
 	request := new(model.ClaimedSessionFillPassengerDataRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
@@ -159,7 +164,7 @@ func (csc *SessionController) SessionTicketDataEntry(ctx *gin.Context) {
 		return
 	}
 
-	datas, err := csc.SessionUsecase.SessionDataEntry(ctx, request)
+	datas, err := csc.SessionUsecase.SessionDataEntry(ctx, request, sessionID)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create claim session", err.Error()))
