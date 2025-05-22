@@ -31,7 +31,7 @@ func NewAuthController(
 	}
 }
 
-func (uc *AuthController) Login(ctx *gin.Context) {
+func (auc *AuthController) Login(ctx *gin.Context) {
 	request := new(authmodel.UserLoginRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
@@ -39,21 +39,21 @@ func (uc *AuthController) Login(ctx *gin.Context) {
 		return
 	}
 
-	accessToken, refreshToken, err := uc.AuthUsecase.Login(ctx, request)
+	accessToken, refreshToken, err := auc.AuthUsecase.Login(ctx, request)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Invalid credentials", err.Error()))
 		return
 	}
 
 	// OPTIONAL: Set as HTTP-only secure cookies
-	ctx.SetCookie("access_token", accessToken, int(uc.Cfg.Auth.AccessTokenExpiry), "/", "", true, true)
-	ctx.SetCookie("refresh_token", refreshToken, int(uc.Cfg.Auth.RefreshTokenExpiry), "/", "", true, true)
+	ctx.SetCookie("access_token", accessToken, int(auc.Cfg.Auth.AccessTokenExpiry.Seconds()), "/", "", false, true)
+	ctx.SetCookie("refresh_token", refreshToken, int(auc.Cfg.Auth.RefreshTokenExpiry.Seconds()), "/", "", false, true)
 
 	// OR: Return tokens in JSON (useful for SPA apps)
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Login successful", nil))
 }
 
-func (uc *AuthController) Logout(ctx *gin.Context) {
+func (auc *AuthController) Logout(ctx *gin.Context) {
 	refreshToken, err := ctx.Cookie("refresh_token")
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Missing refresh token", err.Error()))
@@ -61,7 +61,7 @@ func (uc *AuthController) Logout(ctx *gin.Context) {
 	}
 
 	// Validate token and get claims
-	claims, err := uc.TokenManager.ValidateToken(refreshToken)
+	claims, err := auc.TokenManager.ValidateToken(refreshToken)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Invalid refresh token", err.Error()))
 		return
@@ -75,15 +75,33 @@ func (uc *AuthController) Logout(ctx *gin.Context) {
 	}
 
 	// Revoke the token in DB
-	err = uc.AuthUsecase.RevokeRefreshToken(ctx.Request.Context(), tokenID)
+	err = auc.AuthUsecase.RevokeRefreshToken(ctx, tokenID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to revoke token", err.Error()))
 		return
 	}
 
 	// Clear cookies
-	ctx.SetCookie("access_token", "", -1, "/", "", true, true)
-	ctx.SetCookie("refresh_token", "", -1, "/", "", true, true)
+	ctx.SetCookie("access_token", "", -1, "/", "", false, true)
+	ctx.SetCookie("refresh_token", "", -1, "/", "", false, true)
 
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Logout successful", nil))
+}
+
+func (auc *AuthController) RefreshToken(c *gin.Context) {
+	refreshToken, err := c.Cookie("refresh_token")
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.NewErrorResponse("Missing refresh token", err.Error()))
+		return
+	}
+
+	newAccessToken, err := auc.AuthUsecase.RefreshToken(c.Request.Context(), refreshToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.NewErrorResponse("Invalid session", err.Error()))
+		return
+	}
+
+	// Set new access token cookie
+	c.SetCookie("access_token", newAccessToken, int(auc.Cfg.Auth.AccessTokenExpiry.Seconds()), "/", "", false, true)
+	c.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Token refreshed successfully", nil))
 }
