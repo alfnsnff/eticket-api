@@ -46,7 +46,7 @@ func (auc *AuthController) Login(ctx *gin.Context) {
 	}
 
 	// OPTIONAL: Set as HTTP-only secure cookies
-	ctx.SetSameSite(http.SameSiteLaxMode)
+	ctx.SetSameSite(http.SameSiteNoneMode)
 	ctx.SetCookie("access_token", accessToken, int(auc.Cfg.Auth.AccessTokenExpiry.Seconds()), "/", "", false, true)
 	ctx.SetCookie("refresh_token", refreshToken, int(auc.Cfg.Auth.RefreshTokenExpiry.Seconds()), "/", "", false, true)
 
@@ -83,7 +83,7 @@ func (auc *AuthController) Logout(ctx *gin.Context) {
 	}
 
 	// Clear cookies
-	ctx.SetSameSite(http.SameSiteLaxMode)
+	ctx.SetSameSite(http.SameSiteNoneMode)
 	ctx.SetCookie("access_token", "", -1, "/", "", false, true)
 	ctx.SetCookie("refresh_token", "", -1, "/", "", false, true)
 
