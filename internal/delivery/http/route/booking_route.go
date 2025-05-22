@@ -10,11 +10,11 @@ import (
 )
 
 func NewBookingRouter(ic *injector.Container, rg *gin.RouterGroup) {
-	br := ic.BookingRepository
-	tr := ic.TicketRepository
-	csr := ic.SessionRepository
+	br := ic.Repository.BookingRepository
+	tr := ic.Repository.TicketRepository
+	csr := ic.Repository.SessionRepository
 	bc := &controller.BookingController{
-		BookingUsecase: usecase.NewBookingUsecase(ic.BookingUsecase.Tx, br, tr, csr),
+		BookingUsecase: usecase.NewBookingUsecase(ic.Tx, br, tr, csr),
 	}
 
 	public := rg.Group("") // No middleware
@@ -23,7 +23,7 @@ func NewBookingRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	public.GET("/booking/:id", bc.GetBookingByID)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.Repository.UserRepository, ic.Repository.AuthRepository)
 	protected.Use(middleware.Authenticate())
 
 	protected.POST("/booking/create", bc.CreateBooking)

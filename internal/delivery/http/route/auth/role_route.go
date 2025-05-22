@@ -10,16 +10,16 @@ import (
 )
 
 func NewRoleRouter(ic *injector.Container, rg *gin.RouterGroup) {
-	ror := ic.RoleRepository
+	ror := ic.Repository.RoleRepository
 	roc := &authcontroller.RoleController{
-		RoleUsecase: usecase.NewRoleUsecase(ic.RoleUsecase.Tx, ror),
+		RoleUsecase: usecase.NewRoleUsecase(ic.Tx, ror),
 	}
 	public := rg.Group("") // No middleware
 	public.GET("/roles", roc.GetAllRoles)
 	public.GET("/role/:id", roc.GetRoleByID)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.Repository.UserRepository, ic.Repository.AuthRepository)
 	protected.Use(middleware.Authenticate())
 
 	protected.POST("/role/create", roc.CreateRole)

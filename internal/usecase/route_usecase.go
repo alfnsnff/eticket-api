@@ -14,12 +14,12 @@ import (
 )
 
 type RouteUsecase struct {
-	Tx              tx.TxManager
+	Tx              *tx.TxManager
 	RouteRepository *repository.RouteRepository
 }
 
 func NewRouteUsecase(
-	tx tx.TxManager,
+	tx *tx.TxManager,
 	route_repository *repository.RouteRepository,
 ) *RouteUsecase {
 	return &RouteUsecase{

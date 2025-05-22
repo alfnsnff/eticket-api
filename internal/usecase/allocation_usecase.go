@@ -14,14 +14,14 @@ import (
 )
 
 type AllocationUsecase struct {
-	Tx                   tx.TxManager
+	Tx                   *tx.TxManager
 	AllocationRepository *repository.AllocationRepository
 	ScheduleRepository   *repository.ScheduleRepository
 	FareRepository       *repository.FareRepository
 }
 
 func NewAllocationUsecase(
-	tx tx.TxManager,
+	tx *tx.TxManager,
 	allocation_repository *repository.AllocationRepository,
 	schedule_repository *repository.ScheduleRepository,
 	fare_repository *repository.FareRepository,

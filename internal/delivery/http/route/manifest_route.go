@@ -10,9 +10,9 @@ import (
 )
 
 func NewCapacityRouter(ic *injector.Container, rg *gin.RouterGroup) {
-	hr := ic.ManifestRepository
+	hr := ic.Repository.ManifestRepository
 	mc := &controller.ManifestController{
-		ManifestUsecase: usecase.NewManifestUsecase(ic.ManifestUsecase.Tx, hr),
+		ManifestUsecase: usecase.NewManifestUsecase(ic.Tx, hr),
 	}
 
 	public := rg.Group("") // No middleware
@@ -20,7 +20,7 @@ func NewCapacityRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	public.GET("/manifest/:id", mc.GetManifestByID)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.Repository.UserRepository, ic.Repository.AuthRepository)
 	protected.Use(middleware.Authenticate())
 
 	protected.POST("/manifest/create", mc.CreateManifest)

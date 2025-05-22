@@ -15,14 +15,14 @@ import (
 )
 
 type BookingUsecase struct {
-	Tx                tx.TxManager
+	Tx                *tx.TxManager
 	BookingRepository *repository.BookingRepository
 	TicketRepository  *repository.TicketRepository
 	SessionRepository *repository.SessionRepository
 }
 
 func NewBookingUsecase(
-	tx tx.TxManager,
+	tx *tx.TxManager,
 	booking_repository *repository.BookingRepository,
 	ticket_repository *repository.TicketRepository,
 	session_repository *repository.SessionRepository,

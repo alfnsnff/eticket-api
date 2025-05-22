@@ -7,7 +7,7 @@ import (
 	authmodel "eticket-api/internal/model/auth"
 	authrepository "eticket-api/internal/repository/auth"
 	"eticket-api/pkg/jwt"
-	"eticket-api/pkg/utils"
+	utils "eticket-api/pkg/utils/hash"
 	"eticket-api/pkg/utils/tx"
 	"fmt"
 	"time"
@@ -17,14 +17,14 @@ import (
 )
 
 type AuthUsecase struct {
-	Tx             tx.TxManager
+	Tx             *tx.TxManager
 	AuthRepository *authrepository.AuthRepository
 	UserRepository *authrepository.UserRepository
 	TokenManager   *jwt.TokenManager
 }
 
 func NewAuthUsecase(
-	tx tx.TxManager,
+	tx *tx.TxManager,
 	auth_repository *authrepository.AuthRepository,
 	user_repository *authrepository.UserRepository,
 	tm *jwt.TokenManager,

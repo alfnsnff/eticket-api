@@ -17,7 +17,7 @@ func NewTicketRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	sr := repository.NewSessionRepository()
 
 	tc := &controller.TicketController{
-		TicketUsecase: usecase.NewTicketUsecase(ic.TicketUsecase.Tx, tr, scr, fr, sr),
+		TicketUsecase: usecase.NewTicketUsecase(ic.Tx, tr, scr, fr, sr),
 	}
 
 	public := rg.Group("") // No middleware
@@ -25,7 +25,7 @@ func NewTicketRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	public.GET("/ticket/:id", tc.GetTicketByID)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.Repository.UserRepository, ic.Repository.AuthRepository)
 	protected.Use(middleware.Authenticate())
 
 	protected.POST("/ticket/create", tc.CreateTicket)

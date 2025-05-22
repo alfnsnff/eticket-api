@@ -10,9 +10,9 @@ import (
 )
 
 func NewFareRouter(ic *injector.Container, rg *gin.RouterGroup) {
-	rr := ic.FareRepository
+	rr := ic.Repository.FareRepository
 	fc := &controller.FareController{
-		FareUsecase: usecase.NewFareUsecase(ic.FareUsecase.Tx, rr),
+		FareUsecase: usecase.NewFareUsecase(ic.Tx, rr),
 	}
 
 	public := rg.Group("") // No middleware
@@ -20,7 +20,7 @@ func NewFareRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	public.GET("/fare/:id", fc.GetFareByID)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.Repository.UserRepository, ic.Repository.AuthRepository)
 	protected.Use(middleware.Authenticate())
 
 	protected.POST("/fare/create", fc.CreateFare)

@@ -16,7 +16,7 @@ import (
 )
 
 type SessionUsecase struct {
-	Tx                   tx.TxManager
+	Tx                   *tx.TxManager
 	SessionRepository    *repository.SessionRepository
 	TicketRepository     *repository.TicketRepository
 	ScheduleRepository   *repository.ScheduleRepository
@@ -26,7 +26,7 @@ type SessionUsecase struct {
 }
 
 func NewSessionUsecase(
-	tx tx.TxManager,
+	tx *tx.TxManager,
 	sessionRepo *repository.SessionRepository,
 	ticketRepo *repository.TicketRepository,
 	schedule_repository *repository.ScheduleRepository,

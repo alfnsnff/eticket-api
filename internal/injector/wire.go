@@ -5,14 +5,7 @@ package injector
 
 import (
 	"eticket-api/config"
-	"eticket-api/internal/delivery/http/controller"
-	authcontroller "eticket-api/internal/delivery/http/controller/auth"
-
-	"eticket-api/internal/repository"
-	authrepository "eticket-api/internal/repository/auth"
-
-	"eticket-api/internal/usecase"
-	authusecase "eticket-api/internal/usecase/auth"
+	"eticket-api/internal/injector/module"
 	"eticket-api/pkg/db/postgres"
 	"eticket-api/pkg/jwt"
 	"eticket-api/pkg/utils/tx"
@@ -22,68 +15,17 @@ import (
 
 func InitializeContainer(cfg *config.Config) (*Container, error) {
 	wire.Build(
+		// Core dependencies
 		postgres.New,
-		jwt.NewTokenManager,
+		jwt.New,
+		tx.New,
 
-		// TxManager binding
-		tx.NewGormTxManager,
-		wire.Bind(new(tx.TxManager), new(*tx.GormTxManager)),
+		// Your internal module wiring
+		module.NewRepositoryModule,
+		module.NewUsecaseModule,
+		module.NewControllerModule,
 
-		// Auth Repos
-		authrepository.NewAuthRepository,
-		authrepository.NewRoleRepository,
-		authrepository.NewUserRepository,
-		authrepository.NewUserRoleRepository,
-
-		// App Repos
-		repository.NewShipRepository,
-		repository.NewAllocationRepository,
-		repository.NewManifestRepository,
-		repository.NewTicketRepository,
-		repository.NewFareRepository,
-		repository.NewScheduleRepository,
-		repository.NewBookingRepository,
-		repository.NewSessionRepository,
-		repository.NewRouteRepository,
-		repository.NewHarborRepository,
-		repository.NewClassRepository,
-
-		// Usecases
-		authusecase.NewAuthUsecase,
-		authusecase.NewRoleUsecase,
-		authusecase.NewUserUsecase,
-		authusecase.NewUserRoleUsecase,
-
-		usecase.NewShipUsecase,
-		usecase.NewAllocationUsecase,
-		usecase.NewManifestUsecase,
-		usecase.NewTicketUsecase,
-		usecase.NewFareUsecase,
-		usecase.NewScheduleUsecase,
-		usecase.NewBookingUsecase,
-		usecase.NewSessionUsecase,
-		usecase.NewRouteUsecase,
-		usecase.NewHarborUsecase,
-		usecase.NewClassUsecase,
-
-		// Controllers
-		authcontroller.NewAuthController,
-		authcontroller.NewRoleController,
-		authcontroller.NewUserController,
-		authcontroller.NewUserRoleController,
-
-		controller.NewShipController,
-		controller.NewAllocationController,
-		controller.NewManifestController,
-		controller.NewTicketController,
-		controller.NewFareController,
-		controller.NewScheduleController,
-		controller.NewBookingController,
-		controller.NewSessionController,
-		controller.NewRouteController,
-		controller.NewHarborController,
-		controller.NewClassController,
-
+		// Final application container
 		NewContainer,
 	)
 	return &Container{}, nil

@@ -10,20 +10,20 @@ import (
 )
 
 func NewAuthRouter(ic *injector.Container, rg *gin.RouterGroup) {
-	ar := ic.AuthRepository
-	ur := ic.UserRepository
+	ar := ic.Repository.AuthRepository
+	ur := ic.Repository.UserRepository
 	tm := ic.TokenManager
 	auc := &authcontroller.AuthController{
 		Cfg:          ic.Cfg,
 		TokenManager: ic.TokenManager,
-		AuthUsecase:  usecase.NewAuthUsecase(ic.AuthUsecase.Tx, ar, ur, tm),
+		AuthUsecase:  usecase.NewAuthUsecase(ic.Tx, ar, ur, tm),
 	}
 
 	public := rg.Group("") // No middleware
 	public.POST("/auth/login", auc.Login)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.Repository.UserRepository, ic.Repository.AuthRepository)
 	protected.Use(middleware.Authenticate())
 
 	protected.POST("/auth/logout", auc.Logout)

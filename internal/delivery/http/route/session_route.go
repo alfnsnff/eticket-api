@@ -9,14 +9,14 @@ import (
 )
 
 func NewSessionRouter(ic *injector.Container, rg *gin.RouterGroup) {
-	csr := ic.SessionRepository
-	tr := ic.TicketRepository
-	scr := ic.ScheduleRepository
-	ar := ic.AllocationRepository
-	mr := ic.ManifestRepository
-	fr := ic.FareRepository
+	csr := ic.Repository.SessionRepository
+	tr := ic.Repository.TicketRepository
+	scr := ic.Repository.ScheduleRepository
+	ar := ic.Repository.AllocationRepository
+	mr := ic.Repository.ManifestRepository
+	fr := ic.Repository.FareRepository
 	sc := &controller.SessionController{
-		SessionUsecase: usecase.NewSessionUsecase(ic.SessionUsecase.Tx, csr, tr, scr, ar, mr, fr),
+		SessionUsecase: usecase.NewSessionUsecase(ic.Tx, csr, tr, scr, ar, mr, fr),
 	}
 
 	public := rg.Group("") // No middleware

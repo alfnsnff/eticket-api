@@ -10,16 +10,16 @@ import (
 )
 
 func NewScheduleRouter(ic *injector.Container, rg *gin.RouterGroup) {
-	ar := ic.AllocationRepository
-	cr := ic.ClassRepository
-	fr := ic.FareRepository
-	mr := ic.ManifestRepository
-	rr := ic.RouteRepository
-	shr := ic.ShipRepository
-	scr := ic.ScheduleRepository
-	tr := ic.TicketRepository
+	ar := ic.Repository.AllocationRepository
+	cr := ic.Repository.ClassRepository
+	fr := ic.Repository.FareRepository
+	mr := ic.Repository.ManifestRepository
+	rr := ic.Repository.RouteRepository
+	shr := ic.Repository.ShipRepository
+	scr := ic.Repository.ScheduleRepository
+	tr := ic.Repository.TicketRepository
 	scc := &controller.ScheduleController{
-		ScheduleUsecase: usecase.NewScheduleUsecase(ic.ScheduleUsecase.Tx, ar, cr, fr, mr, rr, shr, scr, tr),
+		ScheduleUsecase: usecase.NewScheduleUsecase(ic.Tx, ar, cr, fr, mr, rr, shr, scr, tr),
 	}
 
 	public := rg.Group("") // No middleware
@@ -29,7 +29,7 @@ func NewScheduleRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	public.GET("/schedule/:id/quota", scc.GetQuotaByScheduleID)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.Repository.UserRepository, ic.Repository.AuthRepository)
 	protected.Use(middleware.Authenticate())
 
 	protected.POST("/schedule/create", scc.CreateSchedule)

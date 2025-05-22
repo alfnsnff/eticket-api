@@ -10,9 +10,9 @@ import (
 )
 
 func NewClassRouter(ic *injector.Container, rg *gin.RouterGroup) {
-	cr := ic.ClassRepository
+	cr := ic.Repository.ClassRepository
 	cc := &controller.ClassController{
-		ClassUsecase: usecase.NewClassUsecase(ic.ClassUsecase.Tx, cr),
+		ClassUsecase: usecase.NewClassUsecase(ic.Tx, cr),
 	}
 
 	public := rg.Group("") // No middleware
@@ -20,7 +20,7 @@ func NewClassRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	public.GET("/class/:id", cc.GetClassByID)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.Repository.UserRepository, ic.Repository.AuthRepository)
 	protected.Use(middleware.Authenticate())
 
 	protected.POST("/class/create", cc.CreateClass)
