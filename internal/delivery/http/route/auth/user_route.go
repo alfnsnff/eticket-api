@@ -18,12 +18,12 @@ func NewUserRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	public := rg.Group("") // No middleware
 	public.GET("/users", uc.GetAllUsers)
 	public.GET("/user/:id", uc.GetUserByID)
+	public.POST("/user/create", uc.CreateUser)
 
 	protected := rg.Group("")
 	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
 	protected.Use(middleware.Authenticate())
 
-	protected.POST("/user/create", uc.CreateUser)
 	protected.PUT("/user/update/:id", uc.UpdateUser)
 	protected.DELETE("/user/:id", uc.DeleteUser)
 }

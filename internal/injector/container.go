@@ -21,6 +21,7 @@ type Container struct {
 	DB           *gorm.DB
 	TokenManager *jwt.TokenManager
 
+	//repository
 	AuthRepository     *authrepository.AuthRepository
 	RoleRepository     *authrepository.RoleRepository
 	UserRepository     *authrepository.UserRepository
@@ -38,6 +39,7 @@ type Container struct {
 	HarborRepository     *repository.HarborRepository
 	ClassRepository      *repository.ClassRepository
 
+	//usecase
 	AuthUsecase     *authusecase.AuthUsecase
 	RoleUsecase     *authusecase.RoleUsecase
 	UserUsecase     *authusecase.UserUsecase
@@ -55,6 +57,7 @@ type Container struct {
 	HarborUsecase     *usecase.HarborUsecase
 	ClassUsecase      *usecase.ClassUsecase
 
+	//controller
 	AuthController     *authcontroller.AuthController
 	RoleController     *authcontroller.RoleController
 	UserController     *authcontroller.UserController
