@@ -38,15 +38,15 @@ func NewAuthUsecase(
 }
 
 // Login authenticates a user and returns access and refresh tokens.
-func (uc *AuthUsecase) Login(ctx context.Context, request *authmodel.UserLoginRequest) (string, string, error) {
+func (au *AuthUsecase) Login(ctx context.Context, request *authmodel.UserLoginRequest) (string, string, error) {
 	if request.Username == "" || request.Password == "" {
 		return "", "", errors.New("username and password are required")
 	}
 
 	var accessToken, refreshToken string
 
-	err := uc.Tx.Execute(ctx, func(txDB *gorm.DB) error {
-		user, repoErr := uc.UserRepository.GetByUsername(txDB, request.Username)
+	err := au.Tx.Execute(ctx, func(tx *gorm.DB) error {
+		user, repoErr := au.UserRepository.GetByUsername(tx, request.Username)
 		if repoErr != nil {
 			return fmt.Errorf("failed to retrieve user: %w", repoErr)
 		}
@@ -59,18 +59,18 @@ func (uc *AuthUsecase) Login(ctx context.Context, request *authmodel.UserLoginRe
 		}
 
 		var err error
-		accessToken, err = uc.TokenManager.GenerateAccessToken(user)
+		accessToken, err = au.TokenManager.GenerateAccessToken(user)
 		if err != nil {
 			return fmt.Errorf("failed to generate access token: %w", err)
 		}
 
-		refreshToken, err = uc.TokenManager.GenerateRefreshToken(user)
+		refreshToken, err = au.TokenManager.GenerateRefreshToken(user)
 		if err != nil {
 			return fmt.Errorf("failed to generate refresh token: %w", err)
 		}
 
 		// ✅ Validate and extract claims from the refresh token
-		claims, err := uc.TokenManager.ValidateToken(refreshToken)
+		claims, err := au.TokenManager.ValidateToken(refreshToken)
 		if err != nil {
 			return fmt.Errorf("failed to parse refresh token: %w", err)
 		}
@@ -85,7 +85,7 @@ func (uc *AuthUsecase) Login(ctx context.Context, request *authmodel.UserLoginRe
 			UpdatedAt: time.Now(),
 		}
 
-		if err := uc.AuthRepository.Create(txDB, refreshTokenEntity); err != nil {
+		if err := au.AuthRepository.Create(tx, refreshTokenEntity); err != nil {
 			return fmt.Errorf("failed to store refresh token: %w", err)
 		}
 
@@ -99,9 +99,45 @@ func (uc *AuthUsecase) Login(ctx context.Context, request *authmodel.UserLoginRe
 	return accessToken, refreshToken, nil
 }
 
-// func (uc *AuthUsecase) RevokeRefreshToken(ctx context.Context, tokenID uuid.UUID) error {
-// 	return uc.AuthRepository.RevokeRefreshTokenByID(, tokenID)
-// }
+func (au *AuthUsecase) RefreshToken(ctx context.Context, refreshToken string) (string, error) {
+	claims, err := au.TokenManager.ValidateToken(refreshToken)
+	if err != nil {
+		return "", fmt.Errorf("invalid refresh token: %w", err)
+	}
+
+	var newAccessToken string
+
+	err = au.Tx.Execute(ctx, func(tx *gorm.DB) error {
+		// Check if refresh token exists and is valid
+		session, err := au.AuthRepository.GetRefreshToken(tx, claims.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get refresh token: %w", err)
+		}
+		if session.Revoked || session.ExpiresAt.Before(time.Now()) {
+			return fmt.Errorf("refresh session invalid or expired")
+		}
+
+		// Get user associated with token
+		user, err := au.UserRepository.GetByID(tx, claims.UserID)
+		if err != nil {
+			return fmt.Errorf("user not found: %w", err)
+		}
+
+		// Generate new access token
+		newAccessToken, err = au.TokenManager.GenerateAccessToken(user)
+		if err != nil {
+			return fmt.Errorf("failed to generate new access token: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	return newAccessToken, nil
+}
 
 func (au *AuthUsecase) RevokeRefreshToken(ctx context.Context, tokenID uuid.UUID) error {
 	return au.Tx.Execute(ctx, func(tx *gorm.DB) error {

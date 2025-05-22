@@ -35,6 +35,15 @@ func (aur *AuthRepository) GetAllRefreshToken(db *gorm.DB) ([]*entity.RefreshTok
 	return tokens, nil
 }
 
+func (aur *AuthRepository) GetRefreshToken(db *gorm.DB, id string) (*entity.RefreshToken, error) {
+	token := new(entity.RefreshToken)
+	result := db.First(&token, "id = ?", id)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return token, nil
+}
+
 func (aur *AuthRepository) RevokeRefreshTokenByID(db *gorm.DB, id uuid.UUID) error {
 	return db.Model(&entity.RefreshToken{}).
 		Where("id = ?", id).

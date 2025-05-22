@@ -23,6 +23,6 @@ func NewShipRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	protected.Use(middleware.Authenticate())
 
 	protected.POST("/ship/create", shc.CreateShip)
-	protected.PUT("/ships/:id", shc.UpdateShip)
-	protected.DELETE("/ships/:id", shc.DeleteShip)
+	protected.PUT("/ship/:id", shc.UpdateShip)
+	protected.DELETE("/ship/:id", shc.DeleteShip)
 }
