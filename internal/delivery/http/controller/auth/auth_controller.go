@@ -45,30 +45,12 @@ func (auc *AuthController) Login(ctx *gin.Context) {
 		return
 	}
 
-	// ✅ Set cookies manually with SameSite
-	http.SetCookie(ctx.Writer, &http.Cookie{
-		Name:     "access_token",
-		Value:    accessToken,
-		Path:     "/",
-		Domain:   "", // or your domain in production
-		MaxAge:   int(auc.Cfg.Auth.AccessTokenExpiry.Seconds()),
-		Secure:   false, // use true if serving over HTTPS
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode, // or SameSiteNoneMode for cross-origin + Secure
-	})
+	// OPTIONAL: Set as HTTP-only secure cookies
+	ctx.SetSameSite(http.SameSiteLaxMode)
+	ctx.SetCookie("access_token", accessToken, int(auc.Cfg.Auth.AccessTokenExpiry.Seconds()), "/", "", false, true)
+	ctx.SetCookie("refresh_token", refreshToken, int(auc.Cfg.Auth.RefreshTokenExpiry.Seconds()), "/", "", false, true)
 
-	http.SetCookie(ctx.Writer, &http.Cookie{
-		Name:     "refresh_token",
-		Value:    refreshToken,
-		Path:     "/",
-		Domain:   "",
-		MaxAge:   int(auc.Cfg.Auth.RefreshTokenExpiry.Seconds()),
-		Secure:   false,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-	})
-
-	// ✅ Respond with success
+	// OR: Return tokens in JSON (useful for SPA apps)
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Login successful", nil))
 }
 
@@ -101,6 +83,7 @@ func (auc *AuthController) Logout(ctx *gin.Context) {
 	}
 
 	// Clear cookies
+	ctx.SetSameSite(http.SameSiteLaxMode)
 	ctx.SetCookie("access_token", "", -1, "/", "", false, true)
 	ctx.SetCookie("refresh_token", "", -1, "/", "", false, true)
 
@@ -114,23 +97,14 @@ func (auc *AuthController) RefreshToken(ctx *gin.Context) {
 		return
 	}
 
-	newAccessToken, err := auc.AuthUsecase.RefreshToken(ctx.Request.Context(), refreshToken)
+	newAccessToken, err := auc.AuthUsecase.RefreshToken(ctx, refreshToken)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Invalid session", err.Error()))
 		return
 	}
 
-	// ✅ Set cookies manually with SameSite
-	http.SetCookie(ctx.Writer, &http.Cookie{
-		Name:     "access_token",
-		Value:    newAccessToken,
-		Path:     "/",
-		Domain:   "", // or your domain in production
-		MaxAge:   int(auc.Cfg.Auth.AccessTokenExpiry.Seconds()),
-		Secure:   false, // use true if serving over HTTPS
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode, // or SameSiteNoneMode for cross-origin + Secure
-	})
-
+	// Set new access token cookie
+	ctx.SetSameSite(http.SameSiteLaxMode)
+	ctx.SetCookie("access_token", newAccessToken, int(auc.Cfg.Auth.AccessTokenExpiry.Seconds()), "/", "", false, true)
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Token refreshed successfully", nil))
 }
