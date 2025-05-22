@@ -50,7 +50,7 @@ func (auc *AuthController) Login(ctx *gin.Context) {
 		Name:     "access_token",
 		Value:    accessToken,
 		Path:     "/",
-		Domain:   "localhost", // or your domain in production
+		Domain:   "", // or your domain in production
 		MaxAge:   int(auc.Cfg.Auth.AccessTokenExpiry.Seconds()),
 		Secure:   false, // use true if serving over HTTPS
 		HttpOnly: true,
@@ -61,7 +61,7 @@ func (auc *AuthController) Login(ctx *gin.Context) {
 		Name:     "refresh_token",
 		Value:    refreshToken,
 		Path:     "/",
-		Domain:   "localhost",
+		Domain:   "",
 		MaxAge:   int(auc.Cfg.Auth.RefreshTokenExpiry.Seconds()),
 		Secure:   false,
 		HttpOnly: true,
@@ -125,7 +125,7 @@ func (auc *AuthController) RefreshToken(ctx *gin.Context) {
 		Name:     "access_token",
 		Value:    newAccessToken,
 		Path:     "/",
-		Domain:   "localhost", // or your domain in production
+		Domain:   "", // or your domain in production
 		MaxAge:   int(auc.Cfg.Auth.AccessTokenExpiry.Seconds()),
 		Secure:   false, // use true if serving over HTTPS
 		HttpOnly: true,
