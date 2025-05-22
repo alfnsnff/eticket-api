@@ -2,7 +2,6 @@ package route
 
 import (
 	"eticket-api/internal/delivery/http/controller"
-	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/injector"
 	"eticket-api/internal/usecase"
 
@@ -26,12 +25,7 @@ func NewSessionRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	public.GET("/sessions", sc.GetAllSessions)
 	public.GET("/session/:id", sc.GetSessionByID)
 	public.GET("/session/uuid/:sessionid", sc.GetSessionBySessionID)
-
-	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
-	protected.Use(middleware.Authenticate())
-
-	protected.POST("/session/create", sc.CreateSession)
-	protected.PUT("/session/update/:id", sc.UpdateSession)
-	protected.DELETE("/session/:id", sc.DeleteSession)
+	public.POST("/session/create", sc.CreateSession)
+	public.PUT("/session/update/:id", sc.UpdateSession)
+	public.DELETE("/session/:id", sc.DeleteSession)
 }
