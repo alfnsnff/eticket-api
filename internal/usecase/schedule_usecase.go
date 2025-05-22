@@ -15,7 +15,7 @@ import (
 )
 
 type ScheduleUsecase struct {
-	Tx                   tx.TxManager
+	Tx                   *tx.TxManager
 	AllocationRepository *repository.AllocationRepository
 	ClassRepository      *repository.ClassRepository
 	FareRepository       *repository.FareRepository
@@ -27,7 +27,7 @@ type ScheduleUsecase struct {
 }
 
 func NewScheduleUsecase(
-	tx tx.TxManager,
+	tx *tx.TxManager,
 	allocation_repository *repository.AllocationRepository,
 	class_repository *repository.ClassRepository,
 	fare_repository *repository.FareRepository,

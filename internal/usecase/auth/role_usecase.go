@@ -14,12 +14,12 @@ import (
 )
 
 type RoleUsecase struct {
-	Tx             tx.TxManager
+	Tx             *tx.TxManager
 	RoleRepository *authrepository.RoleRepository
 }
 
 func NewRoleUsecase(
-	tx tx.TxManager,
+	tx *tx.TxManager,
 	role_repository *authrepository.RoleRepository,
 ) *RoleUsecase {
 	return &RoleUsecase{

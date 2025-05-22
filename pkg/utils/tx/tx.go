@@ -7,6 +7,21 @@ import (
 	"gorm.io/gorm"
 )
 
+// TxManager handles transaction execution using GORM
+type TxManager struct {
+	DB *gorm.DB
+}
+
+// NewTxManager creates a new TxManager
+func New(db *gorm.DB) *TxManager {
+	return &TxManager{DB: db}
+}
+
+// Execute runs the given function within a transaction
+func (tm *TxManager) Execute(ctx context.Context, fn func(tx *gorm.DB) error) error {
+	return Execute(ctx, tm.DB, fn)
+}
+
 // Execute runs a function inside a transaction with automatic rollback/commit
 func Execute(ctx context.Context, db *gorm.DB, fn func(tx *gorm.DB) error) error {
 	tx := db.WithContext(ctx).Begin()

@@ -10,9 +10,9 @@ import (
 )
 
 func NewRouteRouter(ic *injector.Container, rg *gin.RouterGroup) {
-	rr := ic.RouteRepository
+	rr := ic.Repository.RouteRepository
 	rc := &controller.RouteController{
-		RouteUsecase: usecase.NewRouteUsecase(ic.RouteUsecase.Tx, rr),
+		RouteUsecase: usecase.NewRouteUsecase(ic.Tx, rr),
 	}
 
 	public := rg.Group("") // No middleware
@@ -20,7 +20,7 @@ func NewRouteRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	public.GET("/route/:id", rc.GetRouteByID)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.Repository.UserRepository, ic.Repository.AuthRepository)
 	protected.Use(middleware.Authenticate())
 
 	protected.POST("/route/create", rc.CreateRoute)

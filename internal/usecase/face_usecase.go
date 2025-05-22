@@ -14,12 +14,12 @@ import (
 )
 
 type FareUsecase struct {
-	Tx             tx.TxManager
+	Tx             *tx.TxManager
 	FareRepository *repository.FareRepository
 }
 
 func NewFareUsecase(
-	tx tx.TxManager,
+	tx *tx.TxManager,
 	fare_repository *repository.FareRepository,
 ) *FareUsecase {
 	return &FareUsecase{

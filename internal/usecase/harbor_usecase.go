@@ -14,12 +14,12 @@ import (
 )
 
 type HarborUsecase struct {
-	Tx               tx.TxManager
+	Tx               *tx.TxManager
 	HarborRepository *repository.HarborRepository
 }
 
 func NewHarborUsecase(
-	tx tx.TxManager,
+	tx *tx.TxManager,
 	harbor_repository *repository.HarborRepository,
 ) *HarborUsecase {
 	return &HarborUsecase{

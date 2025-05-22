@@ -1,6 +1,6 @@
 server:
   port: 8080
-  gin_mode: debug
+  gin_mode: release
 
 auth:
   access_token_expiry: 15m

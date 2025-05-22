@@ -10,11 +10,11 @@ import (
 )
 
 func NewUserRoleRouter(ic *injector.Container, rg *gin.RouterGroup) {
-	rr := ic.RoleRepository
-	ur := ic.UserRepository
-	urr := ic.UserRoleRepository
+	rr := ic.Repository.RoleRepository
+	ur := ic.Repository.UserRepository
+	urr := ic.Repository.UserRoleRepository
 	urc := &authcontroller.UserRoleController{
-		UserRoleUsecase: usecase.NewUserRoleUsecase(ic.UserRoleUsecase.Tx, rr, ur, urr),
+		UserRoleUsecase: usecase.NewUserRoleUsecase(ic.Tx, rr, ur, urr),
 	}
 
 	public := rg.Group("") // No middleware
@@ -22,7 +22,7 @@ func NewUserRoleRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	public.GET("/user/role/:id", urc.GetUserRoleByID)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.Repository.UserRepository, ic.Repository.AuthRepository)
 	protected.Use(middleware.Authenticate())
 
 	protected.POST("/user/role/assign", urc.CreateUserRole)

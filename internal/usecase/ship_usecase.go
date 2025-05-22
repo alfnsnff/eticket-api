@@ -14,12 +14,12 @@ import (
 )
 
 type ShipUsecase struct {
-	Tx             tx.TxManager
+	Tx             *tx.TxManager
 	ShipRepository *repository.ShipRepository
 }
 
 func NewShipUsecase(
-	tx tx.TxManager,
+	tx *tx.TxManager,
 	ship_repository *repository.ShipRepository,
 ) *ShipUsecase {
 	return &ShipUsecase{

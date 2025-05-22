@@ -24,7 +24,7 @@ type Claims struct {
 }
 
 // Constructor (call this in Run() or main)
-func NewTokenManager(cfg *config.Config) *TokenManager {
+func New(cfg *config.Config) *TokenManager {
 	return &TokenManager{
 		secretKey:          []byte(cfg.Auth.SecretKey),
 		accessTokenExpiry:  cfg.Auth.AccessTokenExpiry,

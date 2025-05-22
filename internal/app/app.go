@@ -1,12 +1,15 @@
 package app
 
 import (
+	"context"
 	"eticket-api/config"
 	"eticket-api/internal/delivery/http/route"
 	"eticket-api/internal/domain/entity"
 	authentity "eticket-api/internal/domain/entity/auth"
 	"eticket-api/internal/injector"
+	"eticket-api/internal/job"
 	"eticket-api/pkg/db/postgres"
+
 	"log"
 	"time"
 
@@ -47,37 +50,35 @@ func Run(cfg *config.Config) {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
-	// cleanupJob := job.SetupJob(db)
+	cleanupJob := job.Setup(ic)
 
-	// go func() {
-	// 	ctx, cancel := context.WithCancel(context.Background())
-	// 	defer cancel() // Ensure cancel is called
+	go func() {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel() // Ensure cancel is called
 
-	// 	log.Println("Starting cleanup job goroutine...")
-	// 	ticker := time.NewTicker(5 * time.Minute)
-	// 	defer ticker.Stop()
+		log.Println("Starting cleanup job goroutine...")
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
 
-	// 	if err := cleanupJob.Run(ctx); err != nil {
-	// 		log.Printf("Initial cleanup job run failed: %v", err)
-	// 	}
+		if err := cleanupJob.Run(ctx); err != nil {
+			log.Printf("Initial cleanup job run failed: %v", err)
+		}
 
-	// 	for {
-	// 		select {
-	// 		case <-ticker.C:
-	// 			log.Println("Triggering scheduled cleanup job run...")
-	// 			if err := cleanupJob.Run(ctx); err != nil {
-	// 				log.Printf("Scheduled cleanup job run failed: %v", err)
-	// 			}
-	// 		case <-ctx.Done():
-	// 			log.Println("Cleanup job goroutine shutting down.")
-	// 			return
-	// 		}
-	// 	}
-	// }()
+		for {
+			select {
+			case <-ticker.C:
+				log.Println("Triggering scheduled cleanup job run...")
+				if err := cleanupJob.Run(ctx); err != nil {
+					log.Printf("Scheduled cleanup job run failed: %v", err)
+				}
+			case <-ctx.Done():
+				log.Println("Cleanup job goroutine shutting down.")
+				return
+			}
+		}
+	}()
 
-	// Set up Gin router
-	// gin.SetMode(gin.ReleaseMode)
-	gin.SetMode(gin.DebugMode)
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 	origins := []string{"http://localhost:3000", "https://tiket-hebat.vercel.app"}
 

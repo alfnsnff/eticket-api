@@ -14,12 +14,12 @@ import (
 )
 
 type ManifestUsecase struct {
-	Tx                 tx.TxManager
+	Tx                 *tx.TxManager
 	ManifestRepository *repository.ManifestRepository
 }
 
 func NewManifestUsecase(
-	tx tx.TxManager,
+	tx *tx.TxManager,
 	manifest_repository *repository.ManifestRepository,
 ) *ManifestUsecase {
 	return &ManifestUsecase{

@@ -12,14 +12,14 @@ import (
 
 func NewShipRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	repo := repository.NewShipRepository()
-	shc := &controller.ShipController{ShipUsecase: usecase.NewShipUsecase(ic.ShipUsecase.Tx, repo)}
+	shc := &controller.ShipController{ShipUsecase: usecase.NewShipUsecase(ic.Tx, repo)}
 
 	public := rg.Group("") // No middleware
 	public.GET("/ships", shc.GetAllShips)
 	public.GET("/ships/:id", shc.GetShipByID)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.Repository.UserRepository, ic.Repository.AuthRepository)
 	protected.Use(middleware.Authenticate())
 
 	protected.POST("/ship/create", shc.CreateShip)

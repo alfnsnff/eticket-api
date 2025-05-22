@@ -14,12 +14,12 @@ import (
 )
 
 type ClassUsecase struct {
-	Tx              tx.TxManager
+	Tx              *tx.TxManager
 	ClassRepository *repository.ClassRepository
 }
 
 func NewClassUsecase(
-	tx tx.TxManager,
+	tx *tx.TxManager,
 	class_repository *repository.ClassRepository,
 ) *ClassUsecase {
 	return &ClassUsecase{

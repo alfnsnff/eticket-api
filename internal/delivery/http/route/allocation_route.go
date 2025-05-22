@@ -10,11 +10,11 @@ import (
 )
 
 func NewAllocationRouter(ic *injector.Container, rg *gin.RouterGroup) {
-	ar := ic.AllocationRepository
-	scr := ic.ScheduleRepository
-	fr := ic.FareRepository
+	ar := ic.Repository.AllocationRepository
+	scr := ic.Repository.ScheduleRepository
+	fr := ic.Repository.FareRepository
 	ac := &controller.AllocationController{
-		AllocationUsecase: usecase.NewAllocationUsecase(ic.AllocationUsecase.Tx, ar, scr, fr),
+		AllocationUsecase: usecase.NewAllocationUsecase(ic.Tx, ar, scr, fr),
 	}
 
 	public := rg.Group("") // No middleware
@@ -22,7 +22,7 @@ func NewAllocationRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	public.GET("/allocation/:id", ac.GetAllocationByID)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.Repository.UserRepository, ic.Repository.AuthRepository)
 	protected.Use(middleware.Authenticate())
 
 	protected.POST("/allocation/create", ac.CreateAllocation)

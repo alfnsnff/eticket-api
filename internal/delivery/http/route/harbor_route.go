@@ -10,9 +10,9 @@ import (
 )
 
 func NewHarborRouter(ic *injector.Container, rg *gin.RouterGroup) {
-	hr := ic.HarborRepository
+	hr := ic.Repository.HarborRepository
 	hc := &controller.HarborController{
-		HarborUsecase: usecase.NewHarborUsecase(ic.HarborUsecase.Tx, hr),
+		HarborUsecase: usecase.NewHarborUsecase(ic.Tx, hr),
 	}
 
 	public := rg.Group("") // No middleware
@@ -20,7 +20,7 @@ func NewHarborRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	public.GET("/harbor/:id", hc.GetHarborByID)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.UserRepository, ic.AuthRepository)
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.Repository.UserRepository, ic.Repository.AuthRepository)
 	protected.Use(middleware.Authenticate())
 
 	protected.POST("/harbor/create", hc.CreateHarbor)
