@@ -83,9 +83,9 @@ func (auc *AuthController) Logout(ctx *gin.Context) {
 	}
 
 	// Clear cookies
-	ctx.SetSameSite(http.SameSiteLaxMode)
-	ctx.SetCookie("access_token", "", -1, "/", "", false, true)
-	ctx.SetCookie("refresh_token", "", -1, "/", "", false, true)
+	ctx.SetSameSite(http.SameSiteNoneMode)
+	ctx.SetCookie("access_token", "", -1, "/", "", true, true)
+	ctx.SetCookie("refresh_token", "", -1, "/", "", true, true)
 
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Logout successful", nil))
 }
