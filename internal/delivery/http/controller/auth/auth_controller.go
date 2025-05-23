@@ -47,8 +47,8 @@ func (auc *AuthController) Login(ctx *gin.Context) {
 
 	// OPTIONAL: Set as HTTP-only secure cookies
 	ctx.SetSameSite(http.SameSiteNoneMode)
-	ctx.SetCookie("access_token", accessToken, int(auc.Cfg.Auth.AccessTokenExpiry.Seconds()), "/", "", true, true)
-	ctx.SetCookie("refresh_token", refreshToken, int(auc.Cfg.Auth.RefreshTokenExpiry.Seconds()), "/", "", true, true)
+	ctx.SetCookie("access_token", accessToken, 15*60, "/", "", true, true)      // 15 minutes
+	ctx.SetCookie("refresh_token", refreshToken, 24*60*60, "/", "", true, true) // 1 day
 
 	// OR: Return tokens in JSON (useful for SPA apps)
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Login successful", nil))
@@ -105,6 +105,6 @@ func (auc *AuthController) RefreshToken(ctx *gin.Context) {
 
 	// Set new access token cookie
 	ctx.SetSameSite(http.SameSiteNoneMode)
-	ctx.SetCookie("access_token", newAccessToken, int(auc.Cfg.Auth.AccessTokenExpiry.Seconds()), "/", "", true, true)
+	ctx.SetCookie("access_token", newAccessToken, 15*60, "/", "", true, true)
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Token refreshed successfully", nil))
 }
