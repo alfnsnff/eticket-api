@@ -9,6 +9,7 @@ import (
 	"eticket-api/internal/injector"
 	"eticket-api/internal/job"
 	"eticket-api/pkg/db/postgres"
+	"fmt"
 
 	"log"
 	"time"
@@ -80,16 +81,28 @@ func Run(cfg *config.Config) {
 
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
-	origins := []string{"http://localhost:3000", "https://tiket-hebat.vercel.app"}
-
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     origins,
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}, // Include OPTIONS for preflight requests
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowOriginFunc: func(origin string) bool {
+			allowed := map[string]bool{
+				"https://hoppscotch.io":                                             true,
+				"http://localhost:3000":                                             true,
+				"https://tiket-hebat.vercel.app":                                    true,
+				"https://tiket-hebat-ardians-projects-01d38d65.vercel.app":          true,
+				"https://tiket-hebat-git-main-ardians-projects-01d38d65.vercel.app": true,
+			}
+			return allowed[origin]
+		},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept", "X-Requested-With"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
+
+	router.Use(func(c *gin.Context) {
+		fmt.Println("Origin:", c.Request.Header.Get("Origin"))
+		c.Next()
+	})
 
 	route.Setup(router, ic)
 
