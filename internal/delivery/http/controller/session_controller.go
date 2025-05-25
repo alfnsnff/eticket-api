@@ -141,13 +141,13 @@ func (csc *SessionController) SessionTicketLock(ctx *gin.Context) {
 
 	datas, err := csc.SessionUsecase.SessionLockTickets(ctx, request)
 
-	ctx.SetSameSite(http.SameSiteNoneMode)
-	ctx.SetCookie("session_id", datas.SessionID, 15*60, "/", "", true, true)
-
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create claim session", err.Error()))
 		return
 	}
+
+	ctx.SetSameSite(http.SameSiteNoneMode)
+	ctx.SetCookie("session_id", datas.SessionID, 15*60, "/", "", true, true)
 
 	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(datas, "Claim session created successfully", nil))
 }

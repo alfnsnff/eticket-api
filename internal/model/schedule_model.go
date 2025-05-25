@@ -58,6 +58,7 @@ type UpdateScheduleRequest struct {
 type ScheduleClassAvailability struct {
 	ClassID           uint    `json:"class_id"`
 	ClassName         string  `json:"class_name"`
+	Type              string  `json:type`
 	TotalCapacity     int     `json:"total_capacity"`
 	AvailableCapacity int     `json:"available_capacity"`
 	Price             float32 `json:"price"`

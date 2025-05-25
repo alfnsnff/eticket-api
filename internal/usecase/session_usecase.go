@@ -160,9 +160,17 @@ func (cs *SessionUsecase) GetBySessionID(ctx context.Context, sessionUUID string
 	return cs.HelperBuildResponse(session, tickets), nil
 }
 
+// --- End of Example Interface Definitions ---
+
 func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model.ClaimedSessionLockTicketsRequest) (*model.ClaimedSessionLockTicketsResponse, error) {
-	if err := cs.HelperValidateLockRequest(request); err != nil {
-		return nil, err
+	// Inlined HelperValidateLockRequest
+	if request.ScheduleID == 0 || len(request.Items) == 0 {
+		return nil, fmt.Errorf("invalid claim request")
+	}
+	for _, item := range request.Items {
+		if item.Quantity == 0 || item.Type == "" || item.ClassID == 0 {
+			return nil, fmt.Errorf("missing request item field")
+		}
 	}
 
 	var claimedTicketIDs []uint
@@ -170,10 +178,37 @@ func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model
 	var createdSessionUUID string // To hold the generated UUID
 
 	err := cs.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		_, err := cs.HelperLockAndCheckAvailability(tx, request)
-		if err != nil {
-			return err
+		// Inlined HelperLockAndCheckAvailability
+		// The 'checks' map was not used further in the original SessionLockTickets, so its direct assignment is omitted.
+		// The logic for checking availability remains.
+		for _, item := range request.Items {
+			// item validation was already done by the inlined HelperValidateLockRequest,
+			// but keeping it here as it was in HelperLockAndCheckAvailability for logical grouping if this block was a separate func.
+			// For direct inlining, it's somewhat redundant but harmless.
+			if item.Quantity == 0 || item.Type == "" || item.ClassID == 0 {
+				return fmt.Errorf("failed to lock capacity: missing request item field")
+			}
+
+			cap, err := cs.AllocationRepository.LockByScheduleAndClass(tx, request.ScheduleID, item.ClassID)
+			if err != nil {
+				return fmt.Errorf("failed to lock capacity: %w", err)
+			}
+			if cap == nil {
+				return fmt.Errorf("allocation not found for class %d", item.ClassID)
+			}
+
+			count, err := cs.TicketRepository.CountByScheduleClassAndStatuses(tx, request.ScheduleID, item.ClassID, []string{"pending_data_entry", "pending_payment", "confirmed"})
+			if err != nil {
+				return fmt.Errorf("failed to count tickets: %w", err)
+			}
+
+			available := int64(cap.Quota) - count
+			if available < int64(item.Quantity) {
+				return fmt.Errorf("not enough slots for class %d (Available: %d, Requested: %d)", item.ClassID, available, item.Quantity)
+			}
+			// checks[item.ClassID] = available // 'checks' map was not used
 		}
+		// End of Inlined HelperLockAndCheckAvailability logic
 
 		now := time.Now()
 		expiryTime = time.Now().Add(15 * time.Minute)
@@ -184,17 +219,47 @@ func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model
 		}
 		createdSessionUUID = sessionUUID.String() // Store for response
 
-		tickets, err := cs.HelperBuildTickets(tx, request)
+		// Inlined HelperBuildTickets
+		schedule, err := cs.ScheduleRepository.GetByID(tx, request.ScheduleID)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get schedule: %w", err)
 		}
+
+		var ticketsToBuild []*entity.Ticket
+		for _, item := range request.Items {
+			if item.Quantity == 0 {
+				continue
+			}
+
+			manifest, err := cs.ManifestRepository.GetByShipAndClass(tx, schedule.ShipID, item.ClassID)
+			if err != nil || manifest == nil {
+				return fmt.Errorf("manifest missing for ship %d, class %d", schedule.ShipID, item.ClassID)
+			}
+
+			fare, err := cs.FareRepository.GetByManifestAndRoute(tx, manifest.ID, schedule.RouteID)
+			if err != nil || fare == nil {
+				return fmt.Errorf("fare missing for manifest %d, route %d", manifest.ID, schedule.RouteID)
+			}
+
+			for i := 0; i < int(item.Quantity); i++ {
+				ticketsToBuild = append(ticketsToBuild, &entity.Ticket{
+					ScheduleID:     request.ScheduleID,
+					ClassID:        item.ClassID,
+					Status:         "pending_data_entry",
+					Price:          fare.TicketPrice,
+					Type:           item.Type,
+					ClaimSessionID: nil, // Will be set after ClaimSession is created
+				})
+			}
+		}
+		// End of Inlined HelperBuildTickets logic
+		// 'ticketsToBuild' is the result of the inlined HelperBuildTickets
 
 		newClaimSession := &entity.ClaimSession{
 			SessionID:  createdSessionUUID,
 			ScheduleID: request.ScheduleID,
 			ClaimedAt:  now,
 			ExpiresAt:  expiryTime,
-			// Other fields like CreatedAt/UpdatedAt handled by GORM
 		}
 
 		err = cs.SessionRepository.Create(tx, newClaimSession) // Use txDB
@@ -203,15 +268,15 @@ func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model
 		}
 
 		// Link the newly created tickets to the ClaimSession
-		for _, ticket := range tickets {
+		for _, ticket := range ticketsToBuild {
 			ticket.ClaimSessionID = &newClaimSession.ID // Set the FK to the new ClaimSession ID
 		}
 
-		if err := cs.TicketRepository.CreateBulk(tx, tickets); err != nil {
+		if err := cs.TicketRepository.CreateBulk(tx, ticketsToBuild); err != nil {
 			return fmt.Errorf("failed to create tickets: %w", err)
 		}
 
-		for _, t := range tickets {
+		for _, t := range ticketsToBuild {
 			claimedTicketIDs = append(claimedTicketIDs, t.ID)
 		}
 
@@ -234,10 +299,16 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 		return nil, errors.New("invalid request: passenger data are required")
 	}
 
-	_, passengerMap := HelperExtractPassengerData(request)
+	// Inlined HelperExtractPassengerData
+	// ticketIDsFromHelper was not used, so we only extract passengerMap
+	passengerMap := make(map[uint]model.ClaimedSessionTicketDataInput)
+	for _, data := range request.TicketData {
+		passengerMap[data.TicketID] = data
+	}
+	// End of Inlined HelperExtractPassengerData logic
 
-	var updatedIDs []uint
-	var failed []model.ClaimedSessionTicketUpdateFailure
+	var finalUpdatedIDs []uint
+	var finalFailed []model.ClaimedSessionTicketUpdateFailure
 
 	err := cs.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		session, err := cs.SessionRepository.GetByUUIDWithLock(tx, sessionID, true)
@@ -253,15 +324,89 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 			return errors.New("claim session has expired")
 		}
 
-		tickets, err := cs.TicketRepository.FindManyBySessionID(tx, session.ID)
+		ticketsFromDB, err := cs.TicketRepository.FindManyBySessionID(tx, session.ID)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve tickets: %w", err)
 		}
 
-		updatedIDs, failed, tickets = cs.HelperValidateAndUpdateTickets(tickets, passengerMap, now)
+		// Inlined HelperValidateAndUpdateTickets
+		retrievedTicketsMap := make(map[uint]*entity.Ticket)
+		for _, ticket := range ticketsFromDB {
+			retrievedTicketsMap[ticket.ID] = ticket
+		}
 
-		if len(tickets) > 0 {
-			err = cs.TicketRepository.UpdateBulk(tx, tickets)
+		var currentUpdatedIDs []uint
+		var currentFailed []model.ClaimedSessionTicketUpdateFailure
+		var ticketsToUpdate []*entity.Ticket
+
+		for id, data := range passengerMap { // passengerMap from inlined HelperExtractPassengerData
+			ticket, exists := retrievedTicketsMap[id]
+			if !exists {
+				currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Ticket not found in session"})
+				continue
+			}
+			if ticket.Status != "pending_data_entry" {
+				currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: fmt.Sprintf("Status is %s", ticket.Status)})
+				continue
+			}
+			if data.PassengerName == "" {
+				currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Passenger name required"})
+				continue
+			}
+			if data.IDType == "" {
+				currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "ID Type required"})
+				continue
+			}
+			if data.IDNumber == "" {
+				currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "ID Number required"})
+				continue
+			}
+			if data.PassengerAge == 0 {
+				currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Passenger age required"})
+				continue
+			}
+			if data.Address == "" {
+				currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Passenger address required"})
+				continue
+			}
+
+			switch ticket.Type {
+			case "passenger":
+				if data.SeatNumber == nil || *data.SeatNumber == "" {
+					currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Seat number required for passenger ticket"})
+					continue
+				}
+				ticket.SeatNumber = data.SeatNumber
+				ticket.LicensePlate = nil
+			case "vehicle":
+				if data.LicensePlate == nil || *data.LicensePlate == "" {
+					currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "License plate required for vehicle ticket"})
+					continue
+				}
+				ticket.LicensePlate = data.LicensePlate
+				ticket.SeatNumber = nil
+			default:
+				currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Unsupported ticket type"})
+				continue
+			}
+
+			ticket.PassengerName = &data.PassengerName
+			ticket.PassengerAge = &data.PassengerAge
+			ticket.Address = &data.Address
+			ticket.IDType = &data.IDType
+			ticket.IDNumber = &data.IDNumber
+			ticket.Status = "pending_payment"
+			ticket.EntriesAt = &now // now is from the outer scope (SessionDataEntry)
+			ticketsToUpdate = append(ticketsToUpdate, ticket)
+			currentUpdatedIDs = append(currentUpdatedIDs, ticket.ID)
+		}
+		// End of Inlined HelperValidateAndUpdateTickets logic
+
+		finalUpdatedIDs = currentUpdatedIDs
+		finalFailed = currentFailed
+
+		if len(ticketsToUpdate) > 0 { // ticketsToUpdate is the result of inlined HelperValidateAndUpdateTickets
+			err = cs.TicketRepository.UpdateBulk(tx, ticketsToUpdate)
 			if err != nil {
 				return fmt.Errorf("failed to save tickets: %w", err)
 			}
@@ -275,93 +420,15 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 	}
 
 	return &model.ClaimedSessionFillPassengerDataResponse{
-		UpdatedTicketIDs: updatedIDs,
-		FailedTickets:    failed,
+		UpdatedTicketIDs: finalUpdatedIDs,
+		FailedTickets:    finalFailed,
 	}, nil
 }
 
-func (cs *SessionUsecase) HelperValidateLockRequest(request *model.ClaimedSessionLockTicketsRequest) error {
-	if request.ScheduleID == 0 || len(request.Items) == 0 {
-		return errors.New("invalid claim request")
-	}
-	for _, item := range request.Items {
-		if item.Quantity == 0 || item.Type == "" || item.ClassID == 0 {
-			return errors.New("invalid ticket request")
-		}
-
-	}
-	return nil
-}
-
-func (cs *SessionUsecase) HelperLockAndCheckAvailability(tx *gorm.DB, request *model.ClaimedSessionLockTicketsRequest) (map[uint]int64, error) {
-	checks := make(map[uint]int64)
-	for _, item := range request.Items {
-		if item.Quantity == 0 || item.Type == "" || item.ClassID == 0 {
-			break
-		}
-
-		cap, err := cs.AllocationRepository.LockByScheduleAndClass(tx, request.ScheduleID, item.ClassID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to lock capacity: %w", err)
-		}
-		if cap == nil {
-			return nil, fmt.Errorf("allocation not found for class %d", item.ClassID)
-		}
-
-		count, err := cs.TicketRepository.CountByScheduleClassAndStatuses(tx, request.ScheduleID, item.ClassID, []string{"pending_data_entry", "pending_payment", "confirmed"})
-		if err != nil {
-			return nil, fmt.Errorf("failed to count tickets: %w", err)
-		}
-
-		available := int64(cap.Quota) - count
-		if available < int64(item.Quantity) {
-			return nil, fmt.Errorf("not enough slots for class %d (Available: %d, Requested: %d)", item.ClassID, available, item.Quantity)
-		}
-
-		checks[item.ClassID] = available
-	}
-	return checks, nil
-}
-
-func (cs *SessionUsecase) HelperBuildTickets(tx *gorm.DB, request *model.ClaimedSessionLockTicketsRequest) ([]*entity.Ticket, error) {
-	schedule, err := cs.ScheduleRepository.GetByID(tx, request.ScheduleID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get schedule: %w", err)
-	}
-
-	var tickets []*entity.Ticket
-	// now := time.Now()
-
-	for _, item := range request.Items {
-		if item.Quantity == 0 {
-			continue
-		}
-
-		manifest, err := cs.ManifestRepository.GetByShipAndClass(tx, schedule.ShipID, item.ClassID)
-		if err != nil || manifest == nil {
-			return nil, fmt.Errorf("manifest missing for ship %d, class %d", schedule.ShipID, item.ClassID)
-		}
-
-		fare, err := cs.FareRepository.GetByManifestAndRoute(tx, manifest.ID, schedule.RouteID)
-		if err != nil || fare == nil {
-			return nil, fmt.Errorf("fare missing for manifest %d, route %d", manifest.ID, schedule.RouteID)
-		}
-
-		for i := 0; i < int(item.Quantity); i++ {
-			tickets = append(tickets, &entity.Ticket{
-				ScheduleID: request.ScheduleID,
-				ClassID:    item.ClassID,
-				Status:     "pending_data_entry",
-				Price:      fare.TicketPrice,
-				Type:       item.Type,
-				// ClaimedAt:  now,
-				// ExpiresAt:  expiry,
-				ClaimSessionID: nil, // Will be set after ClaimSession is created
-			})
-		}
-	}
-	return tickets, nil
-}
+// --- Remaining Helper functions related to response building ---
+// These helpers were not directly called by SessionLockTickets or SessionDataEntry in the provided snippet,
+// or are used by other functions (like a potential GetSessionDetails or ListSessions).
+// They are kept separate as their primary role is response shaping.
 
 // buildSessionResponse generates a consistent ReadClaimSessionResponse, optionally using ticket info.
 func (cs *SessionUsecase) HelperBuildResponse(session *entity.ClaimSession, tickets []*entity.Ticket) *model.ReadClaimSessionResponse {
@@ -373,15 +440,23 @@ func (cs *SessionUsecase) HelperBuildResponse(session *entity.ClaimSession, tick
 		ticketPrices, total = cs.HelperBuildPriceBreakdown(tickets)
 		ticketDetails = cs.HelperBuildTicketBreakdown(tickets)
 	} else {
-		ticketPrices = []model.ClaimSessionTicketPricesResponse{}
+		ticketPrices = []model.ClaimSessionTicketPricesResponse{}    // Ensure empty slice, not nil
+		ticketDetails = []model.ClaimedSessionTicketDetailResponse{} // Ensure empty slice, not nil
 		total = 0
+	}
+
+	// Assuming session.Schedule is preloaded or handled correctly
+	// If session.Schedule might be zero/uninitialized, you'd need a check here
+	var scheduleModel model.ClaimSessionSchedule // Default to zero value if session.Schedule is not populated
+	if session.Schedule.ID != 0 {                // Basic check; adjust as needed based on your entity structure
+		scheduleModel = *mapper.ScheduleSessionMapper.ToModel(&session.Schedule)
 	}
 
 	return &model.ReadClaimSessionResponse{
 		ID:          session.ID,
 		SessionID:   session.SessionID,
 		ScheduleID:  session.ScheduleID,
-		Schedule:    *mapper.ScheduleSessionMapper.ToModel(&session.Schedule),
+		Schedule:    scheduleModel,
 		ClaimedAt:   session.ClaimedAt,
 		ExpiresAt:   session.ExpiresAt,
 		Prices:      ticketPrices,
@@ -392,13 +467,20 @@ func (cs *SessionUsecase) HelperBuildResponse(session *entity.ClaimSession, tick
 	}
 }
 
-// buildTicketPriceBreakdown groups tickets by class and calculates subtotals and total.
+// HelperBuildTicketBreakdown groups tickets by class and calculates subtotals and total.
 func (cs *SessionUsecase) HelperBuildTicketBreakdown(tickets []*entity.Ticket) []model.ClaimedSessionTicketDetailResponse {
 	result := make([]model.ClaimedSessionTicketDetailResponse, len(tickets))
 	for i, v := range tickets {
+		// Assuming v.Class is preloaded or handled correctly
+		// If v.Class might be zero/uninitialized, you'd need a check here
+		var classModel model.ClaimSessionTicketClassItem // Default to zero value
+		if v.Class.ID != 0 {                             // Basic check
+			classModel = *mapper.TicketClassToSessionClassMapper.ToModel(&v.Class)
+		}
+
 		result[i] = model.ClaimedSessionTicketDetailResponse{
 			TicketID: v.ID,
-			Class:    *mapper.TicketClassToSessionClassMapper.ToModel(&v.Class),
+			Class:    classModel,
 			Price:    v.Price,
 			Type:     v.Type,
 		}
@@ -406,20 +488,25 @@ func (cs *SessionUsecase) HelperBuildTicketBreakdown(tickets []*entity.Ticket) [
 	return result
 }
 
-// buildTicketPriceBreakdown groups tickets by class and calculates subtotals and total.
+// HelperBuildPriceBreakdown groups tickets by class and calculates subtotals and total.
 func (cs *SessionUsecase) HelperBuildPriceBreakdown(tickets []*entity.Ticket) ([]model.ClaimSessionTicketPricesResponse, float32) {
 	ticketSummary := make(map[uint]*model.ClaimSessionTicketPricesResponse)
 	var total float32
 
 	for _, ticket := range tickets {
 		classID := ticket.ClassID
-		class := ticket.Class
+		// class := ticket.Class // This is the entity.Class
 		price := ticket.Price
 
 		if _, exists := ticketSummary[classID]; !exists {
+			// Assuming ticket.Class is preloaded or handled correctly
+			var classModel model.ClaimSessionTicketClassItem // Default to zero value
+			if ticket.Class.ID != 0 {                        // Basic check
+				classModel = *mapper.TicketClassToSessionClassMapper.ToModel(&ticket.Class)
+			}
 			ticketSummary[classID] = &model.ClaimSessionTicketPricesResponse{
-				Class:    *mapper.TicketClassToSessionClassMapper.ToModel(&class),
-				Price:    price,
+				Class:    classModel,
+				Price:    price, // This is price per ticket
 				Quantity: 0,
 				Subtotal: 0,
 			}
@@ -438,116 +525,54 @@ func (cs *SessionUsecase) HelperBuildPriceBreakdown(tickets []*entity.Ticket) ([
 	return summaryList, total
 }
 
-// buildSessionListResponse maps a list of Session entities to response models.
+// HelperBuildSessionListResponse maps a list of Session entities to response models.
 func (cs *SessionUsecase) HelperBuildSessionListResponse(ctx context.Context, sessions []*entity.ClaimSession) []*model.ReadClaimSessionResponse {
 	result := make([]*model.ReadClaimSessionResponse, len(sessions))
 	for i, session := range sessions {
+		// This transaction wrapper here might be problematic if the outer function already runs in a transaction.
+		// Or, if this is meant to be a separate unit of work for each session, it's fine.
+		// Consider the transactional boundaries carefully. For simplicity of this refactor, I'm keeping it.
 		err := cs.Tx.Execute(ctx, func(tx *gorm.DB) error {
+			// It's generally better to fetch tickets for ALL sessions in one go outside the loop
+			// and then pass them to HelperBuildResponse, to avoid N+1 queries within Tx.Execute.
+			// However, sticking to the original structure for this refactoring:
 			tickets, err := cs.TicketRepository.FindManyBySessionID(tx, session.ID)
 			if err != nil {
-				return nil
+				// Log error or handle; returning nil might hide issues
+				// For now, if tickets can't be fetched, an empty response for that session part is built.
+				result[i] = cs.HelperBuildResponse(session, []*entity.Ticket{}) // build with empty tickets
+				return nil                                                      // Don't let this specific error fail the whole list building
 			}
 			result[i] = cs.HelperBuildResponse(session, tickets)
 			return nil
 		})
 
 		if err != nil {
-			return nil
+			// If Tx.Execute fails for some reason (not FindManyBySessionID, which is handled inside)
+			// Log this error. Depending on requirements, you might want to stop or continue.
+			// For now, this would mean result[i] might be nil if the Execute itself failed before HelperBuildResponse was called.
+			// To be safe, initialize result[i] to a minimal representation or skip.
+			// Given the current structure, if err is not nil here, result[i] might not be set.
+			// This part of the logic might need more robust error handling.
+			// For example, if Tx.Execute fails, what should be in result[i]?
+			// Perhaps:
+			// result[i] = &model.ReadClaimSessionResponse{ SessionID: session.SessionID, Error: "Failed to load details" }
+			// For now, it results in a nil entry in the list if Tx.Execute fails.
+			// A simple `return nil` here would discard the entire list if one item fails.
+			// Better to log and continue or handle partial results.
+			fmt.Printf("Error processing session %s for list response: %v\n", session.SessionID, err) // Example logging
+			// To ensure the slot isn't nil, you could do:
+			// if result[i] == nil {
+			//    result[i] = cs.HelperBuildResponse(session, []*entity.Ticket{}) // Default response
+			// }
 		}
 	}
-	return result
-}
-
-func HelperExtractPassengerData(request *model.ClaimedSessionFillPassengerDataRequest) ([]uint, map[uint]model.ClaimedSessionTicketDataInput) {
-	ticketIDs := make([]uint, len(request.TicketData))
-	passengerMap := make(map[uint]model.ClaimedSessionTicketDataInput)
-	for i, data := range request.TicketData {
-		ticketIDs[i] = data.TicketID
-		passengerMap[data.TicketID] = data
+	// Filter out nil results if any Execute failed catastrophically for an item
+	finalResult := []*model.ReadClaimSessionResponse{}
+	for _, res := range result {
+		if res != nil {
+			finalResult = append(finalResult, res)
+		}
 	}
-	return ticketIDs, passengerMap
-}
-
-func (cs *SessionUsecase) HelperValidateAndUpdateTickets(
-	tickets []*entity.Ticket,
-	dataMap map[uint]model.ClaimedSessionTicketDataInput,
-	now time.Time,
-) ([]uint, []model.ClaimedSessionTicketUpdateFailure, []*entity.Ticket) {
-
-	retrievedTicketsMap := make(map[uint]*entity.Ticket)
-	for _, ticket := range tickets {
-		retrievedTicketsMap[ticket.ID] = ticket
-	}
-
-	var updatedIDs []uint
-	var failed []model.ClaimedSessionTicketUpdateFailure
-	var toUpdate []*entity.Ticket
-
-	for id, data := range dataMap {
-		ticket, exists := retrievedTicketsMap[id]
-		if !exists {
-
-			failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Ticket not found in session"})
-			continue
-		}
-		if ticket.Status != "pending_data_entry" {
-			failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: fmt.Sprintf("Status is %s", ticket.Status)})
-			continue
-		}
-		if data.PassengerName == "" {
-			failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Passenger name required"})
-			continue
-		}
-		if data.IDType == "" {
-			failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "ID Type required"})
-			continue
-		}
-		if data.IDNumber == "" {
-			failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "ID Number required"})
-			continue
-		}
-		if data.PassengerAge == 0 {
-			failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Passenger age required"})
-			continue
-		}
-		if data.Address == "" {
-			failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Passenger address required"})
-			continue
-		}
-
-		// --- Conditional Validation and Update based on Ticket Type ---
-		switch ticket.Type {
-		case "passenger":
-			if data.SeatNumber == nil || *data.SeatNumber == "" {
-				failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Seat number required for passenger ticket"})
-				continue
-			}
-			ticket.SeatNumber = data.SeatNumber // Optional, can be nil
-			ticket.LicensePlate = nil
-
-		case "vehicle":
-			if data.LicensePlate == nil || *data.LicensePlate == "" {
-				failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "License plate required for vehicle ticket"})
-				continue
-			}
-			ticket.LicensePlate = data.LicensePlate
-			ticket.SeatNumber = nil
-		default:
-			// Handle unknown or unsupported ticket types
-			failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Unsupported ticket type"})
-			continue
-		}
-
-		ticket.PassengerName = &data.PassengerName
-		ticket.PassengerAge = &data.PassengerAge
-		ticket.Address = &data.Address
-		ticket.IDType = &data.IDType
-		ticket.IDNumber = &data.IDNumber
-		ticket.Status = "pending_payment"
-		ticket.EntriesAt = &now
-		toUpdate = append(toUpdate, ticket)
-		updatedIDs = append(updatedIDs, ticket.ID)
-	}
-
-	return updatedIDs, failed, toUpdate
+	return finalResult
 }

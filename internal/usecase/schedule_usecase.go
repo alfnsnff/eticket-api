@@ -238,6 +238,7 @@ func (sc *ScheduleUsecase) HelperGetAvailability(tx *gorm.DB, schedule *entity.S
 		result = append(result, model.ScheduleClassAvailability{
 			ClassID:           cap.ClassID,
 			ClassName:         class.ClassName,
+			Type:              class.Type,
 			TotalCapacity:     cap.Quota,
 			AvailableCapacity: cap.Quota - int(occupied),
 			Price:             fare.TicketPrice,
