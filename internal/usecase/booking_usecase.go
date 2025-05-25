@@ -121,8 +121,10 @@ func (b *BookingUsecase) DeleteBooking(ctx context.Context, id uint) error {
 }
 
 func (b *BookingUsecase) ConfirmBooking(ctx context.Context, request *model.ConfirmBookingRequest) (*model.ConfirmBookingResponse, error) {
-	if err := HelperValidateConfirmRequest(request); err != nil {
-		return nil, err
+	// Inlined HelperValidateConfirmRequest logic
+	if request.Name == "" || request.IDType == "" || request.IDNumber == "" ||
+		request.PhoneNumber == "" || request.Email == "" || request.BirthDate.IsZero() {
+		return nil, errors.New("invalid request: missing required fields")
 	}
 
 	var confirmedBooking *entity.Booking
@@ -143,21 +145,55 @@ func (b *BookingUsecase) ConfirmBooking(ctx context.Context, request *model.Conf
 			return fmt.Errorf("failed to retrieve tickets: %w", err)
 		}
 
+		// Inlined HelperValidateAndPrepareTickets logic
+		var total float32
+		var scheduleID uint
 		now := time.Now()
-		ticketsToUpdate, total, scheduleID, err := b.HelperValidateAndPrepareTickets(tickets, now)
-		if err != nil {
-			return err
+		for i, ticket := range tickets {
+			if ticket.Status != "pending_payment" {
+				return fmt.Errorf("ticket %d not in pending_payment state", ticket.ID)
+			}
+			// if ticket.ExpiresAt.Before(now) {
+			// 	return nil, 0, 0, fmt.Errorf("ticket %d expired before confirmation", ticket.ID)
+			// }
+			if i == 0 {
+				scheduleID = ticket.ScheduleID
+			}
+			ticket.Status = "confirmed"
+			ticket.ClaimSessionID = nil
+			ticket.BookedAt = &now
+			total += ticket.Price
 		}
 
-		booking := HelperBuildBooking(request, scheduleID, now, total)
+		// Inlined HelperBuildBooking logic
+		booking := &entity.Booking{
+			ScheduleID:   scheduleID,
+			CustomerName: request.Name,
+			IDType:       request.IDType,
+			IDNumber:     request.IDNumber,
+			PhoneNumber:  request.PhoneNumber,
+			Email:        request.Email,
+			BirthDate:    request.BirthDate,
+			BookedAt:     now,
+			TotalPrice:   total,
+			Status:       "completed",
+			// PaymentIntentID: request.PaymentIntentID, // Uncomment if needed
+		}
+
 		if err := b.BookingRepository.Create(tx, booking); err != nil {
 			return fmt.Errorf("failed to create booking: %w", err)
 		}
 		confirmedBooking = booking
 
-		confirmedTicketIDs = HelperUpdateTicketsWithBooking(ticketsToUpdate, booking.ID)
+		// Inlined HelperUpdateTicketsWithBooking logic
+		ids := make([]uint, len(tickets))
+		for i, t := range tickets {
+			t.BookingID = &booking.ID
+			ids[i] = t.ID
+		}
+		confirmedTicketIDs = ids
 
-		if err := b.TicketRepository.UpdateBulk(tx, ticketsToUpdate); err != nil {
+		if err := b.TicketRepository.UpdateBulk(tx, tickets); err != nil {
 			return fmt.Errorf("failed to update tickets: %w", err)
 		}
 
@@ -173,61 +209,4 @@ func (b *BookingUsecase) ConfirmBooking(ctx context.Context, request *model.Conf
 		BookingStatus:      confirmedBooking.Status,
 		ConfirmedTicketIDs: confirmedTicketIDs,
 	}, nil
-}
-
-func HelperValidateConfirmRequest(request *model.ConfirmBookingRequest) error {
-	if request.Name == "" || request.IDType == "" || request.IDNumber == "" ||
-		request.PhoneNumber == "" || request.Email == "" || request.BirthDate.IsZero() {
-		return errors.New("invalid request: missing required fields")
-	}
-	return nil
-}
-
-func (b *BookingUsecase) HelperValidateAndPrepareTickets(
-	tickets []*entity.Ticket,
-	now time.Time,
-) ([]*entity.Ticket, float32, uint, error) {
-	var total float32
-	var scheduleID uint
-	for i, ticket := range tickets {
-		if ticket.Status != "pending_payment" {
-			return nil, 0, 0, fmt.Errorf("ticket %d not in pending_payment state", ticket.ID)
-		}
-		// if ticket.ExpiresAt.Before(now) {
-		// 	return nil, 0, 0, fmt.Errorf("ticket %d expired before confirmation", ticket.ID)
-		// }
-		if i == 0 {
-			scheduleID = ticket.ScheduleID
-		}
-		ticket.Status = "confirmed"
-		ticket.ClaimSessionID = nil
-		ticket.BookedAt = &now
-		total += ticket.Price
-	}
-	return tickets, total, scheduleID, nil
-}
-
-func HelperBuildBooking(request *model.ConfirmBookingRequest, scheduleID uint, now time.Time, total float32) *entity.Booking {
-	return &entity.Booking{
-		ScheduleID:   scheduleID,
-		CustomerName: request.Name,
-		IDType:       request.IDType,
-		IDNumber:     request.IDNumber,
-		PhoneNumber:  request.PhoneNumber,
-		Email:        request.Email,
-		BirthDate:    request.BirthDate,
-		BookedAt:     now,
-		TotalPrice:   total,
-		Status:       "completed",
-		// PaymentIntentID: request.PaymentIntentID, // Uncomment if needed
-	}
-}
-
-func HelperUpdateTicketsWithBooking(tickets []*entity.Ticket, bookingID uint) []uint {
-	ids := make([]uint, len(tickets))
-	for i, t := range tickets {
-		t.BookingID = &bookingID
-		ids[i] = t.ID
-	}
-	return ids
 }
