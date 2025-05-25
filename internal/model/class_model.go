@@ -8,15 +8,18 @@ import (
 type ReadClassResponse struct {
 	ID        uint      `json:"id"`
 	ClassName string    `json:"class_name"`
+	Type      string    `json:"type"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type WriteClassRequest struct {
 	ClassName string `json:"class_name"`
+	Type      string `json:"type"`
 }
 
 type UpdateClassRequest struct {
 	ID        uint   `json:"id"`
 	ClassName string `json:"class_name"`
+	Type      string `json:"type"`
 }
