@@ -74,6 +74,7 @@ type ClaimedSessionTicketDetailResponse struct {
 	TicketID uint                        `json:"ticket_id"`
 	Class    ClaimSessionTicketClassItem `json:"class"`
 	Price    float32                     `json:"price"` // Include price if frontend needs it at this stage
+	Type     string                      `json:"type" binding:"required,oneof=passenger vehicle"`
 }
 
 // ShipDTO represents a ship.
@@ -90,8 +91,9 @@ type ClaimedSessionLockTicketsRequest struct {
 
 // ClaimItem represents a request for a specific class and quantity
 type ClaimedSessionLockItem struct {
-	ClassID  uint `json:"class_id"` // The class ID
-	Quantity uint `json:"quantity"` // The number of tickets requested for this class
+	ClassID  uint   `json:"class_id"` // The class ID
+	Quantity uint   `json:"quantity"` // The number of tickets requested for this class
+	Type     string `json:"type" binding:"required,oneof=passenger vehicle"`
 }
 
 // ClaimTicketsResponse represents the result of a successful claim
@@ -101,7 +103,7 @@ type ClaimedSessionLockTicketsResponse struct {
 	ExpiresAt        time.Time `json:"expires_at"`         // Expiration time for the claim
 }
 
-type ClaimedSessionPassengerDataInput struct {
+type ClaimedSessionTicketDataInput struct {
 	TicketID      uint    `json:"ticket_id"`
 	PassengerName string  `json:"passenger_name"`
 	IDType        string  `json:"id_type"`
@@ -109,11 +111,12 @@ type ClaimedSessionPassengerDataInput struct {
 	PassengerAge  int     `json:"passenger_age"`
 	Address       string  `json:"address"`
 	SeatNumber    *string `json:"seat_number"`
+	LicensePlate  *string `json:"license_plate"`
 }
 
 type ClaimedSessionFillPassengerDataRequest struct {
-	SessionID     string                             `json:"session_id"`
-	PassengerData []ClaimedSessionPassengerDataInput `json:"passenger_data"`
+	SessionID  string                          `json:"session_id"`
+	TicketData []ClaimedSessionTicketDataInput `json:"ticket_data"`
 }
 
 type ClaimedSessionFillPassengerDataResponse struct {

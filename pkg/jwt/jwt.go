@@ -19,6 +19,8 @@ type TokenManager struct {
 
 type Claims struct {
 	UserID   uint   `json:"user_id"`
+	RoleID   uint   `json:"role_id"`
+	Rolename string `json:"rolename,omitempty"` // optional for refresh
 	Username string `json:"username,omitempty"` // optional for refresh
 	jwt.RegisteredClaims
 }
@@ -37,6 +39,8 @@ func (tm *TokenManager) GenerateAccessToken(user *authentity.User) (string, erro
 
 	claims := &Claims{
 		UserID:   user.ID,
+		RoleID:   user.Role.ID,
+		Rolename: user.Role.RoleName,
 		Username: user.Username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),

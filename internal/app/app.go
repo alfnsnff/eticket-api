@@ -8,6 +8,7 @@ import (
 	authentity "eticket-api/internal/domain/entity/auth"
 	"eticket-api/internal/injector"
 	"eticket-api/internal/job"
+	"eticket-api/pkg/casbinx"
 	"eticket-api/pkg/db/postgres"
 	"fmt"
 
@@ -103,6 +104,9 @@ func Run(cfg *config.Config) {
 		fmt.Println("Origin:", c.Request.Header.Get("Origin"))
 		c.Next()
 	})
+
+	casbinService := casbinx.NewCasbinService(ic.Enforcer)
+	casbinx.Policies(casbinService)
 
 	route.Setup(router, ic)
 

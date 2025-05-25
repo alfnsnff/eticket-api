@@ -1,4 +1,4 @@
-package casbin
+package casbinx
 
 import (
 	"log"
@@ -14,7 +14,7 @@ func NewEnforcer(db *gorm.DB) *casbin.Enforcer {
 		log.Fatalf("failed to create adapter: %v", err)
 	}
 
-	enforcer, err := casbin.NewEnforcer("config/casbin_model.conf", adapter)
+	enforcer, err := casbin.NewEnforcer("config/model.conf", adapter)
 	if err != nil {
 		log.Fatalf("failed to create enforcer: %v", err)
 	}
@@ -23,6 +23,5 @@ func NewEnforcer(db *gorm.DB) *casbin.Enforcer {
 		log.Fatalf("failed to load policy: %v", err)
 	}
 
-	enforcer.EnableAutoSave(true)
 	return enforcer
 }

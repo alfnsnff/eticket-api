@@ -1,3 +1,0 @@
-p, admin, /settings, GET
-p, admin, /settings, POST
-p, operator, /dashboard, GET

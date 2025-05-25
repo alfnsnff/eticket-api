@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	repository "eticket-api/internal/repository/auth"
 	"eticket-api/pkg/jwt"
 	"eticket-api/pkg/utils/helper/response"
 	"net/http"
@@ -10,16 +9,12 @@ import (
 )
 
 type AuthMiddleware struct {
-	TokenService     *jwt.TokenManager
-	UserRepository   *repository.UserRepository
-	RefreshTokenRepo *repository.AuthRepository
+	TokenManager *jwt.TokenManager
 }
 
-func NewAuthMiddleware(token_manager *jwt.TokenManager, user_repository *repository.UserRepository, auth_repository *repository.AuthRepository) *AuthMiddleware {
+func NewAuthMiddleware(token_manager *jwt.TokenManager) *AuthMiddleware {
 	return &AuthMiddleware{
-		TokenService:     token_manager,
-		UserRepository:   user_repository,
-		RefreshTokenRepo: auth_repository,
+		TokenManager: token_manager,
 	}
 }
 
@@ -34,15 +29,17 @@ func (am *AuthMiddleware) Authenticate() gin.HandlerFunc {
 		}
 
 		// Validate token
-		claims, err := am.TokenService.ValidateToken(tokenStr)
+		claims, err := am.TokenManager.ValidateToken(tokenStr)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, response.NewErrorResponse("Invalid or expired token", err.Error()))
 			return
 		}
 
 		// Inject user info into Gin context
-		c.Set("userID", claims.ID)
+		c.Set("userID", claims.UserID)
 		c.Set("username", claims.Username)
+		c.Set("roleID", claims.RoleID)
+		c.Set("rolename", claims.Rolename)
 		c.Set("token", tokenStr)
 
 		c.Next()

@@ -230,8 +230,8 @@ func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model
 }
 
 func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.ClaimedSessionFillPassengerDataRequest, sessionID string) (*model.ClaimedSessionFillPassengerDataResponse, error) {
-	if len(request.PassengerData) == 0 {
-		return nil, errors.New("invalid request: UserID and passenger data are required")
+	if len(request.TicketData) == 0 {
+		return nil, errors.New("invalid request: passenger data are required")
 	}
 
 	_, passengerMap := HelperExtractPassengerData(request)
@@ -284,14 +284,20 @@ func (cs *SessionUsecase) HelperValidateLockRequest(request *model.ClaimedSessio
 	if request.ScheduleID == 0 || len(request.Items) == 0 {
 		return errors.New("invalid claim request")
 	}
+	for _, item := range request.Items {
+		if item.Quantity == 0 || item.Type == "" || item.ClassID == 0 {
+			return errors.New("invalid ticket request")
+		}
+
+	}
 	return nil
 }
 
 func (cs *SessionUsecase) HelperLockAndCheckAvailability(tx *gorm.DB, request *model.ClaimedSessionLockTicketsRequest) (map[uint]int64, error) {
 	checks := make(map[uint]int64)
 	for _, item := range request.Items {
-		if item.Quantity == 0 {
-			continue
+		if item.Quantity == 0 || item.Type == "" || item.ClassID == 0 {
+			break
 		}
 
 		cap, err := cs.AllocationRepository.LockByScheduleAndClass(tx, request.ScheduleID, item.ClassID)
@@ -347,6 +353,7 @@ func (cs *SessionUsecase) HelperBuildTickets(tx *gorm.DB, request *model.Claimed
 				ClassID:    item.ClassID,
 				Status:     "pending_data_entry",
 				Price:      fare.TicketPrice,
+				Type:       item.Type,
 				// ClaimedAt:  now,
 				// ExpiresAt:  expiry,
 				ClaimSessionID: nil, // Will be set after ClaimSession is created
@@ -393,6 +400,7 @@ func (cs *SessionUsecase) HelperBuildTicketBreakdown(tickets []*entity.Ticket) [
 			TicketID: v.ID,
 			Class:    *mapper.TicketClassToSessionClassMapper.ToModel(&v.Class),
 			Price:    v.Price,
+			Type:     v.Type,
 		}
 	}
 	return result
@@ -450,10 +458,10 @@ func (cs *SessionUsecase) HelperBuildSessionListResponse(ctx context.Context, se
 	return result
 }
 
-func HelperExtractPassengerData(request *model.ClaimedSessionFillPassengerDataRequest) ([]uint, map[uint]model.ClaimedSessionPassengerDataInput) {
-	ticketIDs := make([]uint, len(request.PassengerData))
-	passengerMap := make(map[uint]model.ClaimedSessionPassengerDataInput)
-	for i, data := range request.PassengerData {
+func HelperExtractPassengerData(request *model.ClaimedSessionFillPassengerDataRequest) ([]uint, map[uint]model.ClaimedSessionTicketDataInput) {
+	ticketIDs := make([]uint, len(request.TicketData))
+	passengerMap := make(map[uint]model.ClaimedSessionTicketDataInput)
+	for i, data := range request.TicketData {
 		ticketIDs[i] = data.TicketID
 		passengerMap[data.TicketID] = data
 	}
@@ -462,7 +470,7 @@ func HelperExtractPassengerData(request *model.ClaimedSessionFillPassengerDataRe
 
 func (cs *SessionUsecase) HelperValidateAndUpdateTickets(
 	tickets []*entity.Ticket,
-	dataMap map[uint]model.ClaimedSessionPassengerDataInput,
+	dataMap map[uint]model.ClaimedSessionTicketDataInput,
 	now time.Time,
 ) ([]uint, []model.ClaimedSessionTicketUpdateFailure, []*entity.Ticket) {
 
@@ -506,12 +514,35 @@ func (cs *SessionUsecase) HelperValidateAndUpdateTickets(
 			failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Passenger address required"})
 			continue
 		}
+
+		// --- Conditional Validation and Update based on Ticket Type ---
+		switch ticket.Type {
+		case "passenger":
+			if data.SeatNumber == nil || *data.SeatNumber == "" {
+				failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Seat number required for passenger ticket"})
+				continue
+			}
+			ticket.SeatNumber = data.SeatNumber // Optional, can be nil
+			ticket.LicensePlate = nil
+
+		case "vehicle":
+			if data.LicensePlate == nil || *data.LicensePlate == "" {
+				failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "License plate required for vehicle ticket"})
+				continue
+			}
+			ticket.LicensePlate = data.LicensePlate
+			ticket.SeatNumber = nil
+		default:
+			// Handle unknown or unsupported ticket types
+			failed = append(failed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Unsupported ticket type"})
+			continue
+		}
+
 		ticket.PassengerName = &data.PassengerName
 		ticket.PassengerAge = &data.PassengerAge
 		ticket.Address = &data.Address
 		ticket.IDType = &data.IDType
 		ticket.IDNumber = &data.IDNumber
-		ticket.SeatNumber = data.SeatNumber
 		ticket.Status = "pending_payment"
 		ticket.EntriesAt = &now
 		toUpdate = append(toUpdate, ticket)
