@@ -81,6 +81,7 @@ type ClaimedSessionTicketDetailResponse struct {
 type ClaimSessionTicketClassItem struct {
 	ID        uint   `json:"id"`
 	ClassName string `json:"class_name"`
+	Type      string `json:"type"`
 }
 
 // ClaimTicketsRequest represents the input for claiming tickets
