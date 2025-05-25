@@ -6,6 +6,7 @@ package injector
 import (
 	"eticket-api/config"
 	"eticket-api/internal/injector/module"
+	"eticket-api/pkg/casbinx"
 	"eticket-api/pkg/db/postgres"
 	"eticket-api/pkg/jwt"
 	"eticket-api/pkg/utils/tx"
@@ -19,7 +20,7 @@ func InitializeContainer(cfg *config.Config) (*Container, error) {
 		postgres.New,
 		jwt.New,
 		tx.New,
-
+		casbinx.NewEnforcer,
 		// Your internal module wiring
 		module.NewRepositoryModule,
 		module.NewUsecaseModule,

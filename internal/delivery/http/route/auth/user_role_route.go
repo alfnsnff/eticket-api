@@ -22,7 +22,7 @@ func NewUserRoleRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	public.GET("/user/role/:id", urc.GetUserRoleByID)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.Repository.UserRepository, ic.Repository.AuthRepository)
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager)
 	protected.Use(middleware.Authenticate())
 
 	protected.POST("/user/role/assign", urc.CreateUserRole)

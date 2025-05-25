@@ -9,6 +9,7 @@ package injector
 import (
 	"eticket-api/config"
 	"eticket-api/internal/injector/module"
+	"eticket-api/pkg/casbinx"
 	"eticket-api/pkg/db/postgres"
 	"eticket-api/pkg/jwt"
 	"eticket-api/pkg/utils/tx"
@@ -23,9 +24,10 @@ func InitializeContainer(cfg *config.Config) (*Container, error) {
 	}
 	txManager := tx.New(db)
 	tokenManager := jwt.New(cfg)
+	enforcer := casbinx.NewEnforcer(db)
 	repositoryModule := module.NewRepositoryModule()
 	usecaseModule := module.NewUsecaseModule(txManager, repositoryModule, tokenManager)
 	controllerModule := module.NewControllerModule(cfg, usecaseModule, tokenManager)
-	container := NewContainer(cfg, db, txManager, tokenManager, repositoryModule, usecaseModule, controllerModule)
+	container := NewContainer(cfg, db, txManager, tokenManager, enforcer, repositoryModule, usecaseModule, controllerModule)
 	return container, nil
 }

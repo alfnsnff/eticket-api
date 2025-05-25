@@ -291,13 +291,10 @@ func (sc *ScheduleUsecase) CreateScheduleWithAllocation(ctx context.Context, req
 
 func HelperValidateScheduleInput(schedule *entity.Schedule) error {
 	if schedule.DepartureDatetime.IsZero() {
-		return errors.New("schedule datetime cannot be empty")
+		return errors.New("departure datetime cannot be empty")
 	}
 	if schedule.ArrivalDatetime.IsZero() {
-		return errors.New("schedule datetime cannot be empty")
-	}
-	if schedule.DepartureDatetime == schedule.ArrivalDatetime {
-		return errors.New("schedule datetime cannot be same")
+		return errors.New("arrival datetime cannot be empty")
 	}
 	if schedule.ShipID == 0 {
 		return errors.New("schedule ship ID cannot be zero")

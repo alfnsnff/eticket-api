@@ -22,7 +22,7 @@ func NewAllocationRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	public.GET("/allocation/:id", ac.GetAllocationByID)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.Repository.UserRepository, ic.Repository.AuthRepository)
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager)
 	protected.Use(middleware.Authenticate())
 
 	protected.POST("/allocation/create", ac.CreateAllocation)

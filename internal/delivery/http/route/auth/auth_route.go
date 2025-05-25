@@ -24,7 +24,7 @@ func NewAuthRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	public.POST("/auth/refresh", auc.RefreshToken)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.Repository.UserRepository, ic.Repository.AuthRepository)
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager)
 	protected.Use(middleware.Authenticate())
 
 	protected.POST("/auth/logout", auc.Logout)

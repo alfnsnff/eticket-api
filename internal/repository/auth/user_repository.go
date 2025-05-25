@@ -27,7 +27,7 @@ func (ur *UserRepository) Count(db *gorm.DB) (int64, error) {
 
 func (ur *UserRepository) GetAll(db *gorm.DB) ([]*entity.User, error) {
 	users := []*entity.User{}
-	result := db.Find(&users)
+	result := db.Preload("Role").Find(&users)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -36,7 +36,7 @@ func (ur *UserRepository) GetAll(db *gorm.DB) ([]*entity.User, error) {
 
 func (ur *UserRepository) GetByUsername(db *gorm.DB, username string) (*entity.User, error) {
 	user := new(entity.User)
-	result := db.Where("username = ? ", username).First(&user)
+	result := db.Preload("Role").Where("username = ? ", username).First(&user)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -45,7 +45,7 @@ func (ur *UserRepository) GetByUsername(db *gorm.DB, username string) (*entity.U
 
 func (ur *UserRepository) GetByID(db *gorm.DB, id uint) (*entity.User, error) {
 	user := new(entity.User)
-	result := db.First(&user, id)
+	result := db.Preload("Role").First(&user, id)
 	if result.Error != nil {
 		return nil, result.Error
 	}

@@ -21,7 +21,7 @@ func NewUserRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	public.POST("/user/create", uc.CreateUser)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager, ic.Repository.UserRepository, ic.Repository.AuthRepository)
+	middleware := middleware.NewAuthMiddleware(ic.TokenManager)
 	protected.Use(middleware.Authenticate())
 
 	protected.PUT("/user/update/:id", uc.UpdateUser)

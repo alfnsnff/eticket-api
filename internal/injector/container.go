@@ -6,6 +6,7 @@ import (
 	"eticket-api/pkg/jwt"
 	"eticket-api/pkg/utils/tx"
 
+	"github.com/casbin/casbin/v2"
 	"gorm.io/gorm"
 )
 
@@ -14,10 +15,10 @@ type Container struct {
 	DB           *gorm.DB
 	Tx           *tx.TxManager
 	TokenManager *jwt.TokenManager
-
-	Repository *module.RepositoryModule
-	Usecase    *module.UsecaseModule
-	Controller *module.ControllerModule
+	Enforcer     *casbin.Enforcer
+	Repository   *module.RepositoryModule
+	Usecase      *module.UsecaseModule
+	Controller   *module.ControllerModule
 }
 
 func NewContainer(
@@ -25,6 +26,7 @@ func NewContainer(
 	db *gorm.DB,
 	tx *tx.TxManager,
 	tm *jwt.TokenManager,
+	enforcer *casbin.Enforcer,
 	repository *module.RepositoryModule,
 	usecase *module.UsecaseModule,
 	controller *module.ControllerModule,
@@ -34,6 +36,7 @@ func NewContainer(
 		DB:           db,
 		Tx:           tx,
 		TokenManager: tm,
+		Enforcer:     enforcer,
 		Repository:   repository,
 		Usecase:      usecase,
 		Controller:   controller,
