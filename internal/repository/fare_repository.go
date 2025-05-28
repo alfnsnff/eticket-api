@@ -42,7 +42,13 @@ func (fr *FareRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Fare
 
 func (fr *FareRepository) GetByID(db *gorm.DB, id uint) (*entity.Fare, error) {
 	fare := new(entity.Fare)
-	result := db.First(&fare, id)
+	result := db.Preload("Route").
+		Preload("Route.DepartureHarbor").
+		Preload("Route.ArrivalHarbor").
+		Preload("Manifest").
+		Preload("Manifest.Class").
+		Preload("Manifest.Ship").
+		First(&fare, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
@@ -51,7 +57,13 @@ func (fr *FareRepository) GetByID(db *gorm.DB, id uint) (*entity.Fare, error) {
 
 func (fr *FareRepository) GetByManifestAndRoute(db *gorm.DB, manifestID uint, routeID uint) (*entity.Fare, error) {
 	fare := new(entity.Fare)
-	result := db.Where("manifest_id = ? AND route_id = ?", manifestID, routeID).First(fare)
+	result := db.Preload("Route").
+		Preload("Route.DepartureHarbor").
+		Preload("Route.ArrivalHarbor").
+		Preload("Manifest").
+		Preload("Manifest.Class").
+		Preload("Manifest.Ship").
+		Where("manifest_id = ? AND route_id = ?", manifestID, routeID).First(fare)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}

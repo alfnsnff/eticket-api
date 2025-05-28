@@ -108,7 +108,7 @@ func (sh *ShipUsecase) DeleteShip(ctx context.Context, id uint) error {
 			return err
 		}
 		if ship == nil {
-			return errors.New("route not found")
+			return errors.New("ship not found")
 		}
 		return sh.ShipRepository.Delete(tx, ship)
 	})

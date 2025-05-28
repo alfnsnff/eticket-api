@@ -38,7 +38,9 @@ func (mr *ManifestRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.
 
 func (mr *ManifestRepository) GetByID(db *gorm.DB, id uint) (*entity.Manifest, error) {
 	manifest := new(entity.Manifest)
-	result := db.First(&manifest, id)
+	result := db.Preload("Class").
+		Preload("Ship").
+		First(&manifest, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
@@ -47,7 +49,9 @@ func (mr *ManifestRepository) GetByID(db *gorm.DB, id uint) (*entity.Manifest, e
 
 func (mr *ManifestRepository) GetByShipAndClass(ctx *gorm.DB, shipID uint, classID uint) (*entity.Manifest, error) {
 	manifest := new(entity.Manifest)
-	result := ctx.Where("ship_id = ? AND class_id = ?", shipID, classID).First(manifest)
+	result := ctx.Preload("Class").
+		Preload("Ship").
+		Where("ship_id = ? AND class_id = ?", shipID, classID).First(manifest)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
@@ -56,7 +60,9 @@ func (mr *ManifestRepository) GetByShipAndClass(ctx *gorm.DB, shipID uint, class
 
 func (r *ManifestRepository) FindByShipID(db *gorm.DB, shipID uint) ([]*entity.Manifest, error) {
 	manifests := []*entity.Manifest{}
-	result := db.Where("ship_id = ?", shipID).Find(&manifests)
+	result := db.Preload("Class").
+		Preload("Ship").
+		Where("ship_id = ?", shipID).Find(&manifests)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}

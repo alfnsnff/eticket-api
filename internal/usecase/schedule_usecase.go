@@ -163,6 +163,7 @@ func (sc *ScheduleUsecase) GetAllScheduled(ctx context.Context) ([]*model.ReadSc
 
 	return mapper.ScheduleMapper.ToModels(schedules), nil
 }
+
 func (sc *ScheduleUsecase) GetScheduleAvailability(ctx context.Context, scheduleID uint) (*model.ReadScheduleDetailsWithAvailabilityResponse, error) {
 	var schedule *entity.Schedule
 	var classAvailabilities []model.ScheduleClassAvailability
@@ -199,13 +200,21 @@ func (sc *ScheduleUsecase) GetScheduleAvailability(ctx context.Context, schedule
 			}
 
 			manifest, err := sc.ManifestRepository.GetByShipAndClass(tx, schedule.ShipID, cap.ClassID)
-			if err != nil || manifest == nil {
-				return fmt.Errorf("manifest not found for ship %d, class %d: %w", schedule.ShipID, cap.ClassID, err)
+			if err != nil {
+				return fmt.Errorf("error when retrieve manifest for ship %d, class %d: %w", schedule.ShipID, cap.ClassID, err)
+			}
+			if manifest == nil {
+				log.Printf("skipping invalid/not found manifest for ship %d, class %d", schedule.ShipID, cap.ClassID)
+				continue
 			}
 
 			fare, err := sc.FareRepository.GetByManifestAndRoute(tx, manifest.ID, schedule.RouteID)
-			if err != nil || fare == nil {
-				return fmt.Errorf("fare not found for manifest %d, route %d: %w", manifest.ID, schedule.RouteID, err)
+			if err != nil {
+				return fmt.Errorf("error when retrieve fare for manifest %d, route %d: %w", manifest.ID, schedule.RouteID, err)
+			}
+			if fare == nil {
+				log.Printf("skipping invalid/not found fare not found for manifest %d, route %d", manifest.ID, schedule.RouteID)
+				continue
 			}
 
 			classAvailabilities = append(classAvailabilities, model.ScheduleClassAvailability{
@@ -268,6 +277,15 @@ func (sc *ScheduleUsecase) CreateScheduleWithAllocation(ctx context.Context, req
 		for _, manifest := range manifests {
 			if manifest.ClassID == 0 || manifest.Capacity <= 0 {
 				log.Printf("Skipping invalid manifest %d for ship %d", manifest.ID, manifest.ShipID)
+				continue
+			}
+
+			fare, err := sc.FareRepository.GetByManifestAndRoute(tx, manifest.ID, schedule.RouteID)
+			if err != nil {
+				return fmt.Errorf("error when retrieve fare for manifest %d, route %d: %w", manifest.ID, schedule.RouteID, err)
+			}
+			if fare == nil {
+				log.Printf("skipping invalid/not found fare not found for manifest %d, route %d", manifest.ID, schedule.RouteID)
 				continue
 			}
 			allocation := &entity.Allocation{
