@@ -27,7 +27,9 @@ func (mr *ManifestRepository) Count(db *gorm.DB) (int64, error) {
 
 func (mr *ManifestRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Manifest, error) {
 	manifests := []*entity.Manifest{}
-	result := db.Limit(limit).Offset(offset).Find(&manifests)
+	result := db.Preload("Class").
+		Preload("Ship").
+		Limit(limit).Offset(offset).Find(&manifests)
 	if result.Error != nil {
 		return nil, result.Error
 	}
