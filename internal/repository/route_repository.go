@@ -27,7 +27,9 @@ func (rr *RouteRepository) Count(db *gorm.DB) (int64, error) {
 
 func (rr *RouteRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Route, error) {
 	routes := []*entity.Route{}
-	result := db.Limit(limit).Offset(offset).Find(&routes)
+	result := db.Preload("DepartureHarbor").
+		Preload("ArrivalHarbor").
+		Limit(limit).Offset(offset).Find(&routes)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -36,7 +38,9 @@ func (rr *RouteRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Rou
 
 func (rr *RouteRepository) GetByID(db *gorm.DB, id uint) (*entity.Route, error) {
 	route := new(entity.Route)
-	result := db.First(&route, id)
+	result := db.Preload("DepartureHarbor").
+		Preload("ArrivalHarbor").
+		First(&route, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
