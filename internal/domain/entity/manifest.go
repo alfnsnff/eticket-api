@@ -9,6 +9,9 @@ type Manifest struct {
 	Capacity  int       `gorm:"column:capacity;not null"`
 	CreatedAt time.Time `gorm:"column:created_at;not null"`
 	UpdatedAt time.Time `gorm:"column:updated_at;not null"`
+
+	Class Class `gorm:"foreignKey:ClassID"`
+	Ship  Ship  `gorm:"foreignKey:ShipID"`
 }
 
 func (m *Manifest) TableName() string {

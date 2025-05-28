@@ -9,6 +9,9 @@ type Fare struct {
 	TicketPrice float32   `gorm:"column:ticket_price;not null"`
 	CreatedAt   time.Time `gorm:"column:created_at;not null"`
 	UpdatedAt   time.Time `gorm:"column:updated_at;not null"`
+
+	Route    Route    `gorm:"foreignKey:RouteID"`
+	Manifest Manifest `gorm:"foreignKey:ManifestID"`
 }
 
 func (f *Fare) TableName() string {

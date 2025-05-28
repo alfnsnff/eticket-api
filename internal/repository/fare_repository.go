@@ -27,7 +27,13 @@ func (fr *FareRepository) Count(db *gorm.DB) (int64, error) {
 
 func (fr *FareRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Fare, error) {
 	fares := []*entity.Fare{}
-	result := db.Limit(limit).Offset(offset).Find(&fares)
+	result := db.Preload("Route").
+		Preload("Route.DepartureHarbor").
+		Preload("Route.ArrivalHarbor").
+		Preload("Manifest").
+		Preload("Manifest.Class").
+		Preload("Manifest.Ship").
+		Limit(limit).Offset(offset).Find(&fares)
 	if result.Error != nil {
 		return nil, result.Error
 	}

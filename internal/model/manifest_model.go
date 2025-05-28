@@ -4,14 +4,26 @@ import (
 	"time"
 )
 
+type FareanifestClass struct {
+	ID        uint   `json:"id"`
+	ClassName string `json:"class_name"`
+	Type      string `json:"type"`
+}
+
+type ManifestShip struct {
+	ID       uint   `json:"id"`
+	ShipName string `json:"ship_name"`
+	ShipType string `json:"ship_type"`
+}
+
 // ShipDTO represents a Ship.
 type ReadManifestResponse struct {
-	ID        uint      `json:"id"`
-	ClassID   uint      `json:"class_id"`
-	ShipID    uint      `json:"ship_id"`
-	Capacity  int       `json:"capacity"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        uint             `json:"id"`
+	Class     FareanifestClass `json:"class"`
+	Ship      ManifestShip     `json:"ship"`
+	Capacity  int              `json:"capacity"`
+	CreatedAt time.Time        `json:"created_at"`
+	UpdatedAt time.Time        `json:"updated_at"`
 }
 
 type WriteManifestRequest struct {
