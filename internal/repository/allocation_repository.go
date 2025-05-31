@@ -28,7 +28,7 @@ func (ar *AllocationRepository) Count(db *gorm.DB) (int64, error) {
 
 func (ar *AllocationRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Allocation, error) {
 	allocations := []*entity.Allocation{}
-	result := db.Limit(limit).Offset(offset).Find(&allocations)
+	result := db.Preload("Class").Limit(limit).Offset(offset).Find(&allocations)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -37,7 +37,7 @@ func (ar *AllocationRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entit
 
 func (ar *AllocationRepository) GetByID(db *gorm.DB, id uint) (*entity.Allocation, error) {
 	allocation := new(entity.Allocation)
-	result := db.First(&allocation, id)
+	result := db.Preload("Class").First(&allocation, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}

@@ -2,14 +2,20 @@ package model
 
 import "time"
 
+type AllocationClass struct {
+	ID        uint   `json:"id"`
+	ClassName string `json:"class_name"`
+	Type      string `json:"type"`
+}
+
 // AllocationDTO represents a Allocation.
 type ReadAllocationResponse struct {
-	ID         uint      `json:"id"`
-	ScheduleID uint      `json:"schedule_id"` // Foreign key
-	ClassID    uint      `json:"class_id"`    // Foreign key
-	Quota      int       `json:"quota"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID         uint            `json:"id"`
+	ScheduleID uint            `json:"schedule_id"` // Foreign key
+	Class      AllocationClass `json:"class"`       // Foreign key
+	Quota      int             `json:"quota"`
+	CreatedAt  time.Time       `json:"created_at"`
+	UpdatedAt  time.Time       `json:"updated_at"`
 }
 
 // AllocationDTO represents a Allocation.
