@@ -178,6 +178,14 @@ func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model
 	var createdSessionUUID string // To hold the generated UUID
 
 	err := cs.Tx.Execute(ctx, func(tx *gorm.DB) error {
+
+		sch, err := cs.ScheduleRepository.GetByID(tx, request.ScheduleID)
+		if err != nil {
+			return fmt.Errorf("failed to lock capacity: %w", err)
+		}
+		if sch == nil {
+			return fmt.Errorf("schedule not found")
+		}
 		// Inlined HelperLockAndCheckAvailability
 		// The 'checks' map was not used further in the original SessionLockTickets, so its direct assignment is omitted.
 		// The logic for checking availability remains.
@@ -194,7 +202,7 @@ func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model
 				return fmt.Errorf("failed to lock capacity: %w", err)
 			}
 			if cap == nil {
-				return fmt.Errorf("allocation not found for class %d", item.ClassID)
+				return fmt.Errorf("allocation not found for class %d schedule %d", item.ClassID, request.ScheduleID)
 			}
 
 			count, err := cs.TicketRepository.CountByScheduleClassAndStatuses(tx, request.ScheduleID, item.ClassID, []string{"pending_data_entry", "pending_payment", "confirmed"})
@@ -349,26 +357,6 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 				currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: fmt.Sprintf("Status is %s", ticket.Status)})
 				continue
 			}
-			if data.PassengerName == "" {
-				currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Passenger name required"})
-				continue
-			}
-			if data.IDType == "" {
-				currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "ID Type required"})
-				continue
-			}
-			if data.IDNumber == "" {
-				currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "ID Number required"})
-				continue
-			}
-			if data.PassengerAge == 0 {
-				currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Passenger age required"})
-				continue
-			}
-			if data.Address == "" {
-				currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Passenger address required"})
-				continue
-			}
 
 			switch ticket.Type {
 			case "passenger":
@@ -376,6 +364,31 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 					currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Seat number required for passenger ticket"})
 					continue
 				}
+				if data.PassengerName == "" {
+					currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Passenger name required"})
+					continue
+				}
+				if data.IDType == "" {
+					currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "ID Type required"})
+					continue
+				}
+				if data.IDNumber == "" {
+					currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "ID Number required"})
+					continue
+				}
+				if data.PassengerAge == 0 {
+					currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Passenger age required"})
+					continue
+				}
+				if data.Address == "" {
+					currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Passenger address required"})
+					continue
+				}
+				ticket.PassengerName = &data.PassengerName
+				ticket.PassengerAge = &data.PassengerAge
+				ticket.Address = &data.Address
+				ticket.IDType = &data.IDType
+				ticket.IDNumber = &data.IDNumber
 				ticket.SeatNumber = data.SeatNumber
 				ticket.LicensePlate = nil
 			case "vehicle":
@@ -390,11 +403,6 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 				continue
 			}
 
-			ticket.PassengerName = &data.PassengerName
-			ticket.PassengerAge = &data.PassengerAge
-			ticket.Address = &data.Address
-			ticket.IDType = &data.IDType
-			ticket.IDNumber = &data.IDNumber
 			ticket.Status = "pending_payment"
 			ticket.EntriesAt = &now // now is from the outer scope (SessionDataEntry)
 			ticketsToUpdate = append(ticketsToUpdate, ticket)

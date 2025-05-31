@@ -9,6 +9,8 @@ type Allocation struct {
 	Quota      int       `gorm:"column:quota;not null"`
 	CreatedAt  time.Time `gorm:"column:created_at;not null"`
 	UpdatedAt  time.Time `gorm:"column:updated_at;not null"`
+
+	Class Class `gorm:"foreignKey:ClassID"`
 }
 
 func (a *Allocation) TableName() string {
