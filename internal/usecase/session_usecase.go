@@ -255,7 +255,7 @@ func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model
 					ClassID:        item.ClassID,
 					Status:         "pending_data_entry",
 					Price:          fare.TicketPrice,
-					Type:           item.Type,
+					Type:           manifest.Class.Type,
 					ClaimSessionID: nil, // Will be set after ClaimSession is created
 				})
 			}
