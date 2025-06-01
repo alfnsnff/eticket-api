@@ -308,9 +308,20 @@ func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model
 
 func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.ClaimedSessionFillPassengerDataRequest, sessionID string) (*model.ClaimedSessionFillPassengerDataResponse, error) {
 	// Inlined HelperValidateConfirmRequest logic
-	if request.CustomerName == "" || request.IDType == "" || request.IDNumber == "" ||
-		request.PhoneNumber == "" || request.Email == "" {
-		return nil, errors.New("invalid request: missing required fields")
+	if request.CustomerName == "" {
+		return nil, errors.New("invalid request: missing required field 'CustomerName'")
+	}
+	if request.IDType == "" {
+		return nil, errors.New("invalid request: missing required field 'IDType'")
+	}
+	if request.IDNumber == "" {
+		return nil, errors.New("invalid request: missing required field 'IDNumber'")
+	}
+	if request.PhoneNumber == "" {
+		return nil, errors.New("invalid request: missing required field 'PhoneNumber'")
+	}
+	if request.Email == "" {
+		return nil, errors.New("invalid request: missing required field 'Email'")
 	}
 
 	if len(request.TicketData) == 0 {
