@@ -28,7 +28,13 @@ func (tr *TicketRepository) Count(db *gorm.DB) (int64, error) {
 
 func (tr *TicketRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Ticket, error) {
 	tickets := []*entity.Ticket{}
-	result := db.Limit(limit).Offset(offset).Find(&tickets)
+	result := db.Preload("Class").
+		Preload("Schedule").
+		Preload("Schedule.Ship").
+		Preload("Schedule.Route").
+		Preload("Schedule.Route.DepartureHarbor").
+		Preload("Schedule.Route.ArrivalHarbor").
+		Limit(limit).Offset(offset).Find(&tickets)
 	if result.Error != nil {
 		return nil, result.Error
 	}
