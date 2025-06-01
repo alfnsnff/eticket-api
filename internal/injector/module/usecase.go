@@ -41,7 +41,7 @@ func NewUsecaseModule(tx *tx.TxManager, repository *RepositoryModule, tm *jwt.To
 		FareUsecase:       usecase.NewFareUsecase(tx, repository.FareRepository),
 		ScheduleUsecase:   usecase.NewScheduleUsecase(tx, repository.AllocationRepository, repository.ClassRepository, repository.FareRepository, repository.ManifestRepository, repository.RouteRepository, repository.ShipRepository, repository.ScheduleRepository, repository.TicketRepository),
 		BookingUsecase:    usecase.NewBookingUsecase(tx, repository.BookingRepository, repository.TicketRepository, repository.SessionRepository),
-		SessionUsecase:    usecase.NewSessionUsecase(tx, repository.SessionRepository, repository.TicketRepository, repository.ScheduleRepository, repository.AllocationRepository, repository.ManifestRepository, repository.FareRepository),
+		SessionUsecase:    usecase.NewSessionUsecase(tx, repository.SessionRepository, repository.TicketRepository, repository.ScheduleRepository, repository.AllocationRepository, repository.ManifestRepository, repository.FareRepository, repository.BookingRepository),
 		RouteUsecase:      usecase.NewRouteUsecase(tx, repository.RouteRepository),
 		HarborUsecase:     usecase.NewHarborUsecase(tx, repository.HarborRepository),
 		ClassUsecase:      usecase.NewClassUsecase(tx, repository.ClassRepository),

@@ -1,10 +1,12 @@
 package controller
 
 import (
+	"encoding/json"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase"
 	"eticket-api/pkg/utils/helper/meta"
 	"eticket-api/pkg/utils/helper/response"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -115,14 +117,18 @@ func (bc *BookingController) DeleteBooking(ctx *gin.Context) {
 }
 
 func (bc *BookingController) ConfirmBooking(ctx *gin.Context) {
-	request := new(model.ConfirmBookingRequest)
-
-	if err := ctx.ShouldBindJSON(request); err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+	sessionID, err := ctx.Cookie("session_id")
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Missing session id", err.Error()))
 		return
 	}
 
-	datas, err := bc.BookingUsecase.ConfirmBooking(ctx, request)
+	// if err := ctx.ShouldBindJSON(request); err != nil {
+	// 	ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+	// 	return
+	// }
+
+	datas, err := bc.BookingUsecase.ConfirmBooking(ctx, sessionID)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create class", err.Error()))
@@ -130,4 +136,37 @@ func (bc *BookingController) ConfirmBooking(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(datas, "Booking confirmed successfully", nil))
+}
+
+func (h *BookingController) HandleQRISCallback(ctx *gin.Context, r *http.Request) {
+	var callback struct {
+		ID         string `json:"id"`
+		Status     string `json:"status"`      // e.g., "COMPLETED"
+		ExternalID string `json:"external_id"` // Your order ID (e.g., "order-123")
+		Amount     int    `json:"amount"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&callback); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
+		return
+	}
+
+	// Log or verify the callback
+	fmt.Printf("Received QRIS callback: %+v\n", callback)
+
+	if callback.Status == "COMPLETED" {
+		// ✅ Mark booking as paid in your DB
+		externalIDUint, err := strconv.ParseUint(callback.ExternalID, 10, 64)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid external_id"})
+			return
+		}
+		err = h.BookingUsecase.PaidConfirm(ctx, uint(externalIDUint))
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update booking"})
+			return
+		}
+	}
+
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Booking paid successfully", nil))
 }

@@ -120,21 +120,22 @@ func (b *BookingUsecase) DeleteBooking(ctx context.Context, id uint) error {
 
 }
 
-func (b *BookingUsecase) ConfirmBooking(ctx context.Context, request *model.ConfirmBookingRequest) (*model.ConfirmBookingResponse, error) {
-	// Inlined HelperValidateConfirmRequest logic
-	if request.Name == "" || request.IDType == "" || request.IDNumber == "" ||
-		request.PhoneNumber == "" || request.Email == "" || request.BirthDate.IsZero() {
-		return nil, errors.New("invalid request: missing required fields")
-	}
+func (b *BookingUsecase) PaidConfirm(ctx context.Context, id uint) error {
+	return b.Tx.Execute(ctx, func(tx *gorm.DB) error {
+		return b.BookingRepository.PaidConfirm(tx, id)
+	})
+}
 
+func (b *BookingUsecase) ConfirmBooking(ctx context.Context, sessionID string) (*model.ConfirmBookingResponse, error) {
+	// Inlined HelperValidateConfirmRequest logic
 	var confirmedBooking *entity.Booking
 	var confirmedTicketIDs []uint
 
 	err := b.Tx.Execute(ctx, func(tx *gorm.DB) error {
 
-		session, err := b.SessionRepository.GetByUUIDWithLock(tx, request.SessionID, true)
+		session, err := b.SessionRepository.GetByUUIDWithLock(tx, sessionID, true)
 		if err != nil {
-			return fmt.Errorf("failed to retrieve claim session %s within transaction: %w", request.SessionID, err)
+			return fmt.Errorf("failed to retrieve claim session %s within transaction: %w", sessionID, err)
 		}
 		if session == nil {
 			return errors.New("claim session not found")
@@ -145,21 +146,13 @@ func (b *BookingUsecase) ConfirmBooking(ctx context.Context, request *model.Conf
 			return fmt.Errorf("failed to retrieve tickets: %w", err)
 		}
 
-		// Inlined HelperValidateAndPrepareTickets logic
 		var total float32
-		var scheduleID uint
 		now := time.Now()
-		for i, ticket := range tickets {
+		for _, ticket := range tickets {
 			if ticket.Status != "pending_payment" {
 				return fmt.Errorf("ticket %d not in pending_payment state", ticket.ID)
 			}
-			// if ticket.ExpiresAt.Before(now) {
-			// 	return nil, 0, 0, fmt.Errorf("ticket %d expired before confirmation", ticket.ID)
-			// }
-			if i == 0 {
-				scheduleID = ticket.ScheduleID
-			}
-			ticket.Status = "confirmed"
+			ticket.Status = "paid_confirmed"
 			ticket.ClaimSessionID = nil
 			ticket.BookedAt = &now
 			total += ticket.Price
@@ -167,21 +160,11 @@ func (b *BookingUsecase) ConfirmBooking(ctx context.Context, request *model.Conf
 
 		// Inlined HelperBuildBooking logic
 		booking := &entity.Booking{
-			ScheduleID:   scheduleID,
-			CustomerName: request.Name,
-			IDType:       request.IDType,
-			IDNumber:     request.IDNumber,
-			PhoneNumber:  request.PhoneNumber,
-			Email:        request.Email,
-			BirthDate:    request.BirthDate,
-			BookedAt:     now,
-			TotalPrice:   total,
-			Status:       "completed",
-			// PaymentIntentID: request.PaymentIntentID, // Uncomment if needed
+			Status: "paid_comfirmed",
 		}
 
-		if err := b.BookingRepository.Create(tx, booking); err != nil {
-			return fmt.Errorf("failed to create booking: %w", err)
+		if err := b.BookingRepository.Update(tx, booking); err != nil {
+			return fmt.Errorf("failed to update booking: %w", err)
 		}
 		confirmedBooking = booking
 
@@ -196,8 +179,8 @@ func (b *BookingUsecase) ConfirmBooking(ctx context.Context, request *model.Conf
 		if err := b.TicketRepository.UpdateBulk(tx, tickets); err != nil {
 			return fmt.Errorf("failed to update tickets: %w", err)
 		}
-
 		return nil
+
 	})
 
 	if err != nil {

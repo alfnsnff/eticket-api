@@ -1,6 +1,7 @@
 package model
 
 import (
+	"eticket-api/pkg/utils/qr"
 	"time"
 )
 
@@ -116,11 +117,19 @@ type ClaimedSessionTicketDataInput struct {
 }
 
 type ClaimedSessionFillPassengerDataRequest struct {
-	SessionID  string                          `json:"session_id"`
-	TicketData []ClaimedSessionTicketDataInput `json:"ticket_data"`
+	SessionID    string                          `json:"session_id"`
+	CustomerName string                          `json:"customer_name"`
+	IDType       string                          `json:"id_type"`
+	IDNumber     string                          `json:"id_number"`
+	PhoneNumber  string                          `json:"phone_number"`
+	Email        string                          `json:"email"`
+	BirthDate    time.Time                       `json:"birth_date"`
+	TicketData   []ClaimedSessionTicketDataInput `json:"ticket_data"`
 }
 
 type ClaimedSessionFillPassengerDataResponse struct {
+	BookingID        uint                                `json:"booking_id"` // ID of the booking created
+	Payment          qr.InvoiceResponse                  `json:"payment"`    // QRIS payment details
 	UpdatedTicketIDs []uint                              `json:"updated_ticket_ids"`
 	FailedTickets    []ClaimedSessionTicketUpdateFailure `json:"failed_tickets"`
 }

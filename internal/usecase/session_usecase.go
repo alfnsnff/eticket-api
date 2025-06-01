@@ -7,6 +7,7 @@ import (
 	"eticket-api/internal/model"
 	"eticket-api/internal/model/mapper"
 	"eticket-api/internal/repository"
+	"eticket-api/pkg/utils/qr"
 	"eticket-api/pkg/utils/tx"
 	"fmt"
 	"time"
@@ -23,25 +24,28 @@ type SessionUsecase struct {
 	AllocationRepository *repository.AllocationRepository // Your AllocationRepository implements this
 	ManifestRepository   *repository.ManifestRepository
 	FareRepository       *repository.FareRepository
+	BookingRepository    *repository.BookingRepository
 }
 
 func NewSessionUsecase(
 	tx *tx.TxManager,
-	sessionRepo *repository.SessionRepository,
-	ticketRepo *repository.TicketRepository,
+	session_repository *repository.SessionRepository,
+	ticket_repository *repository.TicketRepository,
 	schedule_repository *repository.ScheduleRepository,
 	allocation_repository *repository.AllocationRepository,
 	manifest_repository *repository.ManifestRepository,
 	fare_repository *repository.FareRepository,
+	booking_repository *repository.BookingRepository,
 ) *SessionUsecase {
 	return &SessionUsecase{
 		Tx:                   tx,
-		SessionRepository:    sessionRepo,
-		TicketRepository:     ticketRepo,
+		SessionRepository:    session_repository,
+		TicketRepository:     ticket_repository,
 		ScheduleRepository:   schedule_repository,
 		AllocationRepository: allocation_repository,
 		ManifestRepository:   manifest_repository,
 		FareRepository:       fare_repository,
+		BookingRepository:    booking_repository,
 	}
 }
 
@@ -168,7 +172,7 @@ func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model
 		return nil, fmt.Errorf("invalid claim request")
 	}
 	for _, item := range request.Items {
-		if item.Quantity == 0 || item.Type == "" || item.ClassID == 0 {
+		if item.Quantity == 0 || item.ClassID == 0 {
 			return nil, fmt.Errorf("missing request item field")
 		}
 	}
@@ -193,7 +197,7 @@ func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model
 			// item validation was already done by the inlined HelperValidateLockRequest,
 			// but keeping it here as it was in HelperLockAndCheckAvailability for logical grouping if this block was a separate func.
 			// For direct inlining, it's somewhat redundant but harmless.
-			if item.Quantity == 0 || item.Type == "" || item.ClassID == 0 {
+			if item.Quantity == 0 || item.ClassID == 0 {
 				return fmt.Errorf("failed to lock capacity: missing request item field")
 			}
 
@@ -303,6 +307,12 @@ func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model
 }
 
 func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.ClaimedSessionFillPassengerDataRequest, sessionID string) (*model.ClaimedSessionFillPassengerDataResponse, error) {
+	// Inlined HelperValidateConfirmRequest logic
+	if request.CustomerName == "" || request.IDType == "" || request.IDNumber == "" ||
+		request.PhoneNumber == "" || request.Email == "" || request.BirthDate.IsZero() {
+		return nil, errors.New("invalid request: missing required fields")
+	}
+
 	if len(request.TicketData) == 0 {
 		return nil, errors.New("invalid request: passenger data are required")
 	}
@@ -317,6 +327,8 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 
 	var finalUpdatedIDs []uint
 	var finalFailed []model.ClaimedSessionTicketUpdateFailure
+	var bookingID uint
+	var invoiceResponse qr.InvoiceResponse
 
 	err := cs.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		session, err := cs.SessionRepository.GetByUUIDWithLock(tx, sessionID, true)
@@ -347,12 +359,30 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 		var currentFailed []model.ClaimedSessionTicketUpdateFailure
 		var ticketsToUpdate []*entity.Ticket
 
+		booking := &entity.Booking{
+			ScheduleID:  session.ScheduleID,
+			IDType:      request.IDType,
+			IDNumber:    request.IDNumber,
+			PhoneNumber: request.PhoneNumber,
+			Email:       request.Email,
+			BookedAt:    now,
+			Status:      "pending_payment",
+			// PaymentIntentID: request.PaymentIntentID, // Uncomment if needed
+		}
+
+		if err := cs.BookingRepository.Create(tx, booking); err != nil {
+			return fmt.Errorf("failed to create booking: %w", err)
+		}
+
+		bookingID = booking.ID // This will be set after the booking is created
+
 		for id, data := range passengerMap { // passengerMap from inlined HelperExtractPassengerData
 			ticket, exists := retrievedTicketsMap[id]
 			if !exists {
 				currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Ticket not found in session"})
 				continue
 			}
+
 			if ticket.Status != "pending_data_entry" {
 				currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: fmt.Sprintf("Status is %s", ticket.Status)})
 				continue
@@ -404,7 +434,7 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 				currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Unsupported ticket type"})
 				continue
 			}
-
+			ticket.BookingID = &booking.ID // Link the ticket to the booking
 			ticket.Status = "pending_payment"
 			ticket.EntriesAt = &now // now is from the outer scope (SessionDataEntry)
 			ticketsToUpdate = append(ticketsToUpdate, ticket)
@@ -415,11 +445,27 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 		finalUpdatedIDs = currentUpdatedIDs
 		finalFailed = currentFailed
 
-		if len(ticketsToUpdate) > 0 { // ticketsToUpdate is the result of inlined HelperValidateAndUpdateTickets
+		if len(ticketsToUpdate) == len(ticketsFromDB) { // ticketsToUpdate is the result of inlined HelperValidateAndUpdateTickets
 			err = cs.TicketRepository.UpdateBulk(tx, ticketsToUpdate)
 			if err != nil {
 				return fmt.Errorf("failed to save tickets: %w", err)
 			}
+
+			invoicePayload := qr.InvoiceRequest{
+				ExternalID:         fmt.Sprintf("%d", booking.ID),
+				PayerEmail:         booking.Email,
+				Description:        "Pembayaran tiket kapal untuk Booking #" + fmt.Sprintf("%d", booking.ID),
+				Amount:             1199000,
+				SuccessRedirectURL: "https://yourdomain.com/payment-success",
+				FailureRedirectURL: "https://yourdomain.com/payment-failed",
+			}
+
+			inv, err := qr.CreateInvoice(invoicePayload)
+			if err != nil {
+				return fmt.Errorf("failed to create QRIS: %w", err)
+			}
+
+			invoiceResponse = inv
 		}
 
 		return nil
@@ -430,8 +476,10 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 	}
 
 	return &model.ClaimedSessionFillPassengerDataResponse{
+		BookingID:        bookingID,
 		UpdatedTicketIDs: finalUpdatedIDs,
 		FailedTickets:    finalFailed,
+		Payment:          invoiceResponse,
 	}, nil
 }
 
