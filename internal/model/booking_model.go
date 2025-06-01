@@ -1,44 +1,45 @@
 package model
 
 import (
+	"eticket-api/pkg/utils/qr"
 	"time"
 )
 
 // BookingDTO represents the person who booked the ticket.
 type ReadBookingResponse struct {
-	ID           uint      `json:"id"`
-	CustomerName string    `json:"customer_name"`
-	IDType       uint      `json:"id_type"`
-	IDNumber     uint      `json:"id_number"`
-	PhoneNumber  string    `json:"phone_number"` // Changed to string to support leading zeros
-	Email        string    `json:"email_address"`
-	BirthDate    time.Time `json:"birth_date"`
+	ID           uint   `json:"id"`
+	ScheduleID   uint   `json:"schedule_id"` // Foreign key
+	CustomerName string `json:"customer_name"`
+	IDType       uint   `json:"id_type"`
+	IDNumber     uint   `json:"id_number"`
+	PhoneNumber  string `json:"phone_number"` // Changed to string to support leading zeros
+	Email        string `json:"email_address"`
+	Status       string `gorm:"type:varchar(20);not null" json:"status"` // e.g., 'completed', 'cancelled', 'refunded'
 
-	BookingTimestamp time.Time `gorm:"not null" json:"booking_timestamp"`       // Timestamp when the booking was confirmed
-	TotalAmount      float32   `gorm:"not null" json:"total_amount"`            // Total price of all tickets in this booking
-	Status           string    `gorm:"type:varchar(20);not null" json:"status"` // e.g., 'completed', 'cancelled', 'refunded'
-
+	BookedAt  time.Time `json:"booked_at"` // Timestamp when the booking was confirmed
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type WriteBookingRequest struct {
-	ScheduleID   uint      `json:"schedule_id"` // Foreign key
-	CustomerName string    `json:"customer_name"`
-	PersonID     uint      `json:"person_id"`
-	PhoneNumber  string    `json:"phone_number"` // Changed to string to support leading zeros
-	Email        string    `json:"email_address"`
-	BirthDate    time.Time `json:"birth_date"`
+	ScheduleID   uint   `json:"schedule_id"` // Foreign key
+	CustomerName string `json:"customer_name"`
+	IDType       uint   `json:"id_type"`
+	IDNumber     uint   `json:"id_number"`
+	PhoneNumber  string `json:"phone_number"` // Changed to string to support leading zeros
+	Email        string `json:"email_address"`
+	Status       string `gorm:"type:varchar(20);not null" json:"status"` // e.g., 'completed', 'cancelled', 'refunded'
 }
 
 type UpdateBookingRequest struct {
-	ID           uint      `json:"id"`
-	ScheduleID   uint      `json:"schedule_id"` // Foreign key
-	CustomerName string    `json:"customer_name"`
-	PersonID     uint      `json:"person_id"`
-	PhoneNumber  string    `json:"phone_number"` // Changed to string to support leading zeros
-	Email        string    `json:"email_address"`
-	BirthDate    time.Time `json:"birth_date"`
+	ID           uint   `json:"id"`
+	ScheduleID   uint   `json:"schedule_id"` // Foreign key
+	CustomerName string `json:"customer_name"`
+	IDType       uint   `json:"id_type"`
+	IDNumber     uint   `json:"id_number"`
+	PhoneNumber  string `json:"phone_number"` // Changed to string to support leading zeros
+	Email        string `json:"email_address"`
+	Status       string `gorm:"type:varchar(20);not null" json:"status"` // e.g., 'completed', 'cancelled', 'refunded'
 }
 
 type ConfirmBookingRequest struct {
@@ -54,9 +55,10 @@ type ConfirmBookingRequest struct {
 
 // ConfirmPaymentResponse represents the result of the payment confirmation.
 type ConfirmBookingResponse struct {
-	BookingID          uint   `json:"booking_id"`
-	BookingStatus      string `json:"booking_status"`
-	ConfirmedTicketIDs []uint `json:"confirmed_ticket_ids"`
+	BookingID          uint               `json:"booking_id"`
+	BookingStatus      string             `json:"booking_status"`
+	ConfirmedTicketIDs []uint             `json:"confirmed_ticket_ids"`
+	Payment            qr.InvoiceResponse `json:"payment"` // QRIS payment details
 }
 
 type TicketSelectionResponse struct {

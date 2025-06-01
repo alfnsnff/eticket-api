@@ -80,7 +80,7 @@ func Run(cfg *config.Config) {
 		}
 	}()
 
-	gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.DebugMode)
 	router := gin.Default()
 	router.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {

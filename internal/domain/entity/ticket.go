@@ -21,7 +21,7 @@ type Ticket struct {
 	IDNumber      *string `gorm:"column:id_number;type:varchar(24)"`
 
 	//Passenger Data
-	SeatNumber *string `gorm:"column:seat_number;type:varchar(8)"`
+	SeatNumber *string `gorm:"column:seat_number;type:varchar(24)"`
 
 	//Vehicle Data
 	LicensePlate *string `gorm:"column:license_plate;type:varchar(10)"`

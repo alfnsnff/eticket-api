@@ -15,8 +15,9 @@ func NewSessionRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	ar := ic.Repository.AllocationRepository
 	mr := ic.Repository.ManifestRepository
 	fr := ic.Repository.FareRepository
+	br := ic.Repository.BookingRepository
 	sc := &controller.SessionController{
-		SessionUsecase: usecase.NewSessionUsecase(ic.Tx, csr, tr, scr, ar, mr, fr),
+		SessionUsecase: usecase.NewSessionUsecase(ic.Tx, csr, tr, scr, ar, mr, fr, br),
 	}
 
 	public := rg.Group("") // No middleware

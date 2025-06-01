@@ -42,3 +42,12 @@ func (br *BookingRepository) GetByID(db *gorm.DB, id uint) (*entity.Booking, err
 	}
 	return booking, result.Error
 }
+
+func (br *BookingRepository) PaidConfirm(db *gorm.DB, id uint) error {
+	booking := new(entity.Booking)
+	result := db.First(&booking, id).Update("status", "paid")
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
