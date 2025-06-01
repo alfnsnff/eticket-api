@@ -27,7 +27,9 @@ func (br *BookingRepository) Count(db *gorm.DB) (int64, error) {
 
 func (br *BookingRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Booking, error) {
 	bookings := []*entity.Booking{}
-	result := db.Limit(limit).Offset(offset).Find(&bookings)
+	result := db.Preload("Tickets").
+		Preload("Tickets.Class").
+		Limit(limit).Offset(offset).Find(&bookings)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -36,7 +38,9 @@ func (br *BookingRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.B
 
 func (br *BookingRepository) GetByID(db *gorm.DB, id uint) (*entity.Booking, error) {
 	booking := new(entity.Booking)
-	result := db.First(&booking, id)
+	result := db.Preload("Tickets").
+		Preload("Tickets.Class").
+		First(&booking, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}

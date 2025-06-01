@@ -43,7 +43,12 @@ func (tr *TicketRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Ti
 
 func (tr *TicketRepository) GetByID(db *gorm.DB, id uint) (*entity.Ticket, error) {
 	ticket := new(entity.Ticket)
-	result := db.First(&ticket, id)
+	result := db.Preload("Class").
+		Preload("Schedule").
+		Preload("Schedule.Ship").
+		Preload("Schedule.Route").
+		Preload("Schedule.Route.DepartureHarbor").
+		Preload("Schedule.Route.ArrivalHarbor").First(&ticket, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
@@ -89,7 +94,13 @@ func (tr *TicketRepository) UpdateBulk(db *gorm.DB, tickets []*entity.Ticket) er
 
 func (tr *TicketRepository) FindManyByIDs(db *gorm.DB, ids []uint) ([]*entity.Ticket, error) {
 	tickets := []*entity.Ticket{}
-	result := db.Where("id IN ?", ids).Find(&tickets)
+	result := db.Preload("Class").
+		Preload("Schedule").
+		Preload("Schedule.Ship").
+		Preload("Schedule.Route").
+		Preload("Schedule.Route.DepartureHarbor").
+		Preload("Schedule.Route.ArrivalHarbor").
+		Where("id IN ?", ids).Find(&tickets)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -98,7 +109,13 @@ func (tr *TicketRepository) FindManyByIDs(db *gorm.DB, ids []uint) ([]*entity.Ti
 
 func (tr *TicketRepository) FindManyBySessionID(db *gorm.DB, sessionID uint) ([]*entity.Ticket, error) {
 	tickets := []*entity.Ticket{}
-	result := db.Preload("Class").Where("claim_session_id = ?", sessionID).Find(&tickets)
+	result := db.Preload("Class").
+		Preload("Schedule").
+		Preload("Schedule.Ship").
+		Preload("Schedule.Route").
+		Preload("Schedule.Route.DepartureHarbor").
+		Preload("Schedule.Route.ArrivalHarbor").
+		Where("claim_session_id = ?", sessionID).Find(&tickets)
 	if result.Error != nil {
 		return nil, result.Error
 	}

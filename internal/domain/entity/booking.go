@@ -14,6 +14,8 @@ type Booking struct {
 	BookedAt     time.Time `gorm:"column:booked_at;not null"`
 	CreatedAt    time.Time `gorm:"column:created_at;not null"`
 	UpdatedAt    time.Time `gorm:"column:updated_at;not null"`
+
+	Tickets []Ticket `gorm:"foreignKey:BookingID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 func (b *Booking) TableName() string {
