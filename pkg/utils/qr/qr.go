@@ -4,23 +4,15 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"eticket-api/internal/domain/entity"
 	"fmt"
 	"net/http"
-
-	"github.com/jinzhu/copier"
 )
 
-// ShipDTO represents a ship.
-type ClassItem struct {
-	ID        uint   `json:"id"`
-	ClassName string `json:"class_name"`
-	Type      string `json:"type"`
-}
-
 type InvoiceItems struct {
-	Class ClassItem `json:"class"`
-	Price float32   `json:"price"`
+	Name     string `json:"name"`
+	Category string `json:"category"`
+	Quantity int    `json:"quantity"`
+	Price    int    `json:"price"`
 }
 
 type InvoiceRequest struct {
@@ -57,31 +49,31 @@ type QRISResponse struct {
 
 type TicketToInvoiceItem struct {
 	ClassName string
-	ClassCode string
+	Type      string
 	Price     float32
 }
 
-func MapTicketsToInvoiceItems(tickets []*entity.Ticket) []InvoiceItems {
-	var ticketDTOs []TicketToInvoiceItem
-	err := copier.Copy(&ticketDTOs, &tickets)
-	if err != nil {
-		return nil
-	}
+// func MapTicketsToInvoiceItems(tickets []*entity.Ticket) []InvoiceItems {
+// 	var ticketDTOs []TicketToInvoiceItem
+// 	err := copier.Copy(&ticketDTOs, &tickets)
+// 	if err != nil {
+// 		return nil
+// 	}
 
-	var invoiceItems []InvoiceItems
-	for _, t := range ticketDTOs {
-		item := InvoiceItems{
-			Class: ClassItem{
-				ClassName: t.ClassName,
-				Type:      t.ClassCode,
-			},
-			Price: t.Price,
-		}
-		invoiceItems = append(invoiceItems, item)
-	}
+// 	var invoiceItems []InvoiceItems
+// 	for _, t := range ticketDTOs {
+// 		item := InvoiceItems{
+// 			Class: ClassItem{
+// 				ClassName: t.ClassName,
+// 				Type:      t.ClassCode,
+// 			},
+// 			Price: t.Price,
+// 		}
+// 		invoiceItems = append(invoiceItems, item)
+// 	}
 
-	return invoiceItems
-}
+// 	return invoiceItems
+// }
 
 func CreateInvoice(payload InvoiceRequest) (InvoiceResponse, error) {
 	url := "https://api.xendit.co/v2/invoices"

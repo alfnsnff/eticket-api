@@ -33,6 +33,7 @@ type Ticket struct {
 
 	Class    Class    `gorm:"foreignKey:ClassID"`
 	Schedule Schedule `gorm:"foreignKey:ScheduleID"`
+	Booking  Booking  `gorm:"foreignKey:BookingID"`
 }
 
 func (t *Ticket) TableName() string {

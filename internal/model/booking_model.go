@@ -5,6 +5,24 @@ import (
 	"time"
 )
 
+// TicketDTO represents a ticket.
+type BookingTicket struct {
+	ID             uint            `json:"id"`
+	ClaimSessionID uint            `json:"claim_session_id"`
+	Class          TicketClassItem `json:"class"`
+	Status         string          `json:"status"`
+	BookingID      uint            `json:"booking_id"`
+	Type           string          `json:"type" binding:"required,oneof=passenger vehicle"`
+	PassengerName  string          `json:"passenger_name"`
+	PassengerAge   int             `json:"passenger_age"`
+	Address        string          `json:"address"`
+	IDType         string          `json:"id_type"`
+	IDNumber       string          `json:"id_number"`
+	SeatNumber     *string         `json:"seat_number"`
+	LicensePlate   *string         `json:"license_plate"`
+	Price          float32         `json:"price"`
+}
+
 // BookingDTO represents the person who booked the ticket.
 type ReadBookingResponse struct {
 	ID           uint   `json:"id"`
@@ -19,6 +37,8 @@ type ReadBookingResponse struct {
 	BookedAt  time.Time `json:"booked_at"` // Timestamp when the booking was confirmed
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+
+	Tickets []BookingTicket `json:"tickets"`
 }
 
 type WriteBookingRequest struct {

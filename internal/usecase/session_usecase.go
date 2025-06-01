@@ -464,10 +464,11 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 			}
 
 			invoicePayload := qr.InvoiceRequest{
-				ExternalID:         fmt.Sprintf("%d", booking.ID),
-				PayerEmail:         booking.Email,
-				Description:        "Pembayaran tiket kapal untuk Booking #" + fmt.Sprintf("%d", booking.ID),
-				Amount:             int(total),
+				ExternalID:  fmt.Sprintf("%d", booking.ID),
+				PayerEmail:  booking.Email,
+				Description: "Pembayaran tiket kapal untuk Booking #" + fmt.Sprintf("%d", booking.ID),
+				Amount:      int(total),
+				// Items:              qr.MapTicketsToInvoiceItems(ticketsToUpdate),
 				SuccessRedirectURL: "https://yourdomain.com/payment-success",
 				FailureRedirectURL: "https://yourdomain.com/payment-failed",
 			}
