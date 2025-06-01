@@ -360,10 +360,6 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 
 			switch ticket.Type {
 			case "passenger":
-				if data.SeatNumber == nil || *data.SeatNumber == "" {
-					currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Seat number required for passenger ticket"})
-					continue
-				}
 				if data.PassengerName == "" {
 					currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Passenger name required"})
 					continue
@@ -389,8 +385,14 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 				ticket.Address = &data.Address
 				ticket.IDType = &data.IDType
 				ticket.IDNumber = &data.IDNumber
-				ticket.SeatNumber = data.SeatNumber
-				ticket.LicensePlate = nil
+
+				count, err := cs.TicketRepository.CountByScheduleClassAndStatuses(tx, ticket.ScheduleID, ticket.ClassID, []string{"pending_data_entry", "pending_payment", "confirmed"})
+				if err != nil {
+					return fmt.Errorf("failed to create seat number: %w", err)
+				}
+				seatNumStr := fmt.Sprintf("%s%d", ticket.Class.ClassName, count+1)
+				ticket.SeatNumber = &seatNumStr
+
 			case "vehicle":
 				if data.LicensePlate == nil || *data.LicensePlate == "" {
 					currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "License plate required for vehicle ticket"})
