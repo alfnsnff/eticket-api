@@ -4,15 +4,31 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"eticket-api/internal/domain/entity"
 	"fmt"
 	"net/http"
+
+	"github.com/jinzhu/copier"
 )
 
+// ShipDTO represents a ship.
+type ClassItem struct {
+	ID        uint   `json:"id"`
+	ClassName string `json:"class_name"`
+	Type      string `json:"type"`
+}
+
+type InvoiceItems struct {
+	Class ClassItem `json:"class"`
+	Price float32   `json:"price"`
+}
+
 type InvoiceRequest struct {
-	ExternalID         string `json:"external_id"`
-	PayerEmail         string `json:"payer_email"`
-	Description        string `json:"description"`
-	Amount             int    `json:"amount"`
+	ExternalID  string `json:"external_id"`
+	PayerEmail  string `json:"payer_email"`
+	Description string `json:"description"`
+	Amount      int    `json:"amount"`
+	// Items              []InvoiceItems `json:"items"`
 	SuccessRedirectURL string `json:"success_redirect_url"`
 	FailureRedirectURL string `json:"failure_redirect_url"`
 }
@@ -37,6 +53,34 @@ type QRISResponse struct {
 	QRURL    string `json:"qr_url"`
 	Status   string `json:"status"`
 	Amount   int    `json:"amount"`
+}
+
+type TicketToInvoiceItem struct {
+	ClassName string
+	ClassCode string
+	Price     float32
+}
+
+func MapTicketsToInvoiceItems(tickets []*entity.Ticket) []InvoiceItems {
+	var ticketDTOs []TicketToInvoiceItem
+	err := copier.Copy(&ticketDTOs, &tickets)
+	if err != nil {
+		return nil
+	}
+
+	var invoiceItems []InvoiceItems
+	for _, t := range ticketDTOs {
+		item := InvoiceItems{
+			Class: ClassItem{
+				ClassName: t.ClassName,
+				Type:      t.ClassCode,
+			},
+			Price: t.Price,
+		}
+		invoiceItems = append(invoiceItems, item)
+	}
+
+	return invoiceItems
 }
 
 func CreateInvoice(payload InvoiceRequest) (InvoiceResponse, error) {

@@ -309,7 +309,7 @@ func (cs *SessionUsecase) SessionLockTickets(ctx context.Context, request *model
 func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.ClaimedSessionFillPassengerDataRequest, sessionID string) (*model.ClaimedSessionFillPassengerDataResponse, error) {
 	// Inlined HelperValidateConfirmRequest logic
 	if request.CustomerName == "" || request.IDType == "" || request.IDNumber == "" ||
-		request.PhoneNumber == "" || request.Email == "" || request.BirthDate.IsZero() {
+		request.PhoneNumber == "" || request.Email == "" {
 		return nil, errors.New("invalid request: missing required fields")
 	}
 
@@ -329,7 +329,7 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 	var finalFailed []model.ClaimedSessionTicketUpdateFailure
 	var bookingID uint
 	var invoiceResponse qr.InvoiceResponse
-
+	var total float32
 	err := cs.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		session, err := cs.SessionRepository.GetByUUIDWithLock(tx, sessionID, true)
 		if err != nil {
@@ -434,6 +434,7 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 				currentFailed = append(currentFailed, model.ClaimedSessionTicketUpdateFailure{TicketID: id, Reason: "Unsupported ticket type"})
 				continue
 			}
+			total += ticket.Price
 			ticket.BookingID = &booking.ID // Link the ticket to the booking
 			ticket.Status = "pending_payment"
 			ticket.EntriesAt = &now // now is from the outer scope (SessionDataEntry)
@@ -455,7 +456,7 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 				ExternalID:         fmt.Sprintf("%d", booking.ID),
 				PayerEmail:         booking.Email,
 				Description:        "Pembayaran tiket kapal untuk Booking #" + fmt.Sprintf("%d", booking.ID),
-				Amount:             1199000,
+				Amount:             int(total),
 				SuccessRedirectURL: "https://yourdomain.com/payment-success",
 				FailureRedirectURL: "https://yourdomain.com/payment-failed",
 			}
