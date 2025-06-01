@@ -19,6 +19,10 @@ RUN go build -o main ./cmd/app
 # 2. Final Minimal Runtime Stage
 FROM debian:bookworm-slim
 
+# Install CA certificates
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
 # Set working directory
 WORKDIR /app
 
