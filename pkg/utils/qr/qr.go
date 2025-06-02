@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"eticket-api/internal/domain/entity"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 type InvoiceItems struct {
@@ -16,13 +18,13 @@ type InvoiceItems struct {
 }
 
 type InvoiceRequest struct {
-	ExternalID  string `json:"external_id"`
-	PayerEmail  string `json:"payer_email"`
-	Description string `json:"description"`
-	Amount      int    `json:"amount"`
-	// Items              []InvoiceItems `json:"items"`
-	SuccessRedirectURL string `json:"success_redirect_url"`
-	FailureRedirectURL string `json:"failure_redirect_url"`
+	ExternalID         string         `json:"external_id"`
+	PayerEmail         string         `json:"payer_email"`
+	Description        string         `json:"description"`
+	Amount             int            `json:"amount"`
+	Items              []InvoiceItems `json:"items"`
+	SuccessRedirectURL string         `json:"success_redirect_url"`
+	FailureRedirectURL string         `json:"failure_redirect_url"`
 }
 
 type InvoiceResponse struct {
@@ -53,27 +55,28 @@ type TicketToInvoiceItem struct {
 	Price     float32
 }
 
-// func MapTicketsToInvoiceItems(tickets []*entity.Ticket) []InvoiceItems {
-// 	var ticketDTOs []TicketToInvoiceItem
-// 	err := copier.Copy(&ticketDTOs, &tickets)
-// 	if err != nil {
-// 		return nil
-// 	}
+func MapTicketsToInvoiceItems(tickets []*entity.Ticket) []InvoiceItems {
+	var items []InvoiceItems
+	for _, t := range tickets {
+		name := "Tiket " + t.Type
+		if t.Type == "passenger" && t.PassengerName != nil {
+			name = fmt.Sprintf("Tiket Penumpang - %s", *t.PassengerName)
+		}
+		if t.Type == "vehicle" && t.LicensePlate != nil {
+			name = fmt.Sprintf("Tiket Kendaraan - %s", *t.LicensePlate)
+		}
 
-// 	var invoiceItems []InvoiceItems
-// 	for _, t := range ticketDTOs {
-// 		item := InvoiceItems{
-// 			Class: ClassItem{
-// 				ClassName: t.ClassName,
-// 				Type:      t.ClassCode,
-// 			},
-// 			Price: t.Price,
-// 		}
-// 		invoiceItems = append(invoiceItems, item)
-// 	}
-
-// 	return invoiceItems
-// }
+		item := InvoiceItems{
+			Name:     name,
+			Category: strings.Title(t.Type), // e.g. "Passenger", "Vehicle"
+			Quantity: 1,                     // satu tiket per entri
+			Price:    int(t.Price),          // pastikan tipe t.Price sesuai (float32 ke int)
+			// url: optional (tidak wajib), bisa ditambahkan jika ada
+		}
+		items = append(items, item)
+	}
+	return items
+}
 
 func CreateInvoice(payload InvoiceRequest) (InvoiceResponse, error) {
 	url := "https://api.xendit.co/v2/invoices"

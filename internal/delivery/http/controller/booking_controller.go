@@ -116,29 +116,51 @@ func (bc *BookingController) DeleteBooking(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Booking deleted successfully", nil))
 }
 
-func (bc *BookingController) ConfirmBooking(ctx *gin.Context) {
-	sessionID, err := ctx.Cookie("session_id")
+// func (bc *BookingController) ConfirmBooking(ctx *gin.Context) {
+// 	sessionID, err := ctx.Cookie("session_id")
+// 	if err != nil {
+// 		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Missing session id", err.Error()))
+// 		return
+// 	}
+
+// 	// if err := ctx.ShouldBindJSON(request); err != nil {
+// 	// 	ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+// 	// 	return
+// 	// }
+
+// 	datas, err := bc.BookingUsecase.ConfirmBooking(ctx, sessionID)
+
+// 	if err != nil {
+// 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create class", err.Error()))
+// 		return
+// 	}
+
+// 	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(datas, "Booking confirmed successfully", nil))
+// }
+
+func (bc *BookingController) PaidBooking(ctx *gin.Context) {
+	id, err := strconv.Atoi(ctx.Param("id"))
+
 	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Missing session id", err.Error()))
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid booking ID", err.Error()))
 		return
 	}
-
 	// if err := ctx.ShouldBindJSON(request); err != nil {
 	// 	ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 	// 	return
 	// }
 
-	datas, err := bc.BookingUsecase.ConfirmBooking(ctx, sessionID)
+	err = bc.BookingUsecase.PaidConfirm(ctx, uint(id))
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create class", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(datas, "Booking confirmed successfully", nil))
+	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Booking confirmed successfully", nil))
 }
 
-func (h *BookingController) HandleQRISCallback(ctx *gin.Context, r *http.Request) {
+func (h *BookingController) HandleCallback(ctx *gin.Context, r *http.Request) {
 	var callback struct {
 		ID         string `json:"id"`
 		Status     string `json:"status"`      // e.g., "COMPLETED"
