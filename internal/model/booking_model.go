@@ -52,6 +52,7 @@ type BookingTicket struct {
 // BookingDTO represents the person who booked the ticket.
 type ReadBookingResponse struct {
 	ID           uint            `json:"id"`
+	OrderID      string          `json:"order_id"` // Unique identifier for the booking, e.g., 'ORD123456'
 	Schedule     BookingSchedule `json:"schedule"`
 	CustomerName string          `json:"customer_name"`
 	IDType       string          `json:"id_type"`

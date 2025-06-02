@@ -7,6 +7,7 @@ import (
 	"eticket-api/internal/model"
 	"eticket-api/internal/model/mapper"
 	"eticket-api/internal/repository"
+	"eticket-api/pkg/utils/code"
 	"eticket-api/pkg/utils/qr"
 	"eticket-api/pkg/utils/tx"
 	"fmt"
@@ -370,7 +371,15 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 		var currentFailed []model.ClaimedSessionTicketUpdateFailure
 		var ticketsToUpdate []*entity.Ticket
 
+		schedule, err := cs.ScheduleRepository.GetByID(tx, session.ScheduleID)
+
+		if err != nil {
+			return fmt.Errorf("failed to create booking: %w", err)
+		}
+
+		orderID := code.GenerateOrderID(fmt.Sprintf("%s-%s", *schedule.Route.DepartureHarbor.HarborAlias, *schedule.Route.ArrivalHarbor.HarborAlias), *schedule.Ship.ShipAlias, time.Now())
 		booking := &entity.Booking{
+			OrderID:      &orderID, // Will be set after creation
 			ScheduleID:   session.ScheduleID,
 			IDType:       request.IDType,
 			IDNumber:     request.IDNumber,
@@ -432,7 +441,7 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 				if err != nil {
 					return fmt.Errorf("failed to create seat number: %w", err)
 				}
-				seatNumStr := fmt.Sprintf("%s%d", ticket.Class.ClassName, count+1)
+				seatNumStr := fmt.Sprintf("%s%d", *ticket.Class.ClassAlias, count+1)
 				ticket.SeatNumber = &seatNumStr
 
 			case "vehicle":
