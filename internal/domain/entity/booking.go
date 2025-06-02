@@ -4,6 +4,7 @@ import "time"
 
 type Booking struct {
 	ID           uint      `gorm:"column:id;primaryKey"`
+	OrderID      *string   `gorm:"column:order_id;type:varchar(64);;uniqueIndex"`
 	ScheduleID   uint      `gorm:"column:schedule_id;not null;index;"`
 	IDType       string    `gorm:"column:id_type;type:varchar(24);not null"`
 	IDNumber     string    `gorm:"column:id_number;type:varchar(24);not null"`

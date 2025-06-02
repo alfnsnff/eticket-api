@@ -9,6 +9,7 @@ type ReadHarborResponse struct {
 	ID            uint      `json:"id"`
 	HarborName    string    `json:"harbor_name"`
 	Status        string    `json:"status"`
+	HarborAlias   *string   `json:"harbor_alias,omitempty"`
 	YearOperation string    `json:"year_operation"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
