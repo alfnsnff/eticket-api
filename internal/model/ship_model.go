@@ -19,20 +19,22 @@ type ReadShipResponse struct {
 }
 
 type WriteShipRequest struct {
-	ShipName      string `json:"ship_name"`
-	Status        string `json:"status"`
-	ShipType      string `json:"ship_type"`
-	YearOperation string `json:"year_operation"`
-	ImageLink     string `json:"image_link"`
-	Description   string `json:"description"`
+	ShipName      string  `json:"ship_name"`
+	Status        string  `json:"status"`
+	ShipType      string  `json:"ship_type"`
+	ShipAlias     *string `json:"ship_alias,omitempty"`
+	YearOperation string  `json:"year_operation"`
+	ImageLink     string  `json:"image_link"`
+	Description   string  `json:"description"`
 }
 
 type UpdateShipRequest struct {
-	ID            uint   `json:"id"`
-	ShipName      string `json:"ship_name"`
-	Status        string `json:"status"`
-	ShipType      string `json:"ship_type"`
-	YearOperation string `json:"year_operation"`
-	ImageLink     string `json:"image_link"`
-	Description   string `json:"description"`
+	ID            uint    `json:"id"`
+	ShipName      string  `json:"ship_name"`
+	Status        string  `json:"status"`
+	ShipType      string  `json:"ship_type"`
+	ShipAlias     *string `json:"ship_alias,omitempty"`
+	YearOperation string  `json:"year_operation"`
+	ImageLink     string  `json:"image_link"`
+	Description   string  `json:"description"`
 }

@@ -15,12 +15,14 @@ type ReadClassResponse struct {
 }
 
 type WriteClassRequest struct {
-	ClassName string `json:"class_name"`
-	Type      string `json:"type"`
+	ClassName  string  `json:"class_name"`
+	Type       string  `json:"type"`
+	ClassAlias *string `json:"class_alias,omitempty"`
 }
 
 type UpdateClassRequest struct {
-	ID        uint   `json:"id"`
-	ClassName string `json:"class_name"`
-	Type      string `json:"type"`
+	ID         uint    `json:"id"`
+	ClassName  string  `json:"class_name"`
+	Type       string  `json:"type"`
+	ClassAlias *string `json:"class_alias,omitempty"`
 }
