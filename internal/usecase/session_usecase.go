@@ -371,13 +371,14 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 		var ticketsToUpdate []*entity.Ticket
 
 		booking := &entity.Booking{
-			ScheduleID:  session.ScheduleID,
-			IDType:      request.IDType,
-			IDNumber:    request.IDNumber,
-			PhoneNumber: request.PhoneNumber,
-			Email:       request.Email,
-			BookedAt:    now,
-			Status:      "pending_payment",
+			ScheduleID:   session.ScheduleID,
+			IDType:       request.IDType,
+			IDNumber:     request.IDNumber,
+			PhoneNumber:  request.PhoneNumber,
+			CustomerName: request.CustomerName,
+			Email:        request.Email,
+			BookedAt:     now,
+			Status:       "pending_payment",
 			// PaymentIntentID: request.PaymentIntentID, // Uncomment if needed
 		}
 
@@ -464,11 +465,11 @@ func (cs *SessionUsecase) SessionDataEntry(ctx context.Context, request *model.C
 			}
 
 			invoicePayload := qr.InvoiceRequest{
-				ExternalID:  fmt.Sprintf("%d", booking.ID),
-				PayerEmail:  booking.Email,
-				Description: "Pembayaran tiket kapal untuk Booking #" + fmt.Sprintf("%d", booking.ID),
-				Amount:      int(total),
-				// Items:              qr.MapTicketsToInvoiceItems(ticketsToUpdate),
+				ExternalID:         fmt.Sprintf("%d", booking.ID),
+				PayerEmail:         booking.Email,
+				Description:        "Pembayaran tiket kapal untuk Booking #" + fmt.Sprintf("%d", booking.ID),
+				Amount:             int(total),
+				Items:              qr.MapTicketsToInvoiceItems(ticketsToUpdate),
 				SuccessRedirectURL: "https://yourdomain.com/payment-success",
 				FailureRedirectURL: "https://yourdomain.com/payment-failed",
 			}

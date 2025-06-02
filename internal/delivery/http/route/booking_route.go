@@ -18,7 +18,7 @@ func NewBookingRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	}
 
 	public := rg.Group("") // No middleware
-	public.POST("/booking/confirm", bc.ConfirmBooking)
+	// public.POST("/booking/confirm", bc.ConfirmBooking)
 	public.GET("/bookings", bc.GetAllBookings)
 	public.GET("/booking/:id", bc.GetBookingByID)
 	public.GET("/booking/payment/callback", bc.GetBookingByID)

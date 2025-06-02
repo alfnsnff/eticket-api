@@ -29,6 +29,11 @@ func (br *BookingRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.B
 	bookings := []*entity.Booking{}
 	result := db.Preload("Tickets").
 		Preload("Tickets.Class").
+		Preload("Schedule").
+		Preload("Schedule.Ship").
+		Preload("Schedule.Route").
+		Preload("Schedule.Route.DepartureHarbor").
+		Preload("Schedule.Route.ArrivalHarbor").
 		Limit(limit).Offset(offset).Find(&bookings)
 	if result.Error != nil {
 		return nil, result.Error
@@ -40,6 +45,11 @@ func (br *BookingRepository) GetByID(db *gorm.DB, id uint) (*entity.Booking, err
 	booking := new(entity.Booking)
 	result := db.Preload("Tickets").
 		Preload("Tickets.Class").
+		Preload("Schedule").
+		Preload("Schedule.Ship").
+		Preload("Schedule.Route").
+		Preload("Schedule.Route.DepartureHarbor").
+		Preload("Schedule.Route.ArrivalHarbor").
 		First(&booking, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
@@ -50,6 +60,15 @@ func (br *BookingRepository) GetByID(db *gorm.DB, id uint) (*entity.Booking, err
 func (br *BookingRepository) PaidConfirm(db *gorm.DB, id uint) error {
 	booking := new(entity.Booking)
 	result := db.First(&booking, id).Update("status", "paid")
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
+func (br *BookingRepository) UpdateStatus(db *gorm.DB) error {
+	booking := new(entity.Booking)
+	result := db.First(&booking).Update("status", "paid")
 	if result.Error != nil {
 		return result.Error
 	}
