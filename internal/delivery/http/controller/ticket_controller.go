@@ -1,10 +1,9 @@
 package controller
 
 import (
+	"eticket-api/internal/common/response"
 	"eticket-api/internal/model"
-	"eticket-api/internal/usecase"
-	"eticket-api/pkg/utils/helper/meta"
-	"eticket-api/pkg/utils/helper/response"
+	"eticket-api/internal/usecase/ticket"
 	"net/http"
 	"strconv"
 
@@ -12,10 +11,10 @@ import (
 )
 
 type TicketController struct {
-	TicketUsecase *usecase.TicketUsecase
+	TicketUsecase *ticket.TicketUsecase
 }
 
-func NewTicketController(ticket_usecase *usecase.TicketUsecase) *TicketController {
+func NewTicketController(ticket_usecase *ticket.TicketUsecase) *TicketController {
 	return &TicketController{TicketUsecase: ticket_usecase}
 }
 
@@ -36,7 +35,7 @@ func (tc *TicketController) CreateTicket(ctx *gin.Context) {
 }
 
 func (tc *TicketController) GetAllTickets(ctx *gin.Context) {
-	params := meta.GetParams(ctx)
+	params := response.GetParams(ctx)
 
 	datas, total, err := tc.TicketUsecase.GetAllTickets(ctx, params.Limit, params.Offset)
 
@@ -45,7 +44,7 @@ func (tc *TicketController) GetAllTickets(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Tickets retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Tickets retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (tc *TicketController) GetTicketByID(ctx *gin.Context) {

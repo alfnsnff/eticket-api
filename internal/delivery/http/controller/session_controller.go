@@ -1,10 +1,9 @@
 package controller
 
 import (
-	"eticket-api/internal/model"
-	"eticket-api/internal/usecase" // Import the response package
-	"eticket-api/pkg/utils/helper/meta"
-	"eticket-api/pkg/utils/helper/response"
+	"eticket-api/internal/common/response"
+	"eticket-api/internal/model" // Import the response package
+	"eticket-api/internal/usecase/claim_session"
 	"net/http"
 	"strconv"
 
@@ -12,10 +11,10 @@ import (
 )
 
 type SessionController struct {
-	SessionUsecase *usecase.SessionUsecase
+	SessionUsecase *claim_session.SessionUsecase
 }
 
-func NewSessionController(session_usecase *usecase.SessionUsecase) *SessionController {
+func NewSessionController(session_usecase *claim_session.SessionUsecase) *SessionController {
 	return &SessionController{SessionUsecase: session_usecase}
 }
 
@@ -36,7 +35,7 @@ func (shc *SessionController) CreateSession(ctx *gin.Context) {
 }
 
 func (shc *SessionController) GetAllSessions(ctx *gin.Context) {
-	params := meta.GetParams(ctx)
+	params := response.GetParams(ctx)
 	datas, total, err := shc.SessionUsecase.GetAllSessions(ctx, params.Limit, params.Offset)
 
 	if err != nil {
@@ -44,7 +43,7 @@ func (shc *SessionController) GetAllSessions(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Claim sessions retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Claim sessions retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (shc *SessionController) GetSessionByID(ctx *gin.Context) {

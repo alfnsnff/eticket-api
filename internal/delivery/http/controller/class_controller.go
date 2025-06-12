@@ -2,9 +2,9 @@ package controller
 
 import (
 	"eticket-api/internal/model"
-	"eticket-api/internal/usecase"
-	"eticket-api/pkg/utils/helper/meta"
-	"eticket-api/pkg/utils/helper/response"
+	"eticket-api/internal/usecase/class"
+
+	"eticket-api/internal/common/response"
 	"net/http"
 	"strconv"
 
@@ -12,10 +12,10 @@ import (
 )
 
 type ClassController struct {
-	ClassUsecase *usecase.ClassUsecase
+	ClassUsecase *class.ClassUsecase
 }
 
-func NewClassController(class_usecase *usecase.ClassUsecase) *ClassController {
+func NewClassController(class_usecase *class.ClassUsecase) *ClassController {
 	return &ClassController{ClassUsecase: class_usecase}
 }
 
@@ -36,7 +36,7 @@ func (cc *ClassController) CreateClass(ctx *gin.Context) {
 }
 
 func (cc *ClassController) GetAllClasses(ctx *gin.Context) {
-	params := meta.GetParams(ctx)
+	params := response.GetParams(ctx)
 	datas, total, err := cc.ClassUsecase.GetAllClasses(ctx, params.Limit, params.Offset)
 
 	if err != nil {
@@ -44,7 +44,7 @@ func (cc *ClassController) GetAllClasses(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Classes retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Classes retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (cc *ClassController) GetClassByID(ctx *gin.Context) {

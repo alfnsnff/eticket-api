@@ -3,24 +3,22 @@ package route
 import (
 	"eticket-api/internal/delivery/http/controller"
 	"eticket-api/internal/delivery/http/middleware"
-	"eticket-api/internal/injector"
-	"eticket-api/internal/usecase"
 
 	"github.com/gin-gonic/gin"
 )
 
-func NewScheduleRouter(ic *injector.Container, rg *gin.RouterGroup) {
-	ar := ic.Repository.AllocationRepository
-	cr := ic.Repository.ClassRepository
-	fr := ic.Repository.FareRepository
-	mr := ic.Repository.ManifestRepository
-	rr := ic.Repository.RouteRepository
-	shr := ic.Repository.ShipRepository
-	scr := ic.Repository.ScheduleRepository
-	tr := ic.Repository.TicketRepository
-	scc := &controller.ScheduleController{
-		ScheduleUsecase: usecase.NewScheduleUsecase(ic.Tx, ar, cr, fr, mr, rr, shr, scr, tr),
-	}
+type ScheduleRouter struct {
+	Controller   *controller.ScheduleController
+	Authenticate *middleware.AuthenticateMiddleware
+	Authorized   *middleware.AuthorizeMiddleware
+}
+
+func NewScheduleRouter(schedule_controller *controller.ScheduleController, authtenticate *middleware.AuthenticateMiddleware, authorized *middleware.AuthorizeMiddleware) *ScheduleRouter {
+	return &ScheduleRouter{Controller: schedule_controller, Authenticate: authtenticate, Authorized: authorized}
+}
+
+func (i ScheduleRouter) Set(router *gin.Engine, rg *gin.RouterGroup) {
+	scc := i.Controller
 
 	public := rg.Group("") // No middleware
 	public.GET("/schedules", scc.GetAllSchedules)
@@ -29,11 +27,11 @@ func NewScheduleRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	public.GET("/schedule/:id/quota", scc.GetQuotaByScheduleID)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager)
-	protected.Use(middleware.Authenticate())
+	protected.Use(i.Authenticate.Handle())
+	// protected.Use(i.Authorized.Handle())
 
 	protected.POST("/schedule/create", scc.CreateSchedule)
-	protected.POST("/schedule/allocation/create", scc.CreateScheduleWithAllocation)
+	protected.POST("/schedule/Schedule/create", scc.CreateScheduleWithAllocation)
 	protected.PUT("/schedule/update/:id", scc.UpdateSchedule)
 	protected.DELETE("/schedule/:id", scc.DeleteSchedule)
 }

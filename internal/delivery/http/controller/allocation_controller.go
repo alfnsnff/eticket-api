@@ -1,10 +1,9 @@
 package controller
 
 import (
+	"eticket-api/internal/common/response"
 	"eticket-api/internal/model"
-	"eticket-api/internal/usecase"
-	"eticket-api/pkg/utils/helper/meta"
-	"eticket-api/pkg/utils/helper/response"
+	"eticket-api/internal/usecase/allocation"
 	"net/http"
 	"strconv"
 
@@ -12,10 +11,10 @@ import (
 )
 
 type AllocationController struct {
-	AllocationUsecase *usecase.AllocationUsecase
+	AllocationUsecase *allocation.AllocationUsecase
 }
 
-func NewAllocationController(allocation_usecase *usecase.AllocationUsecase) *AllocationController {
+func NewAllocationController(allocation_usecase *allocation.AllocationUsecase) *AllocationController {
 	return &AllocationController{AllocationUsecase: allocation_usecase}
 }
 
@@ -36,7 +35,7 @@ func (mc *AllocationController) CreateAllocation(ctx *gin.Context) {
 }
 
 func (mc *AllocationController) GetAllAllocations(ctx *gin.Context) {
-	params := meta.GetParams(ctx)
+	params := response.GetParams(ctx)
 
 	datas, total, err := mc.AllocationUsecase.GetAllAllocations(ctx, params.Limit, params.Offset)
 
@@ -45,7 +44,7 @@ func (mc *AllocationController) GetAllAllocations(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Allocations retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Allocations retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (mc *AllocationController) GetAllocationByID(ctx *gin.Context) {

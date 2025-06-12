@@ -1,7 +1,7 @@
 package model
 
 import (
-	"eticket-api/pkg/utils/qr"
+	"eticket-api/pkg/payment"
 	"time"
 )
 
@@ -128,10 +128,11 @@ type ClaimedSessionFillPassengerDataRequest struct {
 }
 
 type ClaimedSessionFillPassengerDataResponse struct {
-	BookingID        uint                                `json:"booking_id"` // ID of the booking created
-	Payment          qr.InvoiceResponse                  `json:"payment"`    // QRIS payment details
-	UpdatedTicketIDs []uint                              `json:"updated_ticket_ids"`
-	FailedTickets    []ClaimedSessionTicketUpdateFailure `json:"failed_tickets"`
+	BookingID        uint                    `json:"booking_id"` // ID of the booking created
+	Tripay           ReadTransactionResponse `json:"tripay"`     // QRIS payment details
+	Xendit           payment.XenditResponse  `json:"xendit"`     // QRIS payment details
+	UpdatedTicketIDs []uint                  `json:"updated_ticket_ids"`
+	// FailedTickets    []ClaimedSessionTicketUpdateFailure `json:"failed_tickets"`
 }
 
 type ClaimedSessionTicketUpdateFailure struct {

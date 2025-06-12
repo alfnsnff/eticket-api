@@ -3,30 +3,30 @@ package route
 import (
 	"eticket-api/internal/delivery/http/controller"
 	"eticket-api/internal/delivery/http/middleware"
-	"eticket-api/internal/injector"
-	"eticket-api/internal/repository"
-	"eticket-api/internal/usecase"
 
 	"github.com/gin-gonic/gin"
 )
 
-func NewTicketRouter(ic *injector.Container, rg *gin.RouterGroup) {
-	tr := repository.NewTicketRepository()
-	scr := repository.NewScheduleRepository()
-	fr := repository.NewFareRepository()
-	sr := repository.NewSessionRepository()
+type TicketRouter struct {
+	Controller   *controller.TicketController
+	Authenticate *middleware.AuthenticateMiddleware
+	Authorized   *middleware.AuthorizeMiddleware
+}
 
-	tc := &controller.TicketController{
-		TicketUsecase: usecase.NewTicketUsecase(ic.Tx, tr, scr, fr, sr),
-	}
+func NewTicketRouter(ticket_controller *controller.TicketController, authtenticate *middleware.AuthenticateMiddleware, authorized *middleware.AuthorizeMiddleware) *TicketRouter {
+	return &TicketRouter{Controller: ticket_controller, Authenticate: authtenticate, Authorized: authorized}
+}
+
+func (i TicketRouter) Set(router *gin.Engine, rg *gin.RouterGroup) {
+	tc := i.Controller
 
 	public := rg.Group("") // No middleware
 	public.GET("/tickets", tc.GetAllTickets)
 	public.GET("/ticket/:id", tc.GetTicketByID)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager)
-	protected.Use(middleware.Authenticate())
+	protected.Use(i.Authenticate.Handle())
+	// protected.Use(i.Authorized.Handle())
 
 	protected.POST("/ticket/create", tc.CreateTicket)
 	protected.PUT("/ticket//update:id", tc.UpdateTicket)

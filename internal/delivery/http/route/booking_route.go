@@ -3,31 +3,33 @@ package route
 import (
 	"eticket-api/internal/delivery/http/controller"
 	"eticket-api/internal/delivery/http/middleware"
-	"eticket-api/internal/injector"
-	"eticket-api/internal/usecase"
 
 	"github.com/gin-gonic/gin"
 )
 
-func NewBookingRouter(ic *injector.Container, rg *gin.RouterGroup) {
-	br := ic.Repository.BookingRepository
-	tr := ic.Repository.TicketRepository
-	csr := ic.Repository.SessionRepository
-	bc := &controller.BookingController{
-		BookingUsecase: usecase.NewBookingUsecase(ic.Tx, br, tr, csr),
-	}
+type BookingRouter struct {
+	Controller   *controller.BookingController
+	Authenticate *middleware.AuthenticateMiddleware
+	Authorized   *middleware.AuthorizeMiddleware
+}
+
+func NewBookingRouter(booking_controller *controller.BookingController, authtenticate *middleware.AuthenticateMiddleware, authorized *middleware.AuthorizeMiddleware) *BookingRouter {
+	return &BookingRouter{Controller: booking_controller, Authenticate: authtenticate, Authorized: authorized}
+}
+
+func (i BookingRouter) Set(router *gin.Engine, rg *gin.RouterGroup) {
 
 	public := rg.Group("") // No middleware
 	// public.POST("/booking/confirm", bc.ConfirmBooking)
-	public.GET("/bookings", bc.GetAllBookings)
-	public.GET("/booking/:id", bc.GetBookingByID)
-	public.GET("/booking/payment/callback", bc.GetBookingByID)
+	public.GET("/bookings", i.Controller.GetAllBookings)
+	public.GET("/booking/:id", i.Controller.GetBookingByID)
+	public.GET("/booking/payment/callback", i.Controller.GetBookingByID)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager)
-	protected.Use(middleware.Authenticate())
+	protected.Use(i.Authenticate.Handle())
+	// protected.Use(i.Authorized.Handle())
 
-	protected.POST("/booking/create", bc.CreateBooking)
-	protected.PUT("/booking/update/:id", bc.UpdateBooking)
-	protected.DELETE("/booking/:id", bc.DeleteBooking)
+	protected.POST("/booking/create", i.Controller.CreateBooking)
+	protected.PUT("/booking/update/:id", i.Controller.UpdateBooking)
+	protected.DELETE("/booking/:id", i.Controller.DeleteBooking)
 }

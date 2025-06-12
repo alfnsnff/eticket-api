@@ -2,17 +2,18 @@ package repository
 
 import (
 	"errors"
-	"eticket-api/internal/domain/entity"
+	"eticket-api/internal/entity"
 
 	"gorm.io/gorm"
 )
 
 type ClassRepository struct {
 	Repository[entity.Class]
+	DB *gorm.DB
 }
 
-func NewClassRepository() *ClassRepository {
-	return &ClassRepository{}
+func NewClassRepository(db *gorm.DB) *ClassRepository {
+	return &ClassRepository{DB: db}
 }
 
 func (cr *ClassRepository) Count(db *gorm.DB) (int64, error) {
@@ -23,6 +24,10 @@ func (cr *ClassRepository) Count(db *gorm.DB) (int64, error) {
 		return 0, result.Error
 	}
 	return total, nil
+}
+
+func (cr *ClassRepository) Createtest(entity *entity.Class) error {
+	return cr.DB.Create(entity).Error
 }
 
 func (cr *ClassRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Class, error) {

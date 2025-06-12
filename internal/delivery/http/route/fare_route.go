@@ -3,25 +3,30 @@ package route
 import (
 	"eticket-api/internal/delivery/http/controller"
 	"eticket-api/internal/delivery/http/middleware"
-	"eticket-api/internal/injector"
-	"eticket-api/internal/usecase"
 
 	"github.com/gin-gonic/gin"
 )
 
-func NewFareRouter(ic *injector.Container, rg *gin.RouterGroup) {
-	rr := ic.Repository.FareRepository
-	fc := &controller.FareController{
-		FareUsecase: usecase.NewFareUsecase(ic.Tx, rr),
-	}
+type FareRouter struct {
+	Controller   *controller.FareController
+	Authenticate *middleware.AuthenticateMiddleware
+	Authorized   *middleware.AuthorizeMiddleware
+}
+
+func NewFareRouter(fare_controller *controller.FareController, authtenticate *middleware.AuthenticateMiddleware, authorized *middleware.AuthorizeMiddleware) *FareRouter {
+	return &FareRouter{Controller: fare_controller, Authenticate: authtenticate, Authorized: authorized}
+}
+
+func (i FareRouter) Set(router *gin.Engine, rg *gin.RouterGroup) {
+	fc := i.Controller
 
 	public := rg.Group("") // No middleware
 	public.GET("/fares", fc.GetAllFares)
 	public.GET("/fare/:id", fc.GetFareByID)
 
 	protected := rg.Group("")
-	middleware := middleware.NewAuthMiddleware(ic.TokenManager)
-	protected.Use(middleware.Authenticate())
+	protected.Use(i.Authenticate.Handle())
+	// protected.Use(i.Authorized.Handle())
 
 	protected.POST("/fare/create", fc.CreateFare)
 	protected.PUT("/fare/update/:id", fc.UpdateFare)

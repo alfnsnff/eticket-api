@@ -1,10 +1,9 @@
 package controller
 
 import (
+	"eticket-api/internal/common/response"
 	"eticket-api/internal/model"
-	"eticket-api/internal/usecase"
-	"eticket-api/pkg/utils/helper/meta"
-	"eticket-api/pkg/utils/helper/response"
+	"eticket-api/internal/usecase/harbor"
 	"net/http"
 	"strconv"
 
@@ -12,10 +11,10 @@ import (
 )
 
 type HarborController struct {
-	HarborUsecase *usecase.HarborUsecase
+	HarborUsecase *harbor.HarborUsecase
 }
 
-func NewHarborController(harbor_usecase *usecase.HarborUsecase) *HarborController {
+func NewHarborController(harbor_usecase *harbor.HarborUsecase) *HarborController {
 	return &HarborController{HarborUsecase: harbor_usecase}
 }
 
@@ -36,7 +35,7 @@ func (hc *HarborController) CreateHarbor(ctx *gin.Context) {
 }
 
 func (hc *HarborController) GetAllHarbors(ctx *gin.Context) {
-	params := meta.GetParams(ctx)
+	params := response.GetParams(ctx)
 	datas, total, err := hc.HarborUsecase.GetAllHarbors(ctx, params.Limit, params.Offset)
 
 	if err != nil {
@@ -44,7 +43,7 @@ func (hc *HarborController) GetAllHarbors(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Harbors retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Harbors retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (hc *HarborController) GetHarborByID(ctx *gin.Context) {

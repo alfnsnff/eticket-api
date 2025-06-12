@@ -34,7 +34,7 @@ jobs:
           containerAppName: ${{ secrets.CONTAINER_APP_NAME }}
           resourceGroup: ${{ secrets.RESOURCE_GROUP }}
           location: southeastasia  
-          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/myapp:${{ github.sha }}
+          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/tikethebat:${{ github.sha }}
           environmentVariables: >
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             DATABASE_HOST=${{ secrets.DATABASE_HOST }}

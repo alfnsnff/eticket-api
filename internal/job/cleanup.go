@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
-	"eticket-api/internal/domain/entity"
+	"eticket-api/internal/common/tx"
+	"eticket-api/internal/entity"
 	"eticket-api/internal/repository"
-	"eticket-api/pkg/utils/tx"
 
 	"gorm.io/gorm"
 )
@@ -17,15 +17,13 @@ type CleanupJob struct {
 	Tx                *tx.TxManager
 	TicketRepository  *repository.TicketRepository
 	SessionRepository *repository.SessionRepository
-	BatchSize         int
 }
 
-func NewCleanupJob(tx *tx.TxManager, ticket_repository *repository.TicketRepository, session_repository *repository.SessionRepository, batchSize int) *CleanupJob {
+func NewCleanupJob(tx *tx.TxManager, ticket_repository *repository.TicketRepository, session_repository *repository.SessionRepository) *CleanupJob {
 	return &CleanupJob{
 		Tx:                tx,
 		TicketRepository:  ticket_repository,
 		SessionRepository: session_repository,
-		BatchSize:         batchSize,
 	}
 }
 
@@ -37,7 +35,7 @@ func (j *CleanupJob) Run(ctx context.Context) error {
 
 	j.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
-		expiredSessions, err = j.SessionRepository.FindExpired(tx, now, j.BatchSize)
+		expiredSessions, err = j.SessionRepository.FindExpired(tx, now, 100)
 		if err != nil {
 			log.Printf("Error finding expired sessions: %v", err)
 			return fmt.Errorf("failed to find expired sessions: %w", err)
