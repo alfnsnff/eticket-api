@@ -8,6 +8,7 @@ import (
 	"eticket-api/internal/common/utils"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
+	"eticket-api/internal/model/mapper"
 	"eticket-api/internal/repository"
 	"fmt"
 	"time"
@@ -38,12 +39,13 @@ func NewAuthUsecase(
 }
 
 // Login authenticates a user and returns access and refresh tokens.
-func (au *AuthUsecase) Login(ctx context.Context, request *model.UserLoginRequest) (string, string, error) {
+func (au *AuthUsecase) Login(ctx context.Context, request *model.UserLoginRequest) (*model.ReadUserResponse, string, string, error) {
 	if request.Username == "" || request.Password == "" {
-		return "", "", errors.New("username and password are required")
+		return nil, "", "", errors.New("username and password are required")
 	}
 
 	var accessToken, refreshToken string
+	var userd *entity.User
 
 	err := au.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		user, repoErr := au.UserRepository.GetByUsername(tx, request.Username)
@@ -53,6 +55,7 @@ func (au *AuthUsecase) Login(ctx context.Context, request *model.UserLoginReques
 		if user == nil {
 			return errors.New("invalid credentials")
 		}
+		userd = user
 
 		if !utils.CheckPasswordHash(request.Password, user.Password) {
 			return errors.New("invalid credentials")
@@ -93,10 +96,11 @@ func (au *AuthUsecase) Login(ctx context.Context, request *model.UserLoginReques
 	})
 
 	if err != nil {
-		return "", "", err
+		return nil, "", "", err
 	}
 
-	return accessToken, refreshToken, nil
+	fmt.Println(userd)
+	return mapper.UserMapper.ToModel(userd), accessToken, refreshToken, nil
 }
 
 func (au *AuthUsecase) RefreshToken(ctx context.Context, refreshToken string) (string, error) {

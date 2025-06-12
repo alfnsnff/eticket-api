@@ -31,7 +31,7 @@ func (auc *AuthController) Login(ctx *gin.Context) {
 		return
 	}
 
-	accessToken, refreshToken, err := auc.AuthUsecase.Login(ctx, request)
+	datas, accessToken, refreshToken, err := auc.AuthUsecase.Login(ctx, request)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Invalid credentials", err.Error()))
 		return
@@ -43,7 +43,7 @@ func (auc *AuthController) Login(ctx *gin.Context) {
 	ctx.SetCookie("refresh_token", refreshToken, 24*60*60, "/", "", true, true) // 1 day
 
 	// OR: Return tokens in JSON (useful for SPA apps)
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Login successful", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Login successful", nil))
 }
 
 func (auc *AuthController) Logout(ctx *gin.Context) {
