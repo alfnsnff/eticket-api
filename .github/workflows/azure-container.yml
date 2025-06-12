@@ -25,7 +25,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest
+          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest .
           docker push ${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest
 
       - name: Deploy to Azure Container App
