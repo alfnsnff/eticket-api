@@ -8,6 +8,10 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write  # Required for pushing to GHCR
+
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
@@ -17,16 +21,16 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Azure ACR Login
-        run: |
-          az acr login --name ${{ secrets.ACR_NAME }}
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Build and Push Docker Image
+      - name: Build and Push Docker Image to GHCR
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/myapp:${IMAGE_TAG} .
-          docker push ${{ secrets.ACR_NAME }}.azurecr.io/myapp:${IMAGE_TAG}
+          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/myapp:${IMAGE_TAG}
+          docker build -t $IMAGE_NAME .
+          docker push $IMAGE_NAME
 
       - name: Deploy to Azure Container App
         uses: azure/container-apps-deploy-action@v1
@@ -34,7 +38,7 @@ jobs:
           containerAppName: ${{ secrets.CONTAINER_APP_NAME }}
           resourceGroup: ${{ secrets.RESOURCE_GROUP }}
           location: southeastasia  
-          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/myapp:${{ github.sha }}
+          imageToDeploy: ghcr.io/${{ github.repository_owner }}/myapp:${{ github.sha }}
           environmentVariables: >
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             ACCESS_TOKEN_EXPIRY=${{ secrets.ACCESS_TOKEN_EXPIRY }}
@@ -48,9 +52,6 @@ jobs:
             DATABASE_USER=${{ secrets.DATABASE_USER }}
             DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}
             DATABASE_SSLMODE=${{ secrets.DATABASE_SSLMODE }}
-
-
-          # Use the secure secrets here
-          registryUrl: ${{ secrets.ACR_NAME }}.azurecr.io
-          registryUsername: ${{ secrets.ACR_USERNAME }} 
-          registryPassword: ${{ secrets.ACR_PASSWORD }} 
+          registryUrl: ghcr.io
+          registryUsername: ${{ github.actor }}
+          registryPassword: ${{ secrets.GITHUB_TOKEN }}
