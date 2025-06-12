@@ -59,14 +59,15 @@ func NewServer(
 	route *module.RouterModule,
 	job *module.JobModule,
 ) *Server {
-	gin.SetMode(gin.DebugMode)
+	gin.SetMode(gin.ReleaseMode)
 
 	app := gin.Default()
 	app.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
 			// TODO: Make dynamic via cfg
 			allowed := map[string]bool{
-				"http://localhost:3000": true,
+				"http://localhost:3000":          true,
+				"https://tiket-hebat.vercel.app": true,
 			}
 			return allowed[origin]
 		},
