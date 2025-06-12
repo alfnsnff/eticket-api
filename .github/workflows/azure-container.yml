@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write  # Required for pushing to GHCR
+      packages: write
 
     steps:
       - name: Checkout source
@@ -31,6 +31,45 @@ jobs:
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/myapp:${IMAGE_TAG}
           docker build -t $IMAGE_NAME .
           docker push $IMAGE_NAME
+
+      - name: Ensure Container App Environment exists
+        run: |
+          az containerapp env show \
+            --name ${{ secrets.CONTAINER_APP_ENVIRONMENT }} \
+            --resource-group ${{ secrets.RESOURCE_GROUP }} || \
+          az containerapp env create \
+            --name ${{ secrets.CONTAINER_APP_ENVIRONMENT }} \
+            --resource-group ${{ secrets.RESOURCE_GROUP }} \
+            --location southeastasia \
+            --logs-destination none
+
+      - name: Ensure Container App exists
+        run: |
+          az containerapp show \
+            --name ${{ secrets.CONTAINER_APP_NAME }} \
+            --resource-group ${{ secrets.RESOURCE_GROUP }} || \
+          az containerapp create \
+            --name ${{ secrets.CONTAINER_APP_NAME }} \
+            --resource-group ${{ secrets.RESOURCE_GROUP }} \
+            --environment ${{ secrets.CONTAINER_APP_ENVIRONMENT }} \
+            --image ghcr.io/${{ github.repository_owner }}/myapp:${{ github.sha }} \
+            --target-port 80 \
+            --ingress external \
+            --registry-server ghcr.io \
+            --registry-username ${{ github.actor }} \
+            --registry-password ${{ secrets.GITHUB_TOKEN }} \
+            --env-vars SECRET_KEY=${{ secrets.SECRET_KEY }} \
+                        ACCESS_TOKEN_EXPIRY=${{ secrets.ACCESS_TOKEN_EXPIRY }} \
+                        REFRESH_TOKEN_EXPIRY=${{ secrets.REFRESH_TOKEN_EXPIRY }} \
+                        TRIPAY_API_KEY=${{ secrets.TRIPAY_API_KEY }} \
+                        TRIPAY_PRIVATE_API_KEY=${{ secrets.TRIPAY_PRIVATE_API_KEY }} \
+                        TRIPAY_MERCHANT_CODE=${{ secrets.TRIPAY_MERCHANT_CODE }} \
+                        DATABASE_HOST=${{ secrets.DATABASE_HOST }} \
+                        DATABASE_PORT=${{ secrets.DATABASE_PORT }} \
+                        DATABASE_NAME=${{ secrets.DATABASE_NAME }} \
+                        DATABASE_USER=${{ secrets.DATABASE_USER }} \
+                        DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }} \
+                        DATABASE_SSLMODE=${{ secrets.DATABASE_SSLMODE }}
 
       - name: Deploy to Azure Container App
         uses: azure/container-apps-deploy-action@v1
