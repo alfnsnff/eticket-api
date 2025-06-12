@@ -37,6 +37,11 @@ jobs:
           imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/tikethebat:${{ github.sha }}
           environmentVariables: >
             SECRET_KEY=${{ secrets.SECRET_KEY }}
+            ACCESS_TOKEN_EXPIRY=${{ secrets.ACCESS_TOKEN_EXPIRY }}
+            REFRESH_TOKEN_EXPIRY=${{ secrets.REFRESH_TOKEN_EXPIRY }}
+            TRIPAY_API_KEY=${{ secrets.TRIPAY_API_KEY }}
+            TRIPAY_PRIVATE_API_KEY=${{ secrets.TRIPAY_PRIVATE_API_KEY }}
+            TRIPAY_MERCHANT_CODE=${{ secrets.TRIPAY_MERCHANT_CODE }}
             DATABASE_HOST=${{ secrets.DATABASE_HOST }}
             DATABASE_PORT=${{ secrets.DATABASE_PORT }}
             DATABASE_NAME=${{ secrets.DATABASE_NAME }}
