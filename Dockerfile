@@ -14,7 +14,7 @@ RUN go mod download
 COPY . .
 
 # Build the Go application
-RUN go build -o main ./cmd/app
+RUN go build -o main ./cmd/server
 
 # 2. Final Minimal Runtime Stage
 FROM debian:bookworm-slim
