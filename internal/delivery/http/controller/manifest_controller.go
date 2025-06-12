@@ -1,10 +1,9 @@
 package controller
 
 import (
+	"eticket-api/internal/common/response"
 	"eticket-api/internal/model"
-	"eticket-api/internal/usecase" // Import the response package
-	"eticket-api/pkg/utils/helper/meta"
-	"eticket-api/pkg/utils/helper/response"
+	"eticket-api/internal/usecase/manifest" // Import the response package
 	"net/http"
 	"strconv"
 
@@ -12,10 +11,10 @@ import (
 )
 
 type ManifestController struct {
-	ManifestUsecase *usecase.ManifestUsecase
+	ManifestUsecase *manifest.ManifestUsecase
 }
 
-func NewManifestController(manifest_usecase *usecase.ManifestUsecase) *ManifestController {
+func NewManifestController(manifest_usecase *manifest.ManifestUsecase) *ManifestController {
 	return &ManifestController{ManifestUsecase: manifest_usecase}
 }
 
@@ -36,7 +35,7 @@ func (mc *ManifestController) CreateManifest(ctx *gin.Context) {
 }
 
 func (mc *ManifestController) GetAllManifests(ctx *gin.Context) {
-	params := meta.GetParams(ctx)
+	params := response.GetParams(ctx)
 	datas, total, err := mc.ManifestUsecase.GetAllManifests(ctx, params.Limit, params.Offset)
 
 	if err != nil {
@@ -44,7 +43,7 @@ func (mc *ManifestController) GetAllManifests(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Manifests retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Manifests retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (mc *ManifestController) GetManifestByID(ctx *gin.Context) {

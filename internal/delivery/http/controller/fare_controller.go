@@ -1,10 +1,9 @@
 package controller
 
 import (
-	"eticket-api/internal/model"
-	"eticket-api/internal/usecase" // Import the response package
-	"eticket-api/pkg/utils/helper/meta"
-	"eticket-api/pkg/utils/helper/response"
+	"eticket-api/internal/common/response"
+	"eticket-api/internal/model" // Import the response package
+	"eticket-api/internal/usecase/fare"
 	"net/http"
 	"strconv"
 
@@ -12,10 +11,10 @@ import (
 )
 
 type FareController struct {
-	FareUsecase *usecase.FareUsecase
+	FareUsecase *fare.FareUsecase
 }
 
-func NewFareController(Fare_usecase *usecase.FareUsecase) *FareController {
+func NewFareController(Fare_usecase *fare.FareUsecase) *FareController {
 	return &FareController{FareUsecase: Fare_usecase}
 }
 
@@ -36,7 +35,7 @@ func (fc *FareController) CreateFare(ctx *gin.Context) {
 }
 
 func (fc *FareController) GetAllFares(ctx *gin.Context) {
-	params := meta.GetParams(ctx)
+	params := response.GetParams(ctx)
 	datas, total, err := fc.FareUsecase.GetAllFares(ctx, params.Limit, params.Offset)
 
 	if err != nil {
@@ -44,7 +43,7 @@ func (fc *FareController) GetAllFares(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Fares retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Fares retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (fc *FareController) GetFareByID(ctx *gin.Context) {

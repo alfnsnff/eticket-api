@@ -2,10 +2,9 @@ package controller
 
 import (
 	"encoding/json"
+	"eticket-api/internal/common/response"
 	"eticket-api/internal/model"
-	"eticket-api/internal/usecase"
-	"eticket-api/pkg/utils/helper/meta"
-	"eticket-api/pkg/utils/helper/response"
+	"eticket-api/internal/usecase/booking"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -14,11 +13,11 @@ import (
 )
 
 type BookingController struct {
-	BookingUsecase *usecase.BookingUsecase
+	BookingUsecase *booking.BookingUsecase
 }
 
 // NewBookingController creates a new BookingController instance
-func NewBookingController(booking_usecase *usecase.BookingUsecase) *BookingController {
+func NewBookingController(booking_usecase *booking.BookingUsecase) *BookingController {
 	return &BookingController{BookingUsecase: booking_usecase}
 }
 
@@ -41,7 +40,7 @@ func (bc *BookingController) CreateBooking(ctx *gin.Context) {
 }
 
 func (bc *BookingController) GetAllBookings(ctx *gin.Context) {
-	params := meta.GetParams(ctx)
+	params := response.GetParams(ctx)
 	datas, total, err := bc.BookingUsecase.GetAllBookings(ctx, params.Limit, params.Offset)
 
 	if err != nil {
@@ -49,7 +48,7 @@ func (bc *BookingController) GetAllBookings(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Bookings retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Bookings retrieved successfully", total, params.Limit, params.Page))
 }
 
 // GetBookingByID retrieves a booking by its ID

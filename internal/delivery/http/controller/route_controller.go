@@ -1,10 +1,9 @@
 package controller
 
 import (
+	"eticket-api/internal/common/response"
 	"eticket-api/internal/model"
-	"eticket-api/internal/usecase"
-	"eticket-api/pkg/utils/helper/meta"
-	"eticket-api/pkg/utils/helper/response"
+	"eticket-api/internal/usecase/route"
 	"net/http"
 	"strconv"
 
@@ -12,10 +11,10 @@ import (
 )
 
 type RouteController struct {
-	RouteUsecase *usecase.RouteUsecase
+	RouteUsecase *route.RouteUsecase
 }
 
-func NewRouteController(route_usecase *usecase.RouteUsecase) *RouteController {
+func NewRouteController(route_usecase *route.RouteUsecase) *RouteController {
 	return &RouteController{RouteUsecase: route_usecase}
 }
 
@@ -36,7 +35,7 @@ func (rc *RouteController) CreateRoute(ctx *gin.Context) {
 }
 
 func (rc *RouteController) GetAllRoutes(ctx *gin.Context) {
-	params := meta.GetParams(ctx)
+	params := response.GetParams(ctx)
 	datas, total, err := rc.RouteUsecase.GetAllRoutes(ctx, params.Limit, params.Offset)
 
 	if err != nil {
@@ -44,7 +43,7 @@ func (rc *RouteController) GetAllRoutes(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Routes retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Routes retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (rc *RouteController) GetRouteByID(ctx *gin.Context) {

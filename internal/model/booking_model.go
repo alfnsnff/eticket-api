@@ -1,7 +1,6 @@
 package model
 
 import (
-	"eticket-api/pkg/utils/qr"
 	"time"
 )
 
@@ -102,10 +101,9 @@ type ConfirmBookingRequest struct {
 
 // ConfirmPaymentResponse represents the result of the payment confirmation.
 type ConfirmBookingResponse struct {
-	BookingID          uint               `json:"booking_id"`
-	BookingStatus      string             `json:"booking_status"`
-	ConfirmedTicketIDs []uint             `json:"confirmed_ticket_ids"`
-	Payment            qr.InvoiceResponse `json:"payment"` // QRIS payment details
+	BookingID          uint   `json:"booking_id"`
+	BookingStatus      string `json:"booking_status"`
+	ConfirmedTicketIDs []uint `json:"confirmed_ticket_ids"`
 }
 
 type TicketSelectionResponse struct {

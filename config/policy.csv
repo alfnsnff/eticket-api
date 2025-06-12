@@ -1,0 +1,3 @@
+p, admin, /v1/role/create, POST
+p, admin, /v1/role/update/:id, POST
+p, admin, /v1/role/:id, DELETE

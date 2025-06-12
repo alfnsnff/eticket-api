@@ -2,23 +2,23 @@ package route
 
 import (
 	"eticket-api/internal/delivery/http/controller"
-	"eticket-api/internal/injector"
-	"eticket-api/internal/usecase"
+	"eticket-api/internal/delivery/http/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
-func NewSessionRouter(ic *injector.Container, rg *gin.RouterGroup) {
-	csr := ic.Repository.SessionRepository
-	tr := ic.Repository.TicketRepository
-	scr := ic.Repository.ScheduleRepository
-	ar := ic.Repository.AllocationRepository
-	mr := ic.Repository.ManifestRepository
-	fr := ic.Repository.FareRepository
-	br := ic.Repository.BookingRepository
-	sc := &controller.SessionController{
-		SessionUsecase: usecase.NewSessionUsecase(ic.Tx, csr, tr, scr, ar, mr, fr, br),
-	}
+type SessionRouter struct {
+	Controller   *controller.SessionController
+	Authenticate *middleware.AuthenticateMiddleware
+	Authorized   *middleware.AuthorizeMiddleware
+}
+
+func NewSessionRouter(session_controller *controller.SessionController, authtenticate *middleware.AuthenticateMiddleware, authorized *middleware.AuthorizeMiddleware) *SessionRouter {
+	return &SessionRouter{Controller: session_controller, Authenticate: authtenticate, Authorized: authorized}
+}
+
+func (i SessionRouter) Set(router *gin.Engine, rg *gin.RouterGroup) {
+	sc := i.Controller
 
 	public := rg.Group("") // No middleware
 	public.POST("/session/ticket/lock", sc.SessionTicketLock)
@@ -29,4 +29,8 @@ func NewSessionRouter(ic *injector.Container, rg *gin.RouterGroup) {
 	public.POST("/session/create", sc.CreateSession)
 	public.PUT("/session/update/:id", sc.UpdateSession)
 	public.DELETE("/session/:id", sc.DeleteSession)
+
+	protected := rg.Group("") // No middleware
+	protected.Use(i.Authorized.Handle())
+	protected.Use(i.Authorized.Handle())
 }

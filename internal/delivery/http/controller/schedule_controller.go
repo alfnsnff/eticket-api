@@ -1,10 +1,9 @@
 package controller
 
 import (
+	"eticket-api/internal/common/response"
 	"eticket-api/internal/model"
-	"eticket-api/internal/usecase"
-	"eticket-api/pkg/utils/helper/meta"
-	"eticket-api/pkg/utils/helper/response"
+	"eticket-api/internal/usecase/schedule"
 	"net/http"
 	"strconv"
 
@@ -12,10 +11,10 @@ import (
 )
 
 type ScheduleController struct {
-	ScheduleUsecase *usecase.ScheduleUsecase
+	ScheduleUsecase *schedule.ScheduleUsecase
 }
 
-func NewScheduleController(schedule_usecase *usecase.ScheduleUsecase) *ScheduleController {
+func NewScheduleController(schedule_usecase *schedule.ScheduleUsecase) *ScheduleController {
 	return &ScheduleController{ScheduleUsecase: schedule_usecase}
 }
 
@@ -36,7 +35,7 @@ func (scc *ScheduleController) CreateSchedule(ctx *gin.Context) {
 }
 
 func (scc *ScheduleController) GetAllSchedules(ctx *gin.Context) {
-	params := meta.GetParams(ctx)
+	params := response.GetParams(ctx)
 	datas, total, err := scc.ScheduleUsecase.GetAllSchedules(ctx, params.Limit, params.Offset)
 
 	if err != nil {
@@ -44,7 +43,7 @@ func (scc *ScheduleController) GetAllSchedules(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewPaginatedResponse(datas, "Schedules retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Schedules retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (scc *ScheduleController) GetAllScheduled(ctx *gin.Context) {

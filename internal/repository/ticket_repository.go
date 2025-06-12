@@ -2,7 +2,7 @@ package repository
 
 import (
 	"errors"
-	"eticket-api/internal/domain/entity"
+	"eticket-api/internal/entity"
 	"time"
 
 	"gorm.io/gorm"
