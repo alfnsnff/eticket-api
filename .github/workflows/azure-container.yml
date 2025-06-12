@@ -25,8 +25,8 @@ jobs:
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/tikethebat:${IMAGE_TAG} .
-          docker push ${{ secrets.ACR_NAME }}.azurecr.io/tikethebat:${IMAGE_TAG}
+          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/myapp:${IMAGE_TAG} .
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/myapp:${IMAGE_TAG}
 
       - name: Deploy to Azure Container App
         uses: azure/container-apps-deploy-action@v1
@@ -34,7 +34,7 @@ jobs:
           containerAppName: ${{ secrets.CONTAINER_APP_NAME }}
           resourceGroup: ${{ secrets.RESOURCE_GROUP }}
           location: southeastasia  
-          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/tikethebat:${{ github.sha }}
+          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/myapp:${{ github.sha }}
           environmentVariables: >
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             ACCESS_TOKEN_EXPIRY=${{ secrets.ACCESS_TOKEN_EXPIRY }}
