@@ -41,6 +41,7 @@ jobs:
           imageToDeploy: ghcr.io/${{ github.repository_owner }}/myapp:${{ github.sha }}
           environmentVariables: >
             SECRET_KEY=${{ secrets.SECRET_KEY }}
+            PORT=${{ secrets.PORT }}
             ACCESS_TOKEN_EXPIRY=${{ secrets.ACCESS_TOKEN_EXPIRY }}
             REFRESH_TOKEN_EXPIRY=${{ secrets.REFRESH_TOKEN_EXPIRY }}
             TRIPAY_API_KEY=${{ secrets.TRIPAY_API_KEY }}
