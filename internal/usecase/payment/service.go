@@ -83,7 +83,7 @@ func (c *PaymentUsecase) CreatePayment(ctx context.Context, request *model.Write
 		Amount += ticket.Price
 	}
 
-	response, err := c.TripayClient.CreatePayment("QRIS", int(Amount), Booking.CustomerName, Booking.Email, Booking.PhoneNumber, Booking.OrderID, Tickets)
+	response, err := c.TripayClient.CreatePayment(request.PaymentMethod, int(Amount), Booking.CustomerName, Booking.Email, Booking.PhoneNumber, Booking.OrderID, Tickets)
 	if err != nil {
 		return nil, fmt.Errorf("create Tripay payment failed: %w, tickets: %+v", err, Tickets)
 	}
