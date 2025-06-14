@@ -44,7 +44,7 @@ func (m *ManifestUsecase) CreateManifest(ctx context.Context, request *model.Wri
 	})
 }
 
-func (m *ManifestUsecase) GetAllManifests(ctx context.Context, limit, offset int) ([]*model.ReadManifestResponse, int, error) {
+func (m *ManifestUsecase) GetAllManifests(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadManifestResponse, int, error) {
 	manifests := []*entity.Manifest{}
 	var total int64
 	err := m.Tx.Execute(ctx, func(tx *gorm.DB) error {
@@ -53,7 +53,7 @@ func (m *ManifestUsecase) GetAllManifests(ctx context.Context, limit, offset int
 		if err != nil {
 			return err
 		}
-		manifests, err = m.ManifestRepository.GetAll(tx, limit, offset)
+		manifests, err = m.ManifestRepository.GetAll(tx, limit, offset, sort, search)
 		return err
 	})
 

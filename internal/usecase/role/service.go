@@ -44,7 +44,7 @@ func (r *RoleUsecase) CreateRole(ctx context.Context, request *model.WriteRoleRe
 	})
 }
 
-func (r *RoleUsecase) GetAllRoles(ctx context.Context, limit, offset int) ([]*model.ReadRoleResponse, int, error) {
+func (r *RoleUsecase) GetAllRoles(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadRoleResponse, int, error) {
 	roles := []*entity.Role{}
 	var total int64
 	err := r.Tx.Execute(ctx, func(tx *gorm.DB) error {
@@ -53,7 +53,7 @@ func (r *RoleUsecase) GetAllRoles(ctx context.Context, limit, offset int) ([]*mo
 		if err != nil {
 			return err
 		}
-		roles, err = r.RoleRepository.GetAll(tx)
+		roles, err = r.RoleRepository.GetAll(tx, limit, offset, sort, search)
 		return err
 	})
 

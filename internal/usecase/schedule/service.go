@@ -70,7 +70,7 @@ func (sc *ScheduleUsecase) CreateSchedule(ctx context.Context, request *model.Wr
 	})
 }
 
-func (sc *ScheduleUsecase) GetAllSchedules(ctx context.Context, limit, offset int) ([]*model.ReadScheduleResponse, int, error) {
+func (sc *ScheduleUsecase) GetAllSchedules(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadScheduleResponse, int, error) {
 	schedules := []*entity.Schedule{}
 	var total int64
 	err := sc.Tx.Execute(ctx, func(tx *gorm.DB) error {
@@ -79,7 +79,7 @@ func (sc *ScheduleUsecase) GetAllSchedules(ctx context.Context, limit, offset in
 		if err != nil {
 			return err
 		}
-		schedules, err = sc.ScheduleRepository.GetAll(tx, limit, offset)
+		schedules, err = sc.ScheduleRepository.GetAll(tx, limit, offset, sort, search)
 		return err
 	})
 

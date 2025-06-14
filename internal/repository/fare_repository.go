@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"eticket-api/internal/entity"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -25,19 +26,30 @@ func (fr *FareRepository) Count(db *gorm.DB) (int64, error) {
 	return total, nil
 }
 
-func (fr *FareRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Fare, error) {
+func (fr *FareRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*entity.Fare, error) {
 	fares := []*entity.Fare{}
-	result := db.Preload("Route").
+
+	query := db.Preload("Route").
 		Preload("Route.DepartureHarbor").
 		Preload("Route.ArrivalHarbor").
 		Preload("Manifest").
 		Preload("Manifest.Class").
-		Preload("Manifest.Ship").
-		Limit(limit).Offset(offset).Find(&fares)
-	if result.Error != nil {
-		return nil, result.Error
+		Preload("Manifest.Ship")
+
+	if search != "" {
+		search = "%" + search + "%"
+		query = query.Where("route_id ILIKE ?", search)
 	}
-	return fares, nil
+
+	// 🔃 Sort (with default)
+	if sort == "" {
+		sort = "id asc"
+	} else {
+		sort = strings.Replace(sort, ":", " ", 1)
+	}
+
+	err := query.Order(sort).Limit(limit).Offset(offset).Find(&fares).Error
+	return fares, err
 }
 
 func (fr *FareRepository) GetByID(db *gorm.DB, id uint) (*entity.Fare, error) {

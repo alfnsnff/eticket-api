@@ -86,3 +86,36 @@ func (auc *AuthController) RefreshToken(ctx *gin.Context) {
 	ctx.SetCookie("access_token", newAccessToken, 15*60, "/", "", true, true)
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Token refreshed successfully", nil))
 }
+
+func (auc *AuthController) ForgetPassword(ctx *gin.Context) {
+	request := new(model.WriteForgetPasswordRequest)
+
+	if err := ctx.ShouldBindJSON(request); err != nil {
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+		return
+	}
+
+	err := auc.AuthUsecase.RequestPasswordReset(ctx, request.Email)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Reset password failed", err.Error()))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "We will send reset password email if it matched to our system", nil))
+}
+
+func (auc *AuthController) Me(ctx *gin.Context) {
+	accessToken, err := ctx.Cookie("access_token")
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Missing access token", err.Error()))
+		return
+	}
+
+	user, err := auc.AuthUsecase.Me(ctx, accessToken)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Unauthorized", err.Error()))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(user, "User info retrieved successfully", nil))
+}

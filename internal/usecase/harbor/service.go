@@ -40,7 +40,7 @@ func (h *HarborUsecase) CreateHarbor(ctx context.Context, request *model.WriteHa
 	})
 }
 
-func (h *HarborUsecase) GetAllHarbors(ctx context.Context, limit, offset int) ([]*model.ReadHarborResponse, int, error) {
+func (h *HarborUsecase) GetAllHarbors(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadHarborResponse, int, error) {
 	harbors := []*entity.Harbor{}
 	var total int64
 	err := h.Tx.Execute(ctx, func(tx *gorm.DB) error {
@@ -49,7 +49,7 @@ func (h *HarborUsecase) GetAllHarbors(ctx context.Context, limit, offset int) ([
 		if err != nil {
 			return err
 		}
-		harbors, err = h.HarborRepository.GetAll(tx, limit, offset)
+		harbors, err = h.HarborRepository.GetAll(tx, limit, offset, sort, search)
 		return err
 	})
 

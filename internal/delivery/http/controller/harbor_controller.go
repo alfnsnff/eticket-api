@@ -36,14 +36,25 @@ func (hc *HarborController) CreateHarbor(ctx *gin.Context) {
 
 func (hc *HarborController) GetAllHarbors(ctx *gin.Context) {
 	params := response.GetParams(ctx)
-	datas, total, err := hc.HarborUsecase.GetAllHarbors(ctx, params.Limit, params.Offset)
+	datas, total, err := hc.HarborUsecase.GetAllHarbors(ctx, params.Limit, params.Offset, params.Sort, params.Search)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve harbors", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Harbors retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(
+		datas,
+		"Harbors retrieved successfully",
+		total,
+		params.Limit,
+		params.Page,
+		params.Sort,
+		params.Search,
+		params.Path,
+	))
+
+	// ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Harbors retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (hc *HarborController) GetHarborByID(ctx *gin.Context) {

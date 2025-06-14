@@ -7,7 +7,9 @@ import (
 	"context"
 	"eticket-api/config"
 	"eticket-api/internal/common/jwt"
+	"eticket-api/internal/common/mailer"
 	"eticket-api/internal/common/tx"
+	"eticket-api/internal/entity"
 	"eticket-api/internal/module"
 	"net/http"
 
@@ -17,6 +19,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
+	"gorm.io/gorm"
 )
 
 func NewHTTPClient() *http.Client {
@@ -40,6 +43,8 @@ func New() (*Server, error) {
 		jwt.New,
 		tx.New,
 
+		mailer.NewSMTPMailer,
+
 		// Modules
 		module.NewClientModule,
 		module.NewRepositoryModule,
@@ -58,8 +63,30 @@ func NewServer(
 	config *config.Configuration,
 	route *module.RouterModule,
 	job *module.JobModule,
+	db *gorm.DB, // Replace 'interface{}' with the actual type, e.g., *gorm.DB if using GORM
 ) *Server {
-	gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.DebugMode)
+
+	// Automatically migrate your models (creating tables, etc.)
+	if err := db.AutoMigrate(
+		&entity.Route{},
+		&entity.Class{},
+		&entity.Schedule{},
+		&entity.Ship{},
+		&entity.Harbor{},
+		&entity.Booking{},
+		&entity.ClaimSession{},
+		&entity.Ticket{},
+		&entity.Manifest{},
+		&entity.Fare{},
+		&entity.Allocation{},
+		&entity.Role{},
+		&entity.User{},
+		&entity.RefreshToken{},
+		&entity.PasswordReset{},
+	); err != nil {
+		log.Fatalf("Failed to migrate database: %v", err)
+	}
 
 	app := gin.Default()
 	app.Use(cors.New(cors.Config{
@@ -118,8 +145,8 @@ func Job(job *module.JobModule) {
 
 func Setup(route *module.RouterModule, app *gin.Engine) {
 	group := app.Group("/api/v1")
-	route.AllocationRouter.Set(app, group)
 	route.AuthRouter.Set(app, group)
+	route.AllocationRouter.Set(app, group)
 	route.BookingRouter.Set(app, group)
 	route.ClassRouter.Set(app, group)
 	route.FareRouter.Set(app, group)

@@ -49,7 +49,7 @@ func (a *AllocationUsecase) CreateAllocation(ctx context.Context, request *model
 	})
 }
 
-func (a *AllocationUsecase) GetAllAllocations(ctx context.Context, limit, offset int) ([]*model.ReadAllocationResponse, int, error) {
+func (a *AllocationUsecase) GetAllAllocations(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadAllocationResponse, int, error) {
 	allocations := []*entity.Allocation{}
 	var total int64
 	err := a.Tx.Execute(ctx, func(tx *gorm.DB) error {
@@ -58,7 +58,7 @@ func (a *AllocationUsecase) GetAllAllocations(ctx context.Context, limit, offset
 		if err != nil {
 			return err
 		}
-		allocations, err = a.AllocationRepository.GetAll(tx, limit, offset)
+		allocations, err = a.AllocationRepository.GetAll(tx, limit, offset, sort, search)
 		return err
 	})
 

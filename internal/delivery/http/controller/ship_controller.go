@@ -37,14 +37,25 @@ func (shc *ShipController) CreateShip(ctx *gin.Context) {
 func (shc *ShipController) GetAllShips(ctx *gin.Context) {
 	params := response.GetParams(ctx)
 
-	datas, total, err := shc.ShipUsecase.GetAllShips(ctx, params.Limit, params.Offset)
+	datas, total, err := shc.ShipUsecase.GetAllShips(ctx, params.Limit, params.Offset, params.Sort, params.Search)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve ships", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Ships retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(
+		datas,
+		"Ships retrieved successfully",
+		total,
+		params.Limit,
+		params.Page,
+		params.Sort,
+		params.Search,
+		params.Path,
+	))
+
+	// ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Ships retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (shc *ShipController) GetShipByID(ctx *gin.Context) {

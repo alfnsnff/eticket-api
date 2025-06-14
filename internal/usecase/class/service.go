@@ -40,7 +40,7 @@ func (c *ClassUsecase) CreateClass(ctx context.Context, request *model.WriteClas
 	})
 }
 
-func (c *ClassUsecase) GetAllClasses(ctx context.Context, limit, offset int) ([]*model.ReadClassResponse, int, error) {
+func (c *ClassUsecase) GetAllClasses(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadClassResponse, int, error) {
 	classes := []*entity.Class{}
 	var total int64
 
@@ -50,7 +50,7 @@ func (c *ClassUsecase) GetAllClasses(ctx context.Context, limit, offset int) ([]
 		if err != nil {
 			return err
 		}
-		classes, err = c.ClassRepository.GetAll(tx, limit, offset)
+		classes, err = c.ClassRepository.GetAll(tx, limit, offset, sort, search)
 		return err
 	})
 

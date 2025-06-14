@@ -36,14 +36,25 @@ func (shc *SessionController) CreateSession(ctx *gin.Context) {
 
 func (shc *SessionController) GetAllSessions(ctx *gin.Context) {
 	params := response.GetParams(ctx)
-	datas, total, err := shc.SessionUsecase.GetAllSessions(ctx, params.Limit, params.Offset)
+	datas, total, err := shc.SessionUsecase.GetAllSessions(ctx, params.Limit, params.Offset, params.Sort, params.Search)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve claim sessions", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Claim sessions retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(
+		datas,
+		"Claim sessions retrieved successfully",
+		total,
+		params.Limit,
+		params.Page,
+		params.Sort,
+		params.Search,
+		params.Path,
+	))
+
+	// ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Claim sessions retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (shc *SessionController) GetSessionByID(ctx *gin.Context) {
@@ -165,6 +176,29 @@ func (csc *SessionController) SessionTicketDataEntry(ctx *gin.Context) {
 	}
 
 	datas, err := csc.SessionUsecase.SessionDataEntry(ctx, request, sessionID)
+
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create claim session", err.Error()))
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(datas, "Claim session created successfully", nil))
+}
+
+func (csc *SessionController) TicketDataEntry(ctx *gin.Context) {
+	sessionID, err := ctx.Cookie("session_id")
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Missing session id", err.Error()))
+		return
+	}
+	request := new(model.ClaimedSessionFillPassengerDataRequest)
+
+	if err := ctx.ShouldBindJSON(request); err != nil {
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+		return
+	}
+
+	datas, err := csc.SessionUsecase.DataEntry(ctx, request, sessionID)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create claim session", err.Error()))

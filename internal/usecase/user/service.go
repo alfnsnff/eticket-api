@@ -58,7 +58,7 @@ func (u *UserUsecase) CreateUser(ctx context.Context, request *model.WriteUserRe
 	})
 }
 
-func (u *UserUsecase) GetAllUsers(ctx context.Context, limit, offset int) ([]*model.ReadUserResponse, int, error) {
+func (u *UserUsecase) GetAllUsers(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadUserResponse, int, error) {
 	users := []*entity.User{}
 	var total int64
 	err := u.Tx.Execute(ctx, func(tx *gorm.DB) error {
@@ -67,7 +67,7 @@ func (u *UserUsecase) GetAllUsers(ctx context.Context, limit, offset int) ([]*mo
 		if err != nil {
 			return err
 		}
-		users, err = u.UserRepository.GetAll(tx)
+		users, err = u.UserRepository.GetAll(tx, limit, offset, sort, search)
 		return err
 	})
 

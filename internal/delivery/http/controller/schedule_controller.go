@@ -36,14 +36,25 @@ func (scc *ScheduleController) CreateSchedule(ctx *gin.Context) {
 
 func (scc *ScheduleController) GetAllSchedules(ctx *gin.Context) {
 	params := response.GetParams(ctx)
-	datas, total, err := scc.ScheduleUsecase.GetAllSchedules(ctx, params.Limit, params.Offset)
+	datas, total, err := scc.ScheduleUsecase.GetAllSchedules(ctx, params.Limit, params.Offset, params.Sort, params.Search)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve schedules", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Schedules retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(
+		datas,
+		"Schedules retrieved successfully",
+		total,
+		params.Limit,
+		params.Page,
+		params.Sort,
+		params.Search,
+		params.Path,
+	))
+
+	// ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Schedules retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (scc *ScheduleController) GetAllScheduled(ctx *gin.Context) {

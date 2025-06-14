@@ -2,6 +2,7 @@ package repository
 
 import (
 	"eticket-api/internal/entity"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -24,15 +25,26 @@ func (ror *RoleRepository) Count(db *gorm.DB) (int64, error) {
 	return total, nil
 }
 
-func (ror *RoleRepository) GetAll(db *gorm.DB) ([]*entity.Role, error) {
+func (ror *RoleRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*entity.Role, error) {
 	roles := []*entity.Role{}
-	result := db.Find(&roles)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	return roles, nil
-}
 
+	query := db
+
+	if search != "" {
+		search = "%" + search + "%"
+		query = query.Where("role_name ILIKE ?", search)
+	}
+
+	// 🔃 Sort (with default)
+	if sort == "" {
+		sort = "id asc"
+	} else {
+		sort = strings.Replace(sort, ":", " ", 1)
+	}
+
+	err := query.Order(sort).Limit(limit).Offset(offset).Find(&roles).Error
+	return roles, err
+}
 func (ror *RoleRepository) GetByID(db *gorm.DB, id uint) (*entity.Role, error) {
 	role := new(entity.Role)
 	result := db.First(&role, id)

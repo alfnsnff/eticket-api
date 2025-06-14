@@ -37,14 +37,25 @@ func (uc *UserController) CreateUser(ctx *gin.Context) {
 
 func (uc *UserController) GetAllUsers(ctx *gin.Context) {
 	params := response.GetParams(ctx)
-	datas, total, err := uc.UserUsecase.GetAllUsers(ctx, params.Limit, params.Offset)
+	datas, total, err := uc.UserUsecase.GetAllUsers(ctx, params.Limit, params.Offset, params.Sort, params.Search)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve users", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "User roles retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(
+		datas,
+		"Fares retrieved successfully",
+		total,
+		params.Limit,
+		params.Page,
+		params.Sort,
+		params.Search,
+		params.Path,
+	))
+
+	// ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "User roles retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (uc *UserController) GetUserByID(ctx *gin.Context) {

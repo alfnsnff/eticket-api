@@ -36,14 +36,25 @@ func (mc *ManifestController) CreateManifest(ctx *gin.Context) {
 
 func (mc *ManifestController) GetAllManifests(ctx *gin.Context) {
 	params := response.GetParams(ctx)
-	datas, total, err := mc.ManifestUsecase.GetAllManifests(ctx, params.Limit, params.Offset)
+	datas, total, err := mc.ManifestUsecase.GetAllManifests(ctx, params.Limit, params.Offset, params.Sort, params.Search)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve manifests", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Manifests retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(
+		datas,
+		"Manifests retrieved successfully",
+		total,
+		params.Limit,
+		params.Page,
+		params.Sort,
+		params.Search,
+		params.Path,
+	))
+
+	// ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Manifests retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (mc *ManifestController) GetManifestByID(ctx *gin.Context) {

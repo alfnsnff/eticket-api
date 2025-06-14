@@ -23,6 +23,8 @@ func (i PaymentRouter) Set(router *gin.Engine, rg *gin.RouterGroup) {
 
 	public := rg.Group("") // No middleware
 	public.GET("/payment-channels", pc.GetPaymentChannels)
+	public.POST("/payment/transaction", pc.CreatePayment)
+	public.POST("/payment/callback", pc.HandleCallback)
 
 	protected := rg.Group("")
 	protected.Use(i.Authenticate.Handle())

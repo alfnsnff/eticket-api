@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"eticket-api/internal/entity"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -25,13 +26,25 @@ func (shr *ShipRepository) Count(db *gorm.DB) (int64, error) {
 	return total, nil
 }
 
-func (shr *ShipRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Ship, error) {
+func (shr *ShipRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*entity.Ship, error) {
 	ships := []*entity.Ship{}
-	result := db.Limit(limit).Offset(offset).Find(&ships)
-	if result.Error != nil {
-		return nil, result.Error
+
+	query := db
+
+	if search != "" {
+		search = "%" + search + "%"
+		query = query.Where("ship_name ILIKE ?", search)
 	}
-	return ships, nil
+
+	// 🔃 Sort (with default)
+	if sort == "" {
+		sort = "id asc"
+	} else {
+		sort = strings.Replace(sort, ":", " ", 1)
+	}
+
+	err := query.Order(sort).Limit(limit).Offset(offset).Find(&ships).Error
+	return ships, err
 }
 
 func (shr *ShipRepository) GetByID(db *gorm.DB, id uint) (*entity.Ship, error) {

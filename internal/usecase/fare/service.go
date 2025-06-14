@@ -46,7 +46,7 @@ func (f *FareUsecase) CreateFare(ctx context.Context, request *model.WriteFareRe
 	})
 }
 
-func (f *FareUsecase) GetAllFares(ctx context.Context, limit, offset int) ([]*model.ReadFareResponse, int, error) {
+func (f *FareUsecase) GetAllFares(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadFareResponse, int, error) {
 	fares := []*entity.Fare{}
 	var total int64
 	err := f.Tx.Execute(ctx, func(tx *gorm.DB) error {
@@ -55,7 +55,7 @@ func (f *FareUsecase) GetAllFares(ctx context.Context, limit, offset int) ([]*mo
 		if err != nil {
 			return err
 		}
-		fares, err = f.FareRepository.GetAll(tx, limit, offset)
+		fares, err = f.FareRepository.GetAll(tx, limit, offset, sort, search)
 		return err
 	})
 

@@ -2,6 +2,7 @@ package module
 
 import (
 	"eticket-api/internal/common/jwt"
+	"eticket-api/internal/common/mailer"
 	"eticket-api/internal/common/tx"
 	"eticket-api/internal/usecase/allocation"
 	"eticket-api/internal/usecase/auth"
@@ -39,10 +40,10 @@ type UsecaseModule struct {
 	PaymentUsecase    *payment.PaymentUsecase
 }
 
-func NewUsecaseModule(tx *tx.TxManager, repository *RepositoryModule, client *ClientModule, tm *jwt.TokenUtil) *UsecaseModule {
+func NewUsecaseModule(tx *tx.TxManager, repository *RepositoryModule, client *ClientModule, tm *jwt.TokenUtil, mailer *mailer.SMTPMailer) *UsecaseModule {
 	return &UsecaseModule{
 
-		AuthUsecase: auth.NewAuthUsecase(tx, repository.AuthRepository, repository.UserRepository, tm),
+		AuthUsecase: auth.NewAuthUsecase(tx, repository.AuthRepository, repository.UserRepository, mailer, tm),
 		RoleUsecase: role.NewRoleUsecase(tx, repository.RoleRepository),
 		UserUsecase: user.NewUserUsecase(tx, repository.UserRepository),
 
@@ -57,6 +58,6 @@ func NewUsecaseModule(tx *tx.TxManager, repository *RepositoryModule, client *Cl
 		RouteUsecase:      route.NewRouteUsecase(tx, repository.RouteRepository),
 		HarborUsecase:     harbor.NewHarborUsecase(tx, repository.HarborRepository),
 		ClassUsecase:      class.NewClassUsecase(tx, repository.ClassRepository),
-		PaymentUsecase:    payment.NewPaymentUsecase(client.TripayClient),
+		PaymentUsecase:    payment.NewPaymentUsecase(tx, client.TripayClient, repository.BookingRepository, repository.TicketRepository),
 	}
 }

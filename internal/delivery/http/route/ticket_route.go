@@ -26,8 +26,10 @@ func (i TicketRouter) Set(router *gin.Engine, rg *gin.RouterGroup) {
 
 	protected := rg.Group("")
 	protected.Use(i.Authenticate.Handle())
-	// protected.Use(i.Authorized.Handle())
+	protected.Use(i.Authorized.Handle())
 
+	public.GET("/ticket/schedule/:id", tc.GetAllTicketsByScheduleID)
+	protected.POST("/ticket/check-in/:id", tc.CheckIn)
 	protected.POST("/ticket/create", tc.CreateTicket)
 	protected.PUT("/ticket//update:id", tc.UpdateTicket)
 	protected.DELETE("/ticket/:id", tc.DeleteTicket)

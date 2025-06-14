@@ -23,6 +23,7 @@ func (i SessionRouter) Set(router *gin.Engine, rg *gin.RouterGroup) {
 	public := rg.Group("") // No middleware
 	public.POST("/session/ticket/lock", sc.SessionTicketLock)
 	public.POST("/session/ticket/data/entry", sc.SessionTicketDataEntry)
+	public.POST("/session/ticket/entry", sc.TicketDataEntry)
 	public.GET("/sessions", sc.GetAllSessions)
 	public.GET("/session/:id", sc.GetSessionByID)
 	public.GET("/session/uuid/:sessionid", sc.GetSessionBySessionID)

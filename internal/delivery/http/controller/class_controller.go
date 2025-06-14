@@ -37,14 +37,25 @@ func (cc *ClassController) CreateClass(ctx *gin.Context) {
 
 func (cc *ClassController) GetAllClasses(ctx *gin.Context) {
 	params := response.GetParams(ctx)
-	datas, total, err := cc.ClassUsecase.GetAllClasses(ctx, params.Limit, params.Offset)
+	datas, total, err := cc.ClassUsecase.GetAllClasses(ctx, params.Limit, params.Offset, params.Sort, params.Search)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve classes", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Classes retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(
+		datas,
+		"Classes retrieved successfully",
+		total,
+		params.Limit,
+		params.Page,
+		params.Sort,
+		params.Search,
+		params.Path,
+	))
+
+	// ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Classes retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (cc *ClassController) GetClassByID(ctx *gin.Context) {

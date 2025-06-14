@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"eticket-api/internal/entity"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -30,13 +31,25 @@ func (cr *ClassRepository) Createtest(entity *entity.Class) error {
 	return cr.DB.Create(entity).Error
 }
 
-func (cr *ClassRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Class, error) {
+func (cr *ClassRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*entity.Class, error) {
 	classes := []*entity.Class{}
-	result := db.Limit(limit).Offset(offset).Find(&classes)
-	if result.Error != nil {
-		return nil, result.Error
+
+	query := db
+
+	if search != "" {
+		search = "%" + search + "%"
+		query = query.Where("class_name ILIKE ?", search)
 	}
-	return classes, nil
+
+	// 🔃 Sort (with default)
+	if sort == "" {
+		sort = "id asc"
+	} else {
+		sort = strings.Replace(sort, ":", " ", 1)
+	}
+
+	err := query.Order(sort).Limit(limit).Offset(offset).Find(&classes).Error
+	return classes, err
 }
 
 func (cr *ClassRepository) GetByID(db *gorm.DB, id uint) (*entity.Class, error) {

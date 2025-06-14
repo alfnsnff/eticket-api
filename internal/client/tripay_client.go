@@ -10,6 +10,7 @@ import (
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 )
@@ -67,6 +68,15 @@ func (c *TripayClient) CreatePayment(method string, amount int, name string, ema
 	}
 	defer resp.Body.Close()
 
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return model.ReadTransactionResponse{}, fmt.Errorf("failed to read response body: %w", err)
+	}
+	fmt.Println("Raw response:", string(bodyBytes))
+
+	// Reset resp.Body for further decoding
+	resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+
 	var raw model.Result
 
 	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
@@ -121,6 +131,39 @@ func (c *TripayClient) GetPaymentChannels() ([]model.ReadPaymentChannelResponse,
 	}
 	return data, nil
 
+}
+
+func (c *TripayClient) HandleCallback(r *http.Request) error {
+	rawBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read body: %w", err)
+	}
+	r.Body = io.NopCloser(bytes.NewBuffer(rawBody)) // reset body if needed again
+
+	signature := r.Header.Get("X-Callback-Signature")
+	if !c.verifyCallbackSignature(rawBody, signature) {
+		return fmt.Errorf("invalid callback signature")
+	}
+
+	var payload model.WriteCallbackRequest
+	if err := json.Unmarshal(rawBody, &payload); err != nil {
+		return fmt.Errorf("invalid JSON payload: %w", err)
+	}
+
+	// Lanjutkan dengan penyimpanan / update status pembayaran, dsb
+	fmt.Println("Callback payload verified:", payload)
+	return nil
+}
+
+func (c *TripayClient) verifyCallbackSignature(rawBody []byte, signature string) bool {
+	expected := generateCallbackSignature(c.Tripay.PrivateApiKey, rawBody)
+	return hmac.Equal([]byte(expected), []byte(signature))
+}
+
+func generateCallbackSignature(privateKey string, rawBody []byte) string {
+	h := hmac.New(sha256.New, []byte(privateKey))
+	h.Write(rawBody)
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func TicketsToItemsTr(tickets []*entity.Ticket) []model.OrderItem {

@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"eticket-api/internal/entity"
+	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -26,13 +27,25 @@ func (ar *AllocationRepository) Count(db *gorm.DB) (int64, error) {
 	return total, nil
 }
 
-func (ar *AllocationRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Allocation, error) {
+func (ar *AllocationRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*entity.Allocation, error) {
 	allocations := []*entity.Allocation{}
-	result := db.Preload("Class").Limit(limit).Offset(offset).Find(&allocations)
-	if result.Error != nil {
-		return nil, result.Error
+
+	query := db.Preload("Class")
+
+	if search != "" {
+		search = "%" + search + "%"
+		query = query.Where("schedule_id ILIKE ?", search)
 	}
-	return allocations, nil
+
+	// 🔃 Sort (with default)
+	if sort == "" {
+		sort = "id asc"
+	} else {
+		sort = strings.Replace(sort, ":", " ", 1)
+	}
+
+	err := query.Order(sort).Limit(limit).Offset(offset).Find(&allocations).Error
+	return allocations, err
 }
 
 func (ar *AllocationRepository) GetByID(db *gorm.DB, id uint) (*entity.Allocation, error) {

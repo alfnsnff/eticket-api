@@ -11,10 +11,11 @@ import (
 
 type (
 	Configuration struct {
-		Server Server `mapstructure:"server"`
-		DB     DB     `mapstructure:"db"`
-		Auth   Auth   `mapstructure:"auth"`
-		Tripay Tripay `mapstructure:"tripay"`
+		Server     Server     `mapstructure:"server"`
+		DB         DB         `mapstructure:"db"`
+		Auth       Auth       `mapstructure:"auth"`
+		Tripay     Tripay     `mapstructure:"tripay"`
+		SMTPMailer SMTPMailer `mapstructure:"smtpmailer"`
 	}
 
 	Server struct {
@@ -42,10 +43,21 @@ type (
 		PrivateApiKey string `mapstructure:"private_api_key"`
 		MerhcantCode  string `mapstructure:"merchant_code"`
 	}
+
+	SMTPMailer struct {
+		Host     string `mapstructure:"host"`
+		Port     int    `mapstructure:"port"`
+		Username string `mapstructure:"username"`
+		Password string `mapstructure:"password"`
+		From     string `mapstructure:"from"`
+	}
 )
 
 func New() (*Configuration, error) {
-	_ = godotenv.Load()
+
+	if err := godotenv.Load(); err != nil {
+		fmt.Println("No .env file found or failed to load it:", err)
+	}
 
 	v := viper.New()
 
@@ -53,24 +65,36 @@ func New() (*Configuration, error) {
 	v.AutomaticEnv()
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	// Default values (optional, but recommended)
-	v.SetDefault("server.port", 8080)
-	v.SetDefault("db.sslmode", "disable")
-	v.SetDefault("auth.access_token_expiry", "15m")
-	v.SetDefault("auth.refresh_token_expiry", "24h")
+	// Bind environment variables manually
+	bindEnvs := map[string]string{
+		"server.port":               "PORT",
+		"auth.secret_key":           "SECRET_KEY",
+		"auth.access_token_expiry":  "ACCESS_TOKEN_EXPIRY",
+		"auth.refresh_token_expiry": "REFRESH_TOKEN_EXPIRY",
 
-	// Explicit BindEnv for keys that won't match automatically
-	v.BindEnv("server.port", "PORT")
-	v.BindEnv("auth.secret_key", "SECRET_KEY")
-	v.BindEnv("db.user", "DATABASE_USER")
-	v.BindEnv("db.password", "DATABASE_PASSWORD")
-	v.BindEnv("db.host", "DATABASE_HOST")
-	v.BindEnv("db.port", "DATABASE_PORT")
-	v.BindEnv("db.name", "DATABASE_NAME")
-	v.BindEnv("db.sslmode", "DATABASE_SSLMODE")
-	v.BindEnv("tripay.api_key", "TRIPAY_API_KEY")
-	v.BindEnv("tripay.private_api_key", "TRIPAY_PRIVATE_API_KEY")
-	v.BindEnv("tripay.merchant_code", "TRIPAY_MERCHANT_CODE")
+		"tripay.api_key":         "TRIPAY_API_KEY",
+		"tripay.private_api_key": "TRIPAY_PRIVATE_API_KEY",
+		"tripay.merchant_code":   "TRIPAY_MERCHANT_CODE",
+
+		"db.host":     "DATABASE_HOST",
+		"db.port":     "DATABASE_PORT",
+		"db.name":     "DATABASE_NAME",
+		"db.user":     "DATABASE_USER",
+		"db.password": "DATABASE_PASSWORD",
+		"db.sslmode":  "DATABASE_SSLMODE",
+
+		"smtpmailer.host":     "MAILER_HOST",
+		"smtpmailer.port":     "MAILER_PORT",
+		"smtpmailer.from":     "MAILER_FROM",
+		"smtpmailer.username": "MAILER_USERNAME",
+		"smtpmailer.password": "MAILER_PASSWORD",
+	}
+
+	for key, env := range bindEnvs {
+		if err := v.BindEnv(key, env); err != nil {
+			return nil, fmt.Errorf("failed to bind env var %s: %w", env, err)
+		}
+	}
 
 	// Unmarshal into struct
 	var cfg Configuration
