@@ -102,3 +102,9 @@ func (br *BookingRepository) UpdateStatus(db *gorm.DB) error {
 	}
 	return nil
 }
+
+func (r *BookingRepository) UpdateReferenceNumber(tx *gorm.DB, bookingID uint, reference *string) error {
+	return tx.Model(&entity.Booking{}).
+		Where("id = ?", bookingID).
+		Update("reference_number", reference).Error
+}

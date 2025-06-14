@@ -33,7 +33,7 @@ COPY --from=builder /app/main .
 COPY --from=builder /app/config ./config
 
 # Expose application port
-EXPOSE 8080
+EXPOSE 80
 
 # Run the app
 CMD ["./main"]
