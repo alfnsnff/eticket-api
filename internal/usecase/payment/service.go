@@ -51,42 +51,64 @@ func (c *PaymentUsecase) CreatePayment(ctx context.Context, request *model.Write
 	if request.OrderID == "" {
 		return nil, errors.New("invalid request: all customer fields are required")
 	}
-	Booking := new(entity.Booking)
-	Tickets := []*entity.Ticket{}
+
+	var Booking *entity.Booking
+	var Tickets []*entity.Ticket
 	var Amount float32
+
+	// Retrieve booking and tickets
 	if err := c.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		var err error
-		booking, err := c.BookingRepository.GetByOrderID(tx, request.OrderID)
+		Booking, err = c.BookingRepository.GetByOrderID(tx, request.OrderID)
 		if err != nil {
 			return err
 		}
-		if booking == nil {
+		if Booking == nil {
 			return fmt.Errorf("booking not found")
 		}
 
-		Booking = booking
-		tickets, err := c.TicketRepository.GetByBookingID(tx, booking.ID)
-
+		Tickets, err = c.TicketRepository.GetByBookingID(tx, Booking.ID)
 		if err != nil {
 			return err
 		}
-		if tickets == nil {
-			return fmt.Errorf("tiket is empty not found")
+		if len(Tickets) == 0 {
+			return fmt.Errorf("tickets not found")
 		}
-		Tickets = tickets
-		return err
+		return nil
 	}); err != nil {
 		return nil, err
 	}
 
+	// Sum ticket prices
 	for _, ticket := range Tickets {
 		Amount += ticket.Price
 	}
 
-	response, err := c.TripayClient.CreatePayment(request.PaymentMethod, int(Amount), Booking.CustomerName, Booking.Email, Booking.PhoneNumber, Booking.OrderID, Tickets)
+	// Create payment
+	response, err := c.TripayClient.CreatePayment(
+		request.PaymentMethod,
+		int(Amount),
+		Booking.CustomerName,
+		Booking.Email,
+		Booking.PhoneNumber,
+		Booking.OrderID,
+		Tickets,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("create Tripay payment failed: %w, tickets: %+v", err, Tickets)
+		return nil, fmt.Errorf("create Tripay payment failed: %w", err)
 	}
+
+	// Update booking with reference number
+	if response.Reference != "" {
+		ref := response.Reference // make a pointer
+		if err := c.Tx.Execute(ctx, func(tx *gorm.DB) error {
+			Booking.ReferenceNumber = &ref
+			return c.BookingRepository.UpdateReferenceNumber(tx, Booking.ID, &ref)
+		}); err != nil {
+			return nil, fmt.Errorf("failed to update booking with reference number: %w", err)
+		}
+	}
+
 	return &response, nil
 }
 
