@@ -95,6 +95,7 @@ func NewServer(
 			allowed := map[string]bool{
 				"http://localhost:3000":          true,
 				"https://tiket-hebat.vercel.app": true,
+				"https://www.tikethebat.live":    true,
 			}
 			return allowed[origin]
 		},

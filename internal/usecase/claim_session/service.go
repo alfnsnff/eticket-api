@@ -463,6 +463,7 @@ func (cs *SessionUsecase) DataEntry(ctx context.Context, request *model.ClaimedS
 	var (
 		finalUpdatedIDs []uint
 		bookingID       uint
+		orderIDt        string
 		total           float32
 	)
 
@@ -489,6 +490,8 @@ func (cs *SessionUsecase) DataEntry(ctx context.Context, request *model.ClaimedS
 			fmt.Sprintf("%s-%s", *schedule.Route.DepartureHarbor.HarborAlias, *schedule.Route.ArrivalHarbor.HarborAlias),
 			*schedule.Ship.ShipAlias, time.Now(),
 		)
+
+		orderIDt = orderID
 
 		booking := &entity.Booking{
 			OrderID:      orderID,
@@ -580,6 +583,7 @@ func (cs *SessionUsecase) DataEntry(ctx context.Context, request *model.ClaimedS
 
 	return &model.ClaimedSessionFillPassengerDataResponse{
 		BookingID:        bookingID,
+		OrderID:          orderIDt,
 		UpdatedTicketIDs: finalUpdatedIDs,
 	}, nil
 }
