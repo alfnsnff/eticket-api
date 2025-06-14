@@ -15,3 +15,12 @@ type RefreshToken struct {
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime"`
 }
+
+type PasswordReset struct {
+	ID        uint      `gorm:"column:id;primaryKey;autoIncrement"`
+	UserID    uint      `gorm:"column:user_id"` // Assuming foreign key to User.ID
+	Token     string    `gorm:"column:token"`
+	Issued    bool      `gorm:"column:issued"`
+	ExpiresAt time.Time `gorm:"column:expires_at"`
+	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
+}

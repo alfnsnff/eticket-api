@@ -20,8 +20,10 @@ func NewAuthRouter(auth_controller *controller.AuthController, authtenticate *mi
 func (i AuthRouter) Set(router *gin.Engine, rg *gin.RouterGroup) {
 
 	public := rg.Group("") // No middleware
+	public.GET("/auth/me", i.Controller.Me)
 	public.POST("/auth/login", i.Controller.Login)
 	public.POST("/auth/refresh", i.Controller.RefreshToken)
+	public.POST("/auth/forget-password", i.Controller.ForgetPassword)
 
 	protected := rg.Group("")
 	protected.Use(i.Authenticate.Handle())

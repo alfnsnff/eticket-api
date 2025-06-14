@@ -28,15 +28,27 @@ func NewErrorResponse(message string, errors interface{}) *BaseResponse {
 }
 
 type Meta struct {
-	Total       int `json:"total"`
-	PerPage     int `json:"per_page"`
-	CurrentPage int `json:"current_page"`
-	TotalPages  int `json:"total_pages"`
-	NextPage    int `json:"next_page,omitempty"`
-	PrevPage    int `json:"prev_page,omitempty"`
+	Total       int    `json:"total"`               // Total items
+	PerPage     int    `json:"per_page"`            // Items per page
+	CurrentPage int    `json:"current_page"`        // Current page number
+	TotalPages  int    `json:"total_pages"`         // Total number of pages
+	NextPage    int    `json:"next_page,omitempty"` // Next page number if available
+	PrevPage    int    `json:"prev_page,omitempty"` // Previous page number if available
+	From        int    `json:"from"`                // Start index of items in this page (1-based)
+	To          int    `json:"to"`                  // End index of items in this page
+	Sort        string `json:"sort,omitempty"`      // Sort parameter (e.g., "name:asc")
+	Search      string `json:"search,omitempty"`    // Search keyword
+	Path        string `json:"path,omitempty"`      // Current path for building links
+	HasNextPage bool   `json:"has_next_page"`       // Whether there is a next page
+	HasPrevPage bool   `json:"has_prev_page"`       // Whether there is a previous page
 }
 
-func NewMetaResponse(data interface{}, message string, total, perPage, currentPage int) *BaseResponse {
+func NewMetaResponse(
+	data interface{},
+	message string,
+	total, perPage, currentPage int,
+	sort, search, path string,
+) *BaseResponse {
 	totalPages := (total + perPage - 1) / perPage // ceil
 	nextPage := 0
 	if currentPage < totalPages {
@@ -47,6 +59,12 @@ func NewMetaResponse(data interface{}, message string, total, perPage, currentPa
 		prevPage = currentPage - 1
 	}
 
+	from := (currentPage-1)*perPage + 1
+	to := currentPage * perPage
+	if to > total {
+		to = total
+	}
+
 	meta := Meta{
 		Total:       total,
 		PerPage:     perPage,
@@ -54,6 +72,13 @@ func NewMetaResponse(data interface{}, message string, total, perPage, currentPa
 		TotalPages:  totalPages,
 		NextPage:    nextPage,
 		PrevPage:    prevPage,
+		From:        from,
+		To:          to,
+		Sort:        sort,
+		Search:      search,
+		Path:        path,
+		HasNextPage: currentPage < totalPages,
+		HasPrevPage: currentPage > 1,
 	}
 
 	return NewSuccessResponse(data, message, meta)

@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"eticket-api/internal/entity"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -25,15 +26,25 @@ func (mr *ManifestRepository) Count(db *gorm.DB) (int64, error) {
 	return total, nil
 }
 
-func (mr *ManifestRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Manifest, error) {
+func (mr *ManifestRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*entity.Manifest, error) {
 	manifests := []*entity.Manifest{}
-	result := db.Preload("Class").
-		Preload("Ship").
-		Limit(limit).Offset(offset).Find(&manifests)
-	if result.Error != nil {
-		return nil, result.Error
+
+	query := db.Preload("Class").Preload("Ship")
+
+	if search != "" {
+		search = "%" + search + "%"
+		query = query.Where("ship_id ? OR class_id ILIKE ?", search, search)
 	}
-	return manifests, nil
+
+	// 🔃 Sort (with default)
+	if sort == "" {
+		sort = "id asc"
+	} else {
+		sort = strings.Replace(sort, ":", " ", 1)
+	}
+
+	err := query.Order(sort).Limit(limit).Offset(offset).Find(&manifests).Error
+	return manifests, err
 }
 
 func (mr *ManifestRepository) GetByID(db *gorm.DB, id uint) (*entity.Manifest, error) {

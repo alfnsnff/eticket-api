@@ -36,14 +36,25 @@ func (fc *FareController) CreateFare(ctx *gin.Context) {
 
 func (fc *FareController) GetAllFares(ctx *gin.Context) {
 	params := response.GetParams(ctx)
-	datas, total, err := fc.FareUsecase.GetAllFares(ctx, params.Limit, params.Offset)
+	datas, total, err := fc.FareUsecase.GetAllFares(ctx, params.Limit, params.Offset, params.Sort, params.Search)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve fares", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Fares retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(
+		datas,
+		"Fares retrieved successfully",
+		total,
+		params.Limit,
+		params.Page,
+		params.Sort,
+		params.Search,
+		params.Path,
+	))
+
+	// ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Fares retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (fc *FareController) GetFareByID(ctx *gin.Context) {

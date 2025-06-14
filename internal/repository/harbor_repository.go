@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"strings"
 
 	"eticket-api/internal/entity"
 
@@ -26,13 +27,25 @@ func (hr *HarborRepository) Count(db *gorm.DB) (int64, error) {
 	return total, nil
 }
 
-func (hr *HarborRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Harbor, error) {
+func (hr *HarborRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*entity.Harbor, error) {
 	harbors := []*entity.Harbor{}
-	result := db.Limit(limit).Offset(offset).Find(&harbors)
-	if result.Error != nil {
-		return nil, result.Error
+
+	query := db
+
+	if search != "" {
+		search = "%" + search + "%"
+		query = query.Where("harbor_name ILIKE ? OR harbor_alias ILIKE ?", search, search)
 	}
-	return harbors, nil
+
+	// 🔃 Sort (with default)
+	if sort == "" {
+		sort = "id asc"
+	} else {
+		sort = strings.Replace(sort, ":", " ", 1)
+	}
+
+	err := query.Order(sort).Limit(limit).Offset(offset).Find(&harbors).Error
+	return harbors, err
 }
 
 func (hr *HarborRepository) GetByID(db *gorm.DB, id uint) (*entity.Harbor, error) {

@@ -37,14 +37,25 @@ func (mc *AllocationController) CreateAllocation(ctx *gin.Context) {
 func (mc *AllocationController) GetAllAllocations(ctx *gin.Context) {
 	params := response.GetParams(ctx)
 
-	datas, total, err := mc.AllocationUsecase.GetAllAllocations(ctx, params.Limit, params.Offset)
+	datas, total, err := mc.AllocationUsecase.GetAllAllocations(ctx, params.Limit, params.Offset, params.Sort, params.Search)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve allocations", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Allocations retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(
+		datas,
+		"Allocations retrieved successfully",
+		total,
+		params.Limit,
+		params.Page,
+		params.Sort,
+		params.Search,
+		params.Path,
+	))
+
+	// ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Allocations retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (mc *AllocationController) GetAllocationByID(ctx *gin.Context) {

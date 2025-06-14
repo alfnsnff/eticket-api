@@ -40,7 +40,7 @@ func (r *RouteUsecase) CreateRoute(ctx context.Context, request *model.WriteRout
 	})
 }
 
-func (r *RouteUsecase) GetAllRoutes(ctx context.Context, limit, offset int) ([]*model.ReadRouteResponse, int, error) {
+func (r *RouteUsecase) GetAllRoutes(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadRouteResponse, int, error) {
 	routes := []*entity.Route{}
 	var total int64
 	err := r.Tx.Execute(ctx, func(tx *gorm.DB) error {
@@ -49,7 +49,7 @@ func (r *RouteUsecase) GetAllRoutes(ctx context.Context, limit, offset int) ([]*
 		if err != nil {
 			return err
 		}
-		routes, err = r.RouteRepository.GetAll(tx, limit, offset)
+		routes, err = r.RouteRepository.GetAll(tx, limit, offset, sort, search)
 		return err
 	})
 

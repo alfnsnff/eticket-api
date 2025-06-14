@@ -49,7 +49,7 @@ func (t *TicketUsecase) CreateTicket(ctx context.Context, request *model.WriteTi
 	})
 }
 
-func (t *TicketUsecase) GetAllTickets(ctx context.Context, limit, offset int) ([]*model.ReadTicketResponse, int, error) {
+func (t *TicketUsecase) GetAllTickets(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadTicketResponse, int, error) {
 	tickets := []*entity.Ticket{}
 	var total int64
 	err := t.Tx.Execute(ctx, func(tx *gorm.DB) error {
@@ -58,7 +58,32 @@ func (t *TicketUsecase) GetAllTickets(ctx context.Context, limit, offset int) ([
 		if err != nil {
 			return err
 		}
-		tickets, err = t.TicketRepository.GetAll(tx, limit, offset)
+		tickets, err = t.TicketRepository.GetAll(tx, limit, offset, sort, search)
+		return err
+	})
+
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get all tickets: %w", err)
+	}
+
+	return mapper.TicketMapper.ToModels(tickets), int(total), nil
+}
+
+func (t *TicketUsecase) GetAllTicketsByScheduleID(ctx context.Context, schedule_id, limit, offset int, sort, search string) ([]*model.ReadTicketResponse, int, error) {
+	tickets := []*entity.Ticket{}
+	var total int64
+	err := t.Tx.Execute(ctx, func(tx *gorm.DB) error {
+		var err error
+		// ✅ 1. Count query with same filters
+		countt := tx.Model(&entity.Ticket{}).Where("schedule_id = ?", schedule_id)
+		if search != "" {
+			search = "%" + search + "%"
+			countt = countt.Where("passenger_name ILIKE ?", search)
+		}
+		if err := countt.Count(&total).Error; err != nil {
+			return err
+		}
+		tickets, err = t.TicketRepository.GetBySchedulseID(tx, schedule_id, limit, offset, sort, search)
 		return err
 	})
 
@@ -119,4 +144,10 @@ func (t *TicketUsecase) DeleteTicket(ctx context.Context, id uint) error {
 		return t.TicketRepository.Delete(tx, ticket)
 	})
 
+}
+
+func (t *TicketUsecase) CheckIn(ctx context.Context, id uint) error {
+	return t.Tx.Execute(ctx, func(tx *gorm.DB) error {
+		return t.TicketRepository.CheckIn(tx, id)
+	})
 }

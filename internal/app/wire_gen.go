@@ -10,10 +10,13 @@ import (
 	"context"
 	"eticket-api/config"
 	"eticket-api/internal/common/jwt"
+	"eticket-api/internal/common/mailer"
 	"eticket-api/internal/common/tx"
+	"eticket-api/internal/entity"
 	"eticket-api/internal/module"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 	"log"
 	"net/http"
 	"time"
@@ -35,13 +38,14 @@ func New() (*Server, error) {
 	client := NewHTTPClient()
 	clientModule := module.NewClientModule(client, configuration)
 	tokenUtil := jwt.New(configuration)
-	usecaseModule := module.NewUsecaseModule(txManager, repositoryModule, clientModule, tokenUtil)
+	smtpMailer := mailer.NewSMTPMailer(configuration)
+	usecaseModule := module.NewUsecaseModule(txManager, repositoryModule, clientModule, tokenUtil, smtpMailer)
 	controllerModule := module.NewControllerModule(usecaseModule)
 	enforcer := NewEnforcer()
 	middlewareModule := module.NewMiddlewareModule(tokenUtil, enforcer)
 	routerModule := module.NewRouteModule(controllerModule, middlewareModule)
 	jobModule := module.NewJobModule(txManager, repositoryModule)
-	server := NewServer(configuration, routerModule, jobModule)
+	server := NewServer(configuration, routerModule, jobModule, db)
 	return server, nil
 }
 
@@ -59,15 +63,37 @@ type Server struct {
 func NewServer(config2 *config.Configuration,
 	route *module.RouterModule,
 	job *module.JobModule,
+	db *gorm.DB,
 ) *Server {
 	gin.SetMode(gin.DebugMode)
+
+	if err := db.AutoMigrate(
+		&entity.Route{},
+		&entity.Class{},
+		&entity.Schedule{},
+		&entity.Ship{},
+		&entity.Harbor{},
+		&entity.Booking{},
+		&entity.ClaimSession{},
+		&entity.Ticket{},
+		&entity.Manifest{},
+		&entity.Fare{},
+		&entity.Allocation{},
+		&entity.Role{},
+		&entity.User{},
+		&entity.RefreshToken{},
+		&entity.PasswordReset{},
+	); err != nil {
+		log.Fatalf("Failed to migrate database: %v", err)
+	}
 
 	app := gin.Default()
 	app.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
 
 			allowed := map[string]bool{
-				"http://localhost:3000": true,
+				"http://localhost:3000":          true,
+				"https://tiket-hebat.vercel.app": true,
 			}
 			return allowed[origin]
 		},
@@ -116,8 +142,8 @@ func Job(job *module.JobModule) {
 
 func Setup(route *module.RouterModule, app *gin.Engine) {
 	group := app.Group("/api/v1")
-	route.AllocationRouter.Set(app, group)
 	route.AuthRouter.Set(app, group)
+	route.AllocationRouter.Set(app, group)
 	route.BookingRouter.Set(app, group)
 	route.ClassRouter.Set(app, group)
 	route.FareRouter.Set(app, group)

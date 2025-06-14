@@ -37,14 +37,55 @@ func (tc *TicketController) CreateTicket(ctx *gin.Context) {
 func (tc *TicketController) GetAllTickets(ctx *gin.Context) {
 	params := response.GetParams(ctx)
 
-	datas, total, err := tc.TicketUsecase.GetAllTickets(ctx, params.Limit, params.Offset)
+	datas, total, err := tc.TicketUsecase.GetAllTickets(ctx, params.Limit, params.Offset, params.Sort, params.Search)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve tickets", err.Error())) // Use response.
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Tickets retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(
+		datas,
+		"Tickets retrieved successfully",
+		total,
+		params.Limit,
+		params.Page,
+		params.Sort,
+		params.Search,
+		params.Path,
+	))
+
+	// ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Tickets retrieved successfully", total, params.Limit, params.Page))
+}
+
+func (tc *TicketController) GetAllTicketsByScheduleID(ctx *gin.Context) {
+	params := response.GetParams(ctx)
+	id, err := strconv.Atoi(ctx.Param("id"))
+
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ticket ID", err.Error())) // Use response.
+		return
+	}
+
+	datas, total, err := tc.TicketUsecase.GetAllTicketsByScheduleID(ctx, id, params.Limit, params.Offset, params.Sort, params.Search)
+
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve tickets", err.Error())) // Use response.
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(
+		datas,
+		"Tickets retrieved successfully",
+		total,
+		params.Limit,
+		params.Page,
+		params.Sort,
+		params.Search,
+		params.Path,
+	))
+
+	// ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Tickets retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (tc *TicketController) GetTicketByID(ctx *gin.Context) {
@@ -101,6 +142,22 @@ func (tc *TicketController) DeleteTicket(ctx *gin.Context) {
 	}
 
 	if err := tc.TicketUsecase.DeleteTicket(ctx, uint(id)); err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete ticket", err.Error())) // Use response.
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ticket deleted successfully", nil)) // Use response.
+}
+
+func (tc *TicketController) CheckIn(ctx *gin.Context) {
+	id, err := strconv.Atoi(ctx.Param("id"))
+
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid ticket ID", err.Error())) // Use response.
+		return
+	}
+
+	if err := tc.TicketUsecase.CheckIn(ctx, uint(id)); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete ticket", err.Error())) // Use response.
 		return
 	}

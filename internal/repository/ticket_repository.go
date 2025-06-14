@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"eticket-api/internal/entity"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -26,19 +27,56 @@ func (tr *TicketRepository) Count(db *gorm.DB) (int64, error) {
 	return total, nil
 }
 
-func (tr *TicketRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.Ticket, error) {
+func (tr *TicketRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*entity.Ticket, error) {
 	tickets := []*entity.Ticket{}
-	result := db.Preload("Class").
+
+	query := db.Preload("Class").
 		Preload("Schedule").
 		Preload("Schedule.Ship").
 		Preload("Schedule.Route").
 		Preload("Schedule.Route.DepartureHarbor").
-		Preload("Schedule.Route.ArrivalHarbor").
-		Limit(limit).Offset(offset).Find(&tickets)
-	if result.Error != nil {
-		return nil, result.Error
+		Preload("Schedule.Route.ArrivalHarbor")
+
+	if search != "" {
+		search = "%" + search + "%"
+		query = query.Where("passenger_name ILIKE ?", search)
 	}
-	return tickets, nil
+
+	// 🔃 Sort (with default)
+	if sort == "" {
+		sort = "id asc"
+	} else {
+		sort = strings.Replace(sort, ":", " ", 1)
+	}
+
+	err := query.Order(sort).Limit(limit).Offset(offset).Find(&tickets).Error
+	return tickets, err
+}
+
+func (tr *TicketRepository) GetBySchedulseID(db *gorm.DB, id, limit, offset int, sort, search string) ([]*entity.Ticket, error) {
+	tickets := []*entity.Ticket{}
+
+	query := db.Preload("Class").
+		Preload("Schedule").
+		Preload("Schedule.Ship").
+		Preload("Schedule.Route").
+		Preload("Schedule.Route.DepartureHarbor").
+		Preload("Schedule.Route.ArrivalHarbor")
+
+	if search != "" {
+		search = "%" + search + "%"
+		query = query.Where("passenger_name ILIKE ?", search)
+	}
+
+	// 🔃 Sort (with default)
+	if sort == "" {
+		sort = "id asc"
+	} else {
+		sort = strings.Replace(sort, ":", " ", 1)
+	}
+
+	err := query.Order(sort).Where("schedule_id = ?", id).Limit(limit).Offset(offset).Find(&tickets).Error
+	return tickets, err
 }
 
 func (tr *TicketRepository) GetByID(db *gorm.DB, id uint) (*entity.Ticket, error) {
@@ -54,6 +92,36 @@ func (tr *TicketRepository) GetByID(db *gorm.DB, id uint) (*entity.Ticket, error
 	}
 	return ticket, result.Error
 }
+
+func (tr *TicketRepository) GetByBookingID(db *gorm.DB, id uint) ([]*entity.Ticket, error) {
+	tickets := []*entity.Ticket{}
+	result := db.Preload("Class").
+		Preload("Schedule").
+		Preload("Schedule.Ship").
+		Preload("Schedule.Route").
+		Preload("Schedule.Route.DepartureHarbor").
+		Preload("Schedule.Route.ArrivalHarbor").
+		Where("booking_id = ?", id).Find(&tickets)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return tickets, result.Error
+}
+
+// func (tr *TicketRepository) GetBySchedulseID(db *gorm.DB, id uint) ([]*entity.Ticket, error) {
+// 	tickets := []*entity.Ticket{}
+// 	result := db.Preload("Class").
+// 		Preload("Schedule").
+// 		Preload("Schedule.Ship").
+// 		Preload("Schedule.Route").
+// 		Preload("Schedule.Route.DepartureHarbor").
+// 		Preload("Schedule.Route.ArrivalHarbor").
+// 		Where("schedule_id = ?", id).Find(&tickets)
+// 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+// 		return nil, nil
+// 	}
+// 	return tickets, result.Error
+// }
 
 func (r *TicketRepository) CountByScheduleClassAndStatuses(db *gorm.DB, scheduleID uint, classID uint, statuses []string) (int64, error) {
 	var count int64
@@ -136,4 +204,18 @@ func (r *TicketRepository) CancelManyBySessionID(db *gorm.DB, sessionID uint) er
 	}
 
 	return nil
+}
+
+func (r *TicketRepository) Paid(db *gorm.DB, id uint) error {
+	return db.Model(&entity.Ticket{}).
+		Where("id = ?", id).
+		Update("status", "paid").
+		Error
+}
+
+func (r *TicketRepository) CheckIn(db *gorm.DB, id uint) error {
+	return db.Model(&entity.Ticket{}).
+		Where("id = ?", id).
+		Update("status", "checkin").
+		Error
 }

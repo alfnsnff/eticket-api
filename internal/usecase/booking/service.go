@@ -48,7 +48,7 @@ func (b *BookingUsecase) CreateBooking(ctx context.Context, request *model.Write
 	})
 }
 
-func (b *BookingUsecase) GetAllBookings(ctx context.Context, limit, offset int) ([]*model.ReadBookingResponse, int, error) {
+func (b *BookingUsecase) GetAllBookings(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadBookingResponse, int, error) {
 	bookings := []*entity.Booking{}
 	var total int64
 	err := b.Tx.Execute(ctx, func(tx *gorm.DB) error {
@@ -57,7 +57,7 @@ func (b *BookingUsecase) GetAllBookings(ctx context.Context, limit, offset int) 
 		if err != nil {
 			return err
 		}
-		bookings, err = b.BookingRepository.GetAll(tx, limit, offset)
+		bookings, err = b.BookingRepository.GetAll(tx, limit, offset, sort, search)
 		return err
 	})
 

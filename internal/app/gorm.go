@@ -21,7 +21,7 @@ func NewDatabase(cfg *config.Configuration) (*gorm.DB, error) {
 
 	// Configure GORM with custom settings
 	pg, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
+		Logger: logger.Default.LogMode(logger.Info),
 		NamingStrategy: schema.NamingStrategy{
 			SingularTable: true, // Use singular table names
 		},

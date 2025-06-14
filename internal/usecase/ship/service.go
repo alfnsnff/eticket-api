@@ -40,7 +40,7 @@ func (sh *ShipUsecase) CreateShip(ctx context.Context, request *model.WriteShipR
 	})
 }
 
-func (sh *ShipUsecase) GetAllShips(ctx context.Context, limit, offset int) ([]*model.ReadShipResponse, int, error) {
+func (sh *ShipUsecase) GetAllShips(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadShipResponse, int, error) {
 
 	ships := []*entity.Ship{}
 	var total int64
@@ -51,7 +51,7 @@ func (sh *ShipUsecase) GetAllShips(ctx context.Context, limit, offset int) ([]*m
 		if err != nil {
 			return err
 		}
-		ships, err = sh.ShipRepository.GetAll(tx, limit, offset)
+		ships, err = sh.ShipRepository.GetAll(tx, limit, offset, sort, search)
 		return err
 	})
 

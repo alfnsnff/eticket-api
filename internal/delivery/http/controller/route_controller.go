@@ -36,14 +36,25 @@ func (rc *RouteController) CreateRoute(ctx *gin.Context) {
 
 func (rc *RouteController) GetAllRoutes(ctx *gin.Context) {
 	params := response.GetParams(ctx)
-	datas, total, err := rc.RouteUsecase.GetAllRoutes(ctx, params.Limit, params.Offset)
+	datas, total, err := rc.RouteUsecase.GetAllRoutes(ctx, params.Limit, params.Offset, params.Sort, params.Search)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve routes", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Routes retrieved successfully", total, params.Limit, params.Page))
+	ctx.JSON(http.StatusOK, response.NewMetaResponse(
+		datas,
+		"Routes retrieved successfully",
+		total,
+		params.Limit,
+		params.Page,
+		params.Sort,
+		params.Search,
+		params.Path,
+	))
+
+	// ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "Routes retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (rc *RouteController) GetRouteByID(ctx *gin.Context) {

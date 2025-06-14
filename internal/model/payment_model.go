@@ -23,6 +23,26 @@ type OrderItem struct {
 	ImageURL   string `json:"image_url"`
 }
 
+type WritePaymentRequest struct {
+	OrderID       string `json:"order_id"`
+	PaymentMethod string `json:"payment_method"`
+}
+
+// TripayCallbackHandler.go
+type WriteCallbackRequest struct {
+	Reference     string `json:"reference"`
+	MerchantRef   string `json:"merchant_ref"`
+	Status        string `json:"status"`
+	Amount        int    `json:"amount"`
+	PaymentMethod string `json:"payment_method"`
+	Signature     string `json:"signature"`
+}
+
+// TripayCallbackHandler.go
+type ReadCallbackResponse struct {
+	Success bool `json:"success"`
+}
+
 type WriteTransactionRequest struct {
 	Method        string      `json:"method"`
 	MerchantRef   string      `json:"merchant_ref"`

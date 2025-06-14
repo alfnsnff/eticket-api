@@ -2,6 +2,7 @@ package repository
 
 import (
 	"eticket-api/internal/entity"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -47,4 +48,32 @@ func (aur *AuthRepository) RevokeRefreshTokenByID(db *gorm.DB, id uuid.UUID) err
 	return db.Model(&entity.RefreshToken{}).
 		Where("id = ?", id).
 		Update("revoked", true).Error
+}
+
+// Create a password reset token
+func (aur *AuthRepository) CreatePasswordReset(db *gorm.DB, pr *entity.PasswordReset) error {
+	return db.Create(pr).Error
+}
+
+// Get by token
+func (aur *AuthRepository) GetByToken(db *gorm.DB, token string) (*entity.PasswordReset, error) {
+	var pr entity.PasswordReset
+	err := db.First(&pr, "token = ? AND used = false", token).Error
+	if err != nil {
+		return nil, err
+	}
+	return &pr, nil
+}
+
+// Mark token as used
+func (aur *AuthRepository) MarkAsUsed(db *gorm.DB, token string) error {
+	return db.Model(&entity.PasswordReset{}).
+		Where("token = ?", token).
+		Update("used", true).Error
+}
+
+// Delete expired tokens
+func (aur *AuthRepository) DeleteExpired(db *gorm.DB) error {
+	return db.Where("expires_at < ?", time.Now()).
+		Delete(&entity.PasswordReset{}).Error
 }

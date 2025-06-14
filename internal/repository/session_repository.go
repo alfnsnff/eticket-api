@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"strings"
 
 	"eticket-api/internal/entity"
 	"fmt"
@@ -29,15 +30,29 @@ func (csr *SessionRepository) Count(db *gorm.DB) (int64, error) {
 	return total, nil
 }
 
-func (csr *SessionRepository) GetAll(db *gorm.DB, limit, offset int) ([]*entity.ClaimSession, error) {
+func (csr *SessionRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*entity.ClaimSession, error) {
 	sessions := []*entity.ClaimSession{}
-	result := db.Preload("Schedule").Preload("Schedule.Route").
+
+	query := db.Preload("Schedule").
+		Preload("Schedule.Route").
 		Preload("Schedule.Route.DepartureHarbor").
-		Preload("Schedule.Route.ArrivalHarbor").Preload("Schedule.Ship").Limit(limit).Offset(offset).Find(&sessions)
-	if result.Error != nil {
-		return nil, result.Error
+		Preload("Schedule.Route.ArrivalHarbor").
+		Preload("Schedule.Ship")
+
+	if search != "" {
+		search = "%" + search + "%"
+		query = query.Where("session_id ILIKE ?", search)
 	}
-	return sessions, nil
+
+	// 🔃 Sort (with default)
+	if sort == "" {
+		sort = "id asc"
+	} else {
+		sort = strings.Replace(sort, ":", " ", 1)
+	}
+
+	err := query.Order(sort).Limit(limit).Offset(offset).Find(&sessions).Error
+	return sessions, err
 }
 
 func (csr *SessionRepository) GetByID(db *gorm.DB, id uint) (*entity.ClaimSession, error) {
