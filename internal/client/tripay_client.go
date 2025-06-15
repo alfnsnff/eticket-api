@@ -101,7 +101,7 @@ func (c *TripayClient) CreatePayment(method string, amount int, name string, ema
 
 func (c *TripayClient) GetPaymentChannels() ([]model.ReadPaymentChannelResponse, error) {
 
-	req, err := http.NewRequest("GET", TripayBaseURL+"/transaction/detail", nil)
+	req, err := http.NewRequest("GET", TripayBaseURL+"/merchant/payment-channel", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
