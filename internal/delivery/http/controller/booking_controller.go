@@ -87,14 +87,9 @@ func (bc *BookingController) GetBookingByID(ctx *gin.Context) {
 
 // GetBookingByID retrieves a booking by its ID
 func (bc *BookingController) GetBookingByOrderID(ctx *gin.Context) {
-	id, err := strconv.Atoi(ctx.Param("id"))
+	id := ctx.Param("id")
 
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid booking ID", err.Error()))
-		return
-	}
-
-	data, err := bc.BookingUsecase.GetBookingByID(ctx, uint(id))
+	data, err := bc.BookingUsecase.GetBookingByOrderID(ctx, id)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve booking", err.Error()))

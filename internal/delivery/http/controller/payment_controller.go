@@ -29,6 +29,18 @@ func (pc *PaymentController) GetPaymentChannels(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Roles retrieved successfully", err))
 }
 
+func (pc *PaymentController) GetTransactionDetail(ctx *gin.Context) {
+	id := ctx.Param("id")
+	datas, err := pc.PaymentUsecase.GetTransactionDetail(ctx, id)
+
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve roles", err.Error()))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Roles retrieved successfully", err))
+}
+
 func (pc *PaymentController) CreatePayment(ctx *gin.Context) {
 	request := new(model.WritePaymentRequest)
 
