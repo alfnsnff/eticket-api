@@ -58,6 +58,6 @@ func NewUsecaseModule(tx *tx.TxManager, repository *RepositoryModule, client *Cl
 		RouteUsecase:      route.NewRouteUsecase(tx, repository.RouteRepository),
 		HarborUsecase:     harbor.NewHarborUsecase(tx, repository.HarborRepository),
 		ClassUsecase:      class.NewClassUsecase(tx, repository.ClassRepository),
-		PaymentUsecase:    payment.NewPaymentUsecase(tx, client.TripayClient, repository.BookingRepository, repository.TicketRepository),
+		PaymentUsecase:    payment.NewPaymentUsecase(tx, client.TripayClient, repository.BookingRepository, repository.TicketRepository, mailer),
 	}
 }

@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"eticket-api/internal/client"
+	"eticket-api/internal/common/mailer"
+	"eticket-api/internal/common/templates"
 	"eticket-api/internal/common/tx"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
 	"eticket-api/internal/repository"
 	"fmt"
 	"net/http"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -19,6 +22,7 @@ type PaymentUsecase struct {
 	TripayClient      *client.TripayClient
 	BookingRepository *repository.BookingRepository
 	TicketRepository  *repository.TicketRepository
+	Mailer            *mailer.SMTPMailer
 }
 
 func NewPaymentUsecase(
@@ -26,12 +30,14 @@ func NewPaymentUsecase(
 	tripay_client *client.TripayClient,
 	booking_repository *repository.BookingRepository,
 	ticket_repository *repository.TicketRepository,
+	mailer *mailer.SMTPMailer,
 ) *PaymentUsecase {
 	return &PaymentUsecase{
 		Tx:                tx,
 		TripayClient:      tripay_client,
 		BookingRepository: booking_repository,
 		TicketRepository:  ticket_repository,
+		Mailer:            mailer,
 	}
 }
 
@@ -141,6 +147,15 @@ func (c *PaymentUsecase) HandleCallback(ctx context.Context, r *http.Request, re
 
 		for _, ticket := range tickets {
 			c.TicketRepository.Paid(tx, ticket.ID)
+		}
+
+		subject := "Your Booking is Confirmed"
+
+		// Inside your callback logic:
+		htmlBody := templates.BookingSuccessEmail(booking.CustomerName, booking.OrderID, len(tickets), time.Now().Year())
+
+		if err := c.Mailer.Send(booking.Email, subject, htmlBody); err != nil {
+			return fmt.Errorf("failed to send confirmation email: %w", err)
 		}
 
 		return err

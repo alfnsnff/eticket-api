@@ -105,7 +105,7 @@ func (c *TripayClient) GetPaymentChannels() ([]model.ReadPaymentChannelResponse,
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	fmt.Println("Api_kewy:", c.Tripay.ApiKey)
+	fmt.Println("Api_key:", c.Tripay.ApiKey)
 	req.Header.Set("Authorization", "Bearer "+c.Tripay.ApiKey)
 
 	client := http.DefaultClient
