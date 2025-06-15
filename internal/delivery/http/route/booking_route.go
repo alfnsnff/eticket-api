@@ -23,6 +23,7 @@ func (i BookingRouter) Set(router *gin.Engine, rg *gin.RouterGroup) {
 	// public.POST("/booking/confirm", bc.ConfirmBooking)
 	public.GET("/bookings", i.Controller.GetAllBookings)
 	public.GET("/booking/:id", i.Controller.GetBookingByID)
+	public.GET("/booking/order/:id", i.Controller.GetBookingByOrderID)
 	public.GET("/booking/payment/callback", i.Controller.GetBookingByID)
 
 	protected := rg.Group("")
