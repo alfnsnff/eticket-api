@@ -50,15 +50,16 @@ type BookingTicket struct {
 
 // BookingDTO represents the person who booked the ticket.
 type ReadBookingResponse struct {
-	ID           uint            `json:"id"`
-	OrderID      string          `json:"order_id"` // Unique identifier for the booking, e.g., 'ORD123456'
-	Schedule     BookingSchedule `json:"schedule"`
-	CustomerName string          `json:"customer_name"`
-	IDType       string          `json:"id_type"`
-	IDNumber     string          `json:"id_number"`
-	PhoneNumber  string          `json:"phone_number"` // Changed to string to support leading zeros
-	Email        string          `json:"email_address"`
-	Status       string          `gorm:"type:varchar(20);not null" json:"status"` // e.g., 'completed', 'cancelled', 'refunded'
+	ID              uint            `json:"id"`
+	OrderID         string          `json:"order_id"` // Unique identifier for the booking, e.g., 'ORD123456'
+	Schedule        BookingSchedule `json:"schedule"`
+	CustomerName    string          `json:"customer_name"`
+	IDType          string          `json:"id_type"`
+	IDNumber        string          `json:"id_number"`
+	PhoneNumber     string          `json:"phone_number"` // Changed to string to support leading zeros
+	Email           string          `json:"email_address"`
+	Status          string          `json:"status"`           // e.g., 'completed', 'cancelled', 'refunded'
+	ReferenceNumber *string         `json:"reference_number"` // Optional reference number for payment or external tracking
 
 	BookedAt  time.Time `json:"booked_at"` // Timestamp when the booking was confirmed
 	CreatedAt time.Time `json:"created_at"`
