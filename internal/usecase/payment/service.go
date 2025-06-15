@@ -47,6 +47,10 @@ func (c *PaymentUsecase) GetPaymentChannels(ctx context.Context) ([]*model.ReadP
 	return result, nil
 }
 
+func (c *PaymentUsecase) GetTransactionDetail(ctx context.Context, reference string) (*model.ReadTransactionResponse, error) {
+	return c.TripayClient.GetTransactionDetail(reference)
+}
+
 func (c *PaymentUsecase) CreatePayment(ctx context.Context, request *model.WritePaymentRequest) (*model.ReadTransactionResponse, error) {
 	if request.OrderID == "" {
 		return nil, errors.New("invalid request: all customer fields are required")

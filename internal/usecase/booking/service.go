@@ -88,6 +88,26 @@ func (b *BookingUsecase) GetBookingByID(ctx context.Context, id uint) (*model.Re
 	return mapper.BookingMapper.ToModel(booking), nil
 }
 
+func (b *BookingUsecase) GetBookingByOrderID(ctx context.Context, id string) (*model.ReadBookingResponse, error) {
+	booking := new(entity.Booking)
+
+	err := b.Tx.Execute(ctx, func(tx *gorm.DB) error {
+		var err error
+		booking, err = b.BookingRepository.GetByOrderID(tx, id)
+		return err
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if booking == nil {
+		return nil, errors.New("booking not found")
+	}
+
+	return mapper.BookingMapper.ToModel(booking), nil
+}
+
 func (b *BookingUsecase) UpdateBooking(ctx context.Context, id uint, request *model.UpdateBookingRequest) error {
 	booking := mapper.BookingMapper.FromUpdate(request)
 	booking.ID = id

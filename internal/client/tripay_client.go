@@ -101,7 +101,7 @@ func (c *TripayClient) CreatePayment(method string, amount int, name string, ema
 
 func (c *TripayClient) GetPaymentChannels() ([]model.ReadPaymentChannelResponse, error) {
 
-	req, err := http.NewRequest("GET", TripayBaseURL+"/merchant/payment-channel", nil)
+	req, err := http.NewRequest("GET", TripayBaseURL+"/transaction/detail", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -133,6 +133,48 @@ func (c *TripayClient) GetPaymentChannels() ([]model.ReadPaymentChannelResponse,
 
 }
 
+func (c *TripayClient) GetTransactionDetail(reference string) (*model.ReadTransactionResponse, error) {
+	// Build request URL with query parameter
+	req, err := http.NewRequest("GET", TripayBaseURL+"/transaction/detail", nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Add reference as query param
+	q := req.URL.Query()
+	q.Add("reference", reference)
+	req.URL.RawQuery = q.Encode()
+
+	// Set headers
+	req.Header.Set("Authorization", "Bearer "+c.Tripay.ApiKey)
+
+	// Send request
+	client := http.DefaultClient
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Parse base Tripay response
+	var raw model.Result
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	if !raw.Success {
+		return nil, fmt.Errorf("tripay responded with success=false")
+	}
+
+	// Unmarshal `raw.Data` into expected detail type
+	var detail model.ReadTransactionResponse
+	if err := json.Unmarshal(raw.Data, &detail); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal transaction detail: %w", err)
+	}
+
+	return &detail, nil
+}
+
 func (c *TripayClient) HandleCallback(r *http.Request) error {
 	rawBody, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -141,7 +183,7 @@ func (c *TripayClient) HandleCallback(r *http.Request) error {
 	r.Body = io.NopCloser(bytes.NewBuffer(rawBody)) // reset body if needed again
 
 	signature := r.Header.Get("X-Callback-Signature")
-	if !c.verifyCallbackSignature(rawBody, signature) {
+	if VerifyCallbackSignature(c.Tripay.PrivateApiKey, rawBody, signature) {
 		return fmt.Errorf("invalid callback signature")
 	}
 
@@ -155,12 +197,12 @@ func (c *TripayClient) HandleCallback(r *http.Request) error {
 	return nil
 }
 
-func (c *TripayClient) verifyCallbackSignature(rawBody []byte, signature string) bool {
-	expected := generateCallbackSignature(c.Tripay.PrivateApiKey, rawBody)
+func VerifyCallbackSignature(private_api_key string, raw_body []byte, signature string) bool {
+	expected := GenerateCallbackSignature(private_api_key, raw_body)
 	return hmac.Equal([]byte(expected), []byte(signature))
 }
 
-func generateCallbackSignature(privateKey string, rawBody []byte) string {
+func GenerateCallbackSignature(privateKey string, rawBody []byte) string {
 	h := hmac.New(sha256.New, []byte(privateKey))
 	h.Write(rawBody)
 	return hex.EncodeToString(h.Sum(nil))
