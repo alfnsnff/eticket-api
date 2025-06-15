@@ -157,7 +157,7 @@ func (csc *SessionController) SessionTicketLock(ctx *gin.Context) {
 	}
 
 	ctx.SetSameSite(http.SameSiteNoneMode)
-	ctx.SetCookie("session_id", datas.SessionID, 15*60, "/", "", true, true)
+	ctx.SetCookie("session_id", datas.SessionID, 60*60, "/", "", true, true)
 
 	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(datas, "Claim session created successfully", nil))
 }
