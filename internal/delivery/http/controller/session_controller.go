@@ -184,26 +184,3 @@ func (csc *SessionController) SessionTicketDataEntry(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(datas, "Claim session created successfully", nil))
 }
-
-func (csc *SessionController) TicketDataEntry(ctx *gin.Context) {
-	sessionID, err := ctx.Cookie("session_id")
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Missing session id", err.Error()))
-		return
-	}
-	request := new(model.ClaimedSessionFillPassengerDataRequest)
-
-	if err := ctx.ShouldBindJSON(request); err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
-		return
-	}
-
-	datas, err := csc.SessionUsecase.DataEntry(ctx, request, sessionID)
-
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create claim session", err.Error()))
-		return
-	}
-
-	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(datas, "Claim session created successfully", nil))
-}

@@ -1,7 +1,6 @@
 package model
 
 import (
-	"eticket-api/pkg/payment"
 	"time"
 )
 
@@ -128,11 +127,9 @@ type ClaimedSessionFillPassengerDataRequest struct {
 }
 
 type ClaimedSessionFillPassengerDataResponse struct {
-	BookingID        uint                    `json:"booking_id"` // ID of the booking created
-	OrderID          string                  `json:"order_id"`   // ID of the booking created
-	Tripay           ReadTransactionResponse `json:"tripay"`     // QRIS payment details
-	Xendit           payment.XenditResponse  `json:"xendit"`     // QRIS payment details
-	UpdatedTicketIDs []uint                  `json:"updated_ticket_ids"`
+	BookingID        uint   `json:"booking_id"` // ID of the booking created
+	OrderID          string `json:"order_id"`   // ID of the booking created
+	UpdatedTicketIDs []uint `json:"updated_ticket_ids"`
 	// FailedTickets    []ClaimedSessionTicketUpdateFailure `json:"failed_tickets"`
 }
 
