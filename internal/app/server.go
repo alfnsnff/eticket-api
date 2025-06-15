@@ -96,6 +96,7 @@ func NewServer(
 				"http://localhost:3000":          true,
 				"https://tiket-hebat.vercel.app": true,
 				"https://www.tikethebat.live":    true,
+				"https://tripay.co.id/":          true,
 			}
 			return allowed[origin]
 		},
