@@ -56,7 +56,7 @@ jobs:
             MAILER_HOST=${{ secrets.MAILER_HOST }}
             MAILER_PORT=${{ secrets.MAILER_PORT }}
             MAILER_USERNAME=${{ secrets.MAILER_USERNAME }}
-            MAILER_PASSWORD=${{ secrets.MAILER_PASSWORD }}
+            MAILER_PASSWORD="${{ secrets.MAILER_PASSWORD }}"
             MAILER_FROM=${{ secrets.MAILER_FROM }}
           registryUrl: ghcr.io
           registryUsername: ${{ secrets.GHCR_USERNAME }}
