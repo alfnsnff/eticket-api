@@ -35,8 +35,8 @@ jobs:
       - name: Deploy to Azure Container App
         uses: azure/container-apps-deploy-action@v1
         with:
-          containerAppName: ${{ secrets.CONTAINER_APP_NAME }}
-          resourceGroup: ${{ secrets.RESOURCE_GROUP }}
+          containerAppName: ${{ secrets.AZURE_CONTAINER_APP_NAME }}
+          resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
           location: southeastasia  
           imageToDeploy: ghcr.io/${{ github.repository_owner }}/myapp:${{ github.sha }}
           environmentVariables: >
