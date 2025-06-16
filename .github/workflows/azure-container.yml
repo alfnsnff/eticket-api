@@ -32,14 +32,6 @@ jobs:
           docker build -t $IMAGE_NAME .
           docker push $IMAGE_NAME
 
-      - name: Debug secret lengths
-        run: |
-          echo "MAILER_PASSWORD length: ${#MAILER_PASSWORD}"
-          echo "DATABASE_PASSWORD length: ${#DATABASE_PASSWORD}"
-        env:
-          MAILER_PASSWORD: ${{ secrets.MAILER_PASSWORD }}
-          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
-
       - name: Deploy to Azure Container App
         uses: azure/container-apps-deploy-action@v1
         with:
