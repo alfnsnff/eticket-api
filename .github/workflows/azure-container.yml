@@ -1,36 +1,21 @@
-name: Deploy to Azure Container Apps
+name: Deploy to Azure Container App
 
 on:
-  push:
-    branches:
-      - master
+  workflow_run:
+    workflows: ["Build and Push Docker Image"]
+    types:
+      - completed
 
 jobs:
-  build-and-deploy:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write  # Required for pushing to GHCR
 
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v3
-
       - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Log in to GitHub Container Registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-      - name: Build and Push Docker Image to GHCR
-        env:
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/myapp:${IMAGE_TAG}
-          docker build -t $IMAGE_NAME .
-          docker push $IMAGE_NAME
 
       - name: Deploy to Azure Container App
         uses: azure/container-apps-deploy-action@v1
