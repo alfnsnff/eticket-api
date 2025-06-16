@@ -49,6 +49,7 @@ jobs:
       - name: Run new container
         run: |
           docker run -d \
+            --add-host=host.docker.internal:host-gateway \
             --name myapp \
             --restart unless-stopped \
             --env-file .env \
