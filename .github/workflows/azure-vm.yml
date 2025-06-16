@@ -39,7 +39,7 @@ jobs:
       - name: Login to GHCR and pull image
         run: |
           echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
-          docker pull ghcr.io/${{ secrets.GHCR_USERNAME }}/myapp:${{ github.sha }}
+          docker pull ghcr.io/${{ secrets.GHCR_USERNAME }}/myapp:latest
 
       - name: Stop and remove existing container
         run: |
