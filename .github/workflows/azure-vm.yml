@@ -52,7 +52,7 @@ jobs:
             --name myapp \
             --restart unless-stopped \
             --env-file .env \
-            -p 80:80 \
+            -p 8080:80 \
             ghcr.io/${{ secrets.GHCR_USERNAME }}/myapp:${{ github.sha }}
 
       - name: Cleanup
