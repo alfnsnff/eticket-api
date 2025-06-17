@@ -25,7 +25,7 @@ func (i ClassRouter) Set(router *gin.Engine, rg *gin.RouterGroup) {
 	public.GET("/class/:id", cc.GetClassByID)
 
 	protected := rg.Group("")
-	protected.Use(i.Authorized.Handle())
+	protected.Use(i.Authenticate.Handle())
 	// protected.Use(i.Authorized.Handle())
 
 	protected.POST("/class/create", cc.CreateClass)

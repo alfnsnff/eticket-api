@@ -3,7 +3,6 @@ package route
 import (
 	"context"
 	"errors"
-	"eticket-api/internal/common/tx"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
 	"eticket-api/internal/model/mapper"
@@ -14,100 +13,169 @@ import (
 )
 
 type RouteUsecase struct {
-	Tx              *tx.TxManager
+	DB              *gorm.DB
 	RouteRepository *repository.RouteRepository
 }
 
 func NewRouteUsecase(
-	tx *tx.TxManager,
-	route_repository *repository.RouteRepository,
+	db *gorm.DB,
+	routeRepository *repository.RouteRepository,
 ) *RouteUsecase {
 	return &RouteUsecase{
-		Tx:              tx,
-		RouteRepository: route_repository,
+		DB:              db,
+		RouteRepository: routeRepository,
 	}
 }
 
 func (r *RouteUsecase) CreateRoute(ctx context.Context, request *model.WriteRouteRequest) error {
-	route := mapper.RouteMapper.FromWrite(request)
+	tx := r.DB.WithContext(ctx).Begin()
+	defer func() {
+		if rec := recover(); rec != nil {
+			tx.Rollback()
+			panic(rec)
+		} else {
+			tx.Rollback()
+		}
+	}()
+
+	route := &entity.Route{
+		DepartureHarborID: request.DepartureHarborID,
+		ArrivalHarborID:   request.ArrivalHarborID,
+	}
 
 	if route.DepartureHarborID == 0 || route.ArrivalHarborID == 0 {
 		return fmt.Errorf("harbor ID cannot be empty")
 	}
 
-	return r.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		return r.RouteRepository.Create(tx, route)
-	})
+	if err := r.RouteRepository.Create(tx, route); err != nil {
+		return fmt.Errorf("failed to create route: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit: %w", err)
+	}
+
+	return nil
 }
 
 func (r *RouteUsecase) GetAllRoutes(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadRouteResponse, int, error) {
-	routes := []*entity.Route{}
-	var total int64
-	err := r.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		var err error
-		total, err = r.RouteRepository.Count(tx)
-		if err != nil {
-			return err
+	tx := r.DB.WithContext(ctx).Begin()
+	defer func() {
+		if rec := recover(); rec != nil {
+			tx.Rollback()
+			panic(rec)
+		} else {
+			tx.Rollback()
 		}
-		routes, err = r.RouteRepository.GetAll(tx, limit, offset, sort, search)
-		return err
-	})
+	}()
 
+	total, err := r.RouteRepository.Count(tx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count routes: %w", err)
+	}
+
+	routes, err := r.RouteRepository.GetAll(tx, limit, offset, sort, search)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get all routes: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to commit: %w", err)
 	}
 
 	return mapper.RouteMapper.ToModels(routes), int(total), nil
 }
 
 func (r *RouteUsecase) GetRouteByID(ctx context.Context, id uint) (*model.ReadRouteResponse, error) {
-	route := new(entity.Route)
+	tx := r.DB.WithContext(ctx).Begin()
+	defer func() {
+		if rec := recover(); rec != nil {
+			tx.Rollback()
+			panic(rec)
+		} else {
+			tx.Rollback()
+		}
+	}()
 
-	err := r.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		var err error
-		route, err = r.RouteRepository.GetByID(tx, id)
-		return err
-	})
-
+	route, err := r.RouteRepository.GetByID(tx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get route by ID: %w", err)
 	}
-
 	if route == nil {
 		return nil, errors.New("route not found")
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, fmt.Errorf("failed to commit: %w", err)
 	}
 
 	return mapper.RouteMapper.ToModel(route), nil
 }
 
-func (r *RouteUsecase) UpdateRoute(ctx context.Context, id uint, request *model.UpdateRouteRequest) error {
-	route := mapper.RouteMapper.FromUpdate(request)
-	route.ID = id
+func (r *RouteUsecase) UpdateRoute(ctx context.Context, request *model.UpdateRouteRequest) error {
+	tx := r.DB.WithContext(ctx).Begin()
+	defer func() {
+		if rec := recover(); rec != nil {
+			tx.Rollback()
+			panic(rec)
+		} else {
+			tx.Rollback()
+		}
+	}()
 
-	if route.ID == 0 {
-		return fmt.Errorf("shipClass ID cannot be zero")
+	if request.ID == 0 {
+		return fmt.Errorf("route ID cannot be zero")
 	}
 
-	if route.DepartureHarborID == 0 || route.ArrivalHarborID == 0 {
-		return fmt.Errorf("harbor ID cannot be empty")
+	// Fetch existing allocation
+	route, err := r.RouteRepository.GetByID(tx, request.ID)
+	if err != nil {
+		return fmt.Errorf("failed to find route: %w", err)
+	}
+	if route == nil {
+		return errors.New("route not found")
 	}
 
-	return r.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		return r.RouteRepository.Update(tx, route)
-	})
+	route.DepartureHarborID = request.DepartureHarborID
+	route.ArrivalHarborID = request.ArrivalHarborID
+
+	if err := r.RouteRepository.Update(tx, route); err != nil {
+		return fmt.Errorf("failed to update route: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit: %w", err)
+	}
+
+	return nil
 }
 
 func (r *RouteUsecase) DeleteRoute(ctx context.Context, id uint) error {
-
-	return r.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		route, err := r.RouteRepository.GetByID(tx, id)
-		if err != nil {
-			return err
+	tx := r.DB.WithContext(ctx).Begin()
+	defer func() {
+		if rec := recover(); rec != nil {
+			tx.Rollback()
+			panic(rec)
+		} else {
+			tx.Rollback()
 		}
-		if route == nil {
-			return errors.New("route not found")
-		}
-		return r.RouteRepository.Delete(tx, route)
-	})
+	}()
 
+	route, err := r.RouteRepository.GetByID(tx, id)
+	if err != nil {
+		return fmt.Errorf("failed to get route: %w", err)
+	}
+	if route == nil {
+		return errors.New("route not found")
+	}
+
+	if err := r.RouteRepository.Delete(tx, route); err != nil {
+		return fmt.Errorf("failed to delete route: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit: %w", err)
+	}
+
+	return nil
 }

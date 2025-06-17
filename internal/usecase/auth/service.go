@@ -21,6 +21,7 @@ import (
 
 type AuthUsecase struct {
 	Tx             *tx.TxManager
+	DB             *gorm.DB // Assuming you have a DB field for the transaction manager
 	AuthRepository *repository.AuthRepository
 	UserRepository *repository.UserRepository
 	Mailer         *mailer.SMTPMailer
@@ -29,6 +30,7 @@ type AuthUsecase struct {
 
 func NewAuthUsecase(
 	tx *tx.TxManager,
+	db *gorm.DB,
 	auth_repository *repository.AuthRepository,
 	user_repository *repository.UserRepository,
 	mailer *mailer.SMTPMailer,
@@ -36,6 +38,7 @@ func NewAuthUsecase(
 ) *AuthUsecase {
 	return &AuthUsecase{
 		Tx:             tx,
+		DB:             db,
 		AuthRepository: auth_repository,
 		UserRepository: user_repository,
 		Mailer:         mailer,

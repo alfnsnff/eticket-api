@@ -69,28 +69,32 @@ type ReadBookingResponse struct {
 }
 
 type WriteBookingRequest struct {
-	ScheduleID     uint   `json:"schedule_id"` // Foreign key
-	IDType         string `json:"id_type"`
-	IDNumber       string `json:"id_number"`
-	CustomerName   string `json:"customer_name"`
-	CustomerAge    int    `json:"customer_age"`
-	CustomerGender string `json:"customer_gender"` //
-	PhoneNumber    string `json:"phone_number"`    // Changed to string to support leading zeros
-	Email          string `json:"email_address"`
-	Status         string `gorm:"type:varchar(20);not null" json:"status"` // e.g., 'completed', 'cancelled', 'refunded'
+	OrderID         string  `json:"order_id"`    // Unique identifier for the booking, e.g., 'ORD123456'
+	ScheduleID      uint    `json:"schedule_id"` // Foreign key
+	IDType          string  `json:"id_type"`
+	IDNumber        string  `json:"id_number"`
+	CustomerName    string  `json:"customer_name"`
+	CustomerAge     int     `json:"customer_age"`
+	CustomerGender  string  `json:"customer_gender"` //
+	PhoneNumber     string  `json:"phone_number"`    // Changed to string to support leading zeros
+	Email           string  `json:"email_address"`
+	Status          string  `gorm:"type:varchar(20);not null" json:"status"` // e.g., 'completed', 'cancelled', 'refunded'
+	ReferenceNumber *string `json:"reference_number"`                        // Optional reference number for payment or external tracking
 }
 
 type UpdateBookingRequest struct {
-	ID             uint   `json:"id"`
-	ScheduleID     uint   `json:"schedule_id"` // Foreign key
-	CustomerName   string `json:"customer_name"`
-	CustomerAge    int    `json:"customer_age"`
-	CustomerGender string `json:"customer_gender"` //
-	IDType         string `json:"id_type"`
-	IDNumber       string `json:"id_number"`
-	PhoneNumber    string `json:"phone_number"` // Changed to string to support leading zeros
-	Email          string `json:"email_address"`
-	Status         string `gorm:"type:varchar(20);not null" json:"status"` // e.g., 'completed', 'cancelled', 'refunded'
+	ID              uint    `json:"id"`
+	OrderID         string  `json:"order_id"`
+	ScheduleID      uint    `json:"schedule_id"` // Foreign key
+	CustomerName    string  `json:"customer_name"`
+	CustomerAge     int     `json:"customer_age"`
+	CustomerGender  string  `json:"customer_gender"` //
+	IDType          string  `json:"id_type"`
+	IDNumber        string  `json:"id_number"`
+	PhoneNumber     string  `json:"phone_number"` // Changed to string to support leading zeros
+	Email           string  `json:"email_address"`
+	Status          string  `gorm:"type:varchar(20);not null" json:"status"` // e.g., 'completed', 'cancelled', 'refunded'
+	ReferenceNumber *string `json:"reference_number"`
 }
 
 type ConfirmBookingRequest struct {

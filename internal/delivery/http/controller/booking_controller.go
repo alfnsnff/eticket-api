@@ -118,7 +118,8 @@ func (bc *BookingController) UpdateBooking(ctx *gin.Context) {
 		return
 	}
 
-	err := bc.BookingUsecase.UpdateBooking(ctx, uint(id), request)
+	request.ID = uint(id)
+	err := bc.BookingUsecase.UpdateBooking(ctx, request)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update booking", err.Error()))
@@ -165,28 +166,6 @@ func (bc *BookingController) DeleteBooking(ctx *gin.Context) {
 
 // 	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(datas, "Booking confirmed successfully", nil))
 // }
-
-func (bc *BookingController) PaidBooking(ctx *gin.Context) {
-	id, err := strconv.Atoi(ctx.Param("id"))
-
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid booking ID", err.Error()))
-		return
-	}
-	// if err := ctx.ShouldBindJSON(request); err != nil {
-	// 	ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
-	// 	return
-	// }
-
-	err = bc.BookingUsecase.PaidConfirm(ctx, uint(id))
-
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create class", err.Error()))
-		return
-	}
-
-	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Booking confirmed successfully", nil))
-}
 
 func (h *BookingController) HandleCallback(ctx *gin.Context, r *http.Request) {
 	var callback struct {

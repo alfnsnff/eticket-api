@@ -93,8 +93,8 @@ func (mc *ManifestController) UpdateManifest(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Manifest ID is required", nil))
 		return
 	}
-
-	if err := mc.ManifestUsecase.UpdateManifest(ctx, uint(id), request); err != nil {
+	request.ID = uint(id)
+	if err := mc.ManifestUsecase.UpdateManifest(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update manifest", err.Error()))
 		return
 	}

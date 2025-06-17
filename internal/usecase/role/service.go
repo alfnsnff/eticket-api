@@ -3,7 +3,6 @@ package role
 import (
 	"context"
 	"errors"
-	"eticket-api/internal/common/tx"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
 	"eticket-api/internal/model/mapper"
@@ -14,109 +13,172 @@ import (
 )
 
 type RoleUsecase struct {
-	Tx             *tx.TxManager
+	DB             *gorm.DB
 	RoleRepository *repository.RoleRepository
 }
 
 func NewRoleUsecase(
-	tx *tx.TxManager,
-	role_repository *repository.RoleRepository,
+	db *gorm.DB,
+	roleRepository *repository.RoleRepository,
 ) *RoleUsecase {
 	return &RoleUsecase{
-		Tx:             tx,
-		RoleRepository: role_repository,
+		DB:             db,
+		RoleRepository: roleRepository,
 	}
 }
 
 func (r *RoleUsecase) CreateRole(ctx context.Context, request *model.WriteRoleRequest) error {
-	user := mapper.RoleMapper.FromWrite(request)
+	tx := r.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
+		}
+	}()
 
-	if user.RoleName == "" {
+	role := &entity.Role{
+		RoleName:    request.RoleName,
+		Description: request.Description,
+	}
+
+	if role.RoleName == "" {
 		return fmt.Errorf("role name cannot be empty")
 	}
-
-	if user.Description == "" {
-		return fmt.Errorf("desription cannot be empty")
+	if role.Description == "" {
+		return fmt.Errorf("description cannot be empty")
 	}
 
-	return r.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		return r.RoleRepository.Create(tx, user)
-	})
+	if err := r.RoleRepository.Create(tx, role); err != nil {
+		return fmt.Errorf("failed to create role: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit: %w", err)
+	}
+
+	return nil
 }
 
 func (r *RoleUsecase) GetAllRoles(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadRoleResponse, int, error) {
-	roles := []*entity.Role{}
-	var total int64
-	err := r.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		var err error
-		total, err = r.RoleRepository.Count(tx)
-		if err != nil {
-			return err
+	tx := r.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
 		}
-		roles, err = r.RoleRepository.GetAll(tx, limit, offset, sort, search)
-		return err
-	})
+	}()
 
+	total, err := r.RoleRepository.Count(tx)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get all allocations: %w", err)
+		return nil, 0, fmt.Errorf("failed to count roles: %w", err)
+	}
+
+	roles, err := r.RoleRepository.GetAll(tx, limit, offset, sort, search)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get all roles: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to commit: %w", err)
 	}
 
 	return mapper.RoleMapper.ToModels(roles), int(total), nil
 }
 
 func (r *RoleUsecase) GetRoleByID(ctx context.Context, id uint) (*model.ReadRoleResponse, error) {
-	role := new(entity.Role)
+	tx := r.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
+		}
+	}()
 
-	err := r.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		var err error
-		role, err = r.RoleRepository.GetByID(tx, id)
-		return err
-	})
-
+	role, err := r.RoleRepository.GetByID(tx, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get role by id: %w", err)
+	}
+	if role == nil {
+		return nil, errors.New("role not found")
 	}
 
-	if role == nil {
-		return nil, errors.New("booking not found")
+	if err := tx.Commit().Error; err != nil {
+		return nil, fmt.Errorf("failed to commit: %w", err)
 	}
 
 	return mapper.RoleMapper.ToModel(role), nil
 }
 
-func (r *RoleUsecase) UpdateRole(ctx context.Context, id uint, request *model.UpdateRoleRequest) error {
-	role := mapper.RoleMapper.FromUpdate(request)
-	role.ID = id
+func (r *RoleUsecase) UpdateRole(ctx context.Context, request *model.UpdateRoleRequest) error {
+	tx := r.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
+		}
+	}()
 
-	if role.ID == 0 {
+	if request.ID == 0 {
 		return fmt.Errorf("role ID cannot be zero")
 	}
 
-	if role.RoleName == "" {
-		return fmt.Errorf("role name cannot be empty")
+	// Fetch existing allocation
+	role, err := r.RoleRepository.GetByID(tx, request.ID)
+	if err != nil {
+		return fmt.Errorf("failed to find role: %w", err)
+	}
+	if role == nil {
+		return errors.New("role not found")
 	}
 
-	if role.Description == "" {
-		return fmt.Errorf("desription cannot be empty")
+	role.RoleName = request.RoleName
+	role.Description = request.Description
+
+	if err := r.RoleRepository.Update(tx, role); err != nil {
+		return fmt.Errorf("failed to update role: %w", err)
 	}
 
-	return r.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		return r.RoleRepository.Update(tx, role)
-	})
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit: %w", err)
+	}
 
+	return nil
 }
 
 func (r *RoleUsecase) DeleteRole(ctx context.Context, id uint) error {
-
-	return r.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		role, err := r.RoleRepository.GetByID(tx, id)
-		if err != nil {
-			return err
+	tx := r.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
 		}
-		if role == nil {
-			return errors.New("route not found")
-		}
-		return r.RoleRepository.Delete(tx, role)
-	})
+	}()
 
+	role, err := r.RoleRepository.GetByID(tx, id)
+	if err != nil {
+		return fmt.Errorf("failed to get role: %w", err)
+	}
+	if role == nil {
+		return errors.New("role not found")
+	}
+
+	if err := r.RoleRepository.Delete(tx, role); err != nil {
+		return fmt.Errorf("failed to delete role: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit: %w", err)
+	}
+
+	return nil
 }

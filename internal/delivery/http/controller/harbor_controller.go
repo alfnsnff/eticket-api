@@ -94,7 +94,8 @@ func (hc *HarborController) UpdateHarbor(ctx *gin.Context) {
 		return
 	}
 
-	if err := hc.HarborUsecase.UpdateHarbor(ctx, uint(id), request); err != nil {
+	request.ID = uint(id)
+	if err := hc.HarborUsecase.UpdateHarbor(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update harbor", err.Error()))
 		return
 	}

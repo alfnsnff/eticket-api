@@ -12,7 +12,7 @@ type ReadUserResponse struct {
 	ID        uint      `json:"id"`
 	Username  string    `json:"username"` // e.g., "admin", "editor"
 	Email     string    `json:"email"`
-	Fullname  string    `json:"full_name"`
+	FullName  string    `json:"full_name"`
 	Role      UserRole  `json:"role"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -24,7 +24,7 @@ type WriteUserRequest struct {
 	Username string `json:"username" binding:"required"` // e.g., "admin", "editor"
 	Email    string `json:"email" binding:"required"`
 	Password string `json:"password" binding:"required"`
-	Fullname string `json:"full_name" binding:"required"`
+	FullName string `json:"full_name" binding:"required"`
 }
 
 // AllocationDTO represents a Allocation.
@@ -34,7 +34,7 @@ type UpdateUserRequest struct {
 	Username string `json:"username"` // e.g., "admin", "editor"
 	Email    string `json:"email"`
 	Password string `json:"password"`
-	Fullname string `json:"full_name"`
+	FullName string `json:"full_name"`
 }
 
 // AllocationDTO represents a Allocation.
