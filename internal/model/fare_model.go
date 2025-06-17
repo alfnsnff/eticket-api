@@ -15,9 +15,10 @@ type FareManifestShip struct {
 }
 
 type FareManifest struct {
-	ID    uint              `json:"id"`
-	Class FareManifestClass `json:"class"`
-	Ship  FareManifestShip  `json:"ship"`
+	ID       uint              `json:"id"`
+	Class    FareManifestClass `json:"class"`
+	Ship     FareManifestShip  `json:"ship"`
+	Capacity int               `json:"capacity"`
 }
 
 type CountFareRequest struct {
