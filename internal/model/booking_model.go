@@ -69,24 +69,28 @@ type ReadBookingResponse struct {
 }
 
 type WriteBookingRequest struct {
-	ScheduleID   uint   `json:"schedule_id"` // Foreign key
-	CustomerName string `json:"customer_name"`
-	IDType       string `json:"id_type"`
-	IDNumber     string `json:"id_number"`
-	PhoneNumber  string `json:"phone_number"` // Changed to string to support leading zeros
-	Email        string `json:"email_address"`
-	Status       string `gorm:"type:varchar(20);not null" json:"status"` // e.g., 'completed', 'cancelled', 'refunded'
+	ScheduleID     uint   `json:"schedule_id"` // Foreign key
+	IDType         string `json:"id_type"`
+	IDNumber       string `json:"id_number"`
+	CustomerName   string `json:"customer_name"`
+	CustomerAge    int    `json:"customer_age"`
+	CustomerGender string `json:"customer_gender"` //
+	PhoneNumber    string `json:"phone_number"`    // Changed to string to support leading zeros
+	Email          string `json:"email_address"`
+	Status         string `gorm:"type:varchar(20);not null" json:"status"` // e.g., 'completed', 'cancelled', 'refunded'
 }
 
 type UpdateBookingRequest struct {
-	ID           uint   `json:"id"`
-	ScheduleID   uint   `json:"schedule_id"` // Foreign key
-	CustomerName string `json:"customer_name"`
-	IDType       string `json:"id_type"`
-	IDNumber     string `json:"id_number"`
-	PhoneNumber  string `json:"phone_number"` // Changed to string to support leading zeros
-	Email        string `json:"email_address"`
-	Status       string `gorm:"type:varchar(20);not null" json:"status"` // e.g., 'completed', 'cancelled', 'refunded'
+	ID             uint   `json:"id"`
+	ScheduleID     uint   `json:"schedule_id"` // Foreign key
+	CustomerName   string `json:"customer_name"`
+	CustomerAge    int    `json:"customer_age"`
+	CustomerGender string `json:"customer_gender"` //
+	IDType         string `json:"id_type"`
+	IDNumber       string `json:"id_number"`
+	PhoneNumber    string `json:"phone_number"` // Changed to string to support leading zeros
+	Email          string `json:"email_address"`
+	Status         string `gorm:"type:varchar(20);not null" json:"status"` // e.g., 'completed', 'cancelled', 'refunded'
 }
 
 type ConfirmBookingRequest struct {
