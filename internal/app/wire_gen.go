@@ -39,7 +39,7 @@ func New() (*Server, error) {
 	clientModule := module.NewClientModule(client, configuration)
 	tokenUtil := jwt.New(configuration)
 	smtpMailer := mailer.NewSMTPMailer(configuration)
-	usecaseModule := module.NewUsecaseModule(txManager, repositoryModule, clientModule, tokenUtil, smtpMailer)
+	usecaseModule := module.NewUsecaseModule(txManager, db, repositoryModule, clientModule, tokenUtil, smtpMailer)
 	controllerModule := module.NewControllerModule(usecaseModule)
 	enforcer := NewEnforcer()
 	middlewareModule := module.NewMiddlewareModule(tokenUtil, enforcer)
@@ -95,6 +95,7 @@ func NewServer(config2 *config.Configuration,
 				"http://localhost:3000":          true,
 				"https://tiket-hebat.vercel.app": true,
 				"https://www.tikethebat.live":    true,
+				"https://tripay.co.id/":          true,
 			}
 			return allowed[origin]
 		},

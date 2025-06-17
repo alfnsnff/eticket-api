@@ -17,7 +17,6 @@ type Booking struct {
 	Email           string    `gorm:"column:email;not null"`
 	Status          string    `gorm:"column:status;type:varchar(24);not null"`
 	ReferenceNumber *string   `gorm:"column:reference_number;"`
-	BookedAt        time.Time `gorm:"column:booked_at;not null"`
 	CreatedAt       time.Time `gorm:"column:created_at;not null"`
 	UpdatedAt       time.Time `gorm:"column:updated_at;not null"`
 

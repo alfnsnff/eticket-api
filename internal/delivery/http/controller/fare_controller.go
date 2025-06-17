@@ -93,8 +93,9 @@ func (fc *FareController) UpdateFare(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Fare ID is required", nil))
 		return
 	}
+	request.ID = uint(id)
 
-	if err := fc.FareUsecase.UpdateFare(ctx, uint(id), request); err != nil {
+	if err := fc.FareUsecase.UpdateFare(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update fare", err.Error()))
 		return
 	}

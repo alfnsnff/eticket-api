@@ -124,8 +124,8 @@ func (tc *TicketController) UpdateTicket(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Ticket ID is required", nil)) // Use response.
 		return
 	}
-
-	if err := tc.TicketUsecase.UpdateTicket(ctx, uint(id), request); err != nil {
+	request.ID = uint(id)
+	if err := tc.TicketUsecase.UpdateTicket(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update ticket", err.Error())) // Use response.
 		return
 	}

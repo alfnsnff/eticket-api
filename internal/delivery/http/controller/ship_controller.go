@@ -94,8 +94,8 @@ func (shc *ShipController) UpdateShip(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Ship ID is required", nil))
 		return
 	}
-
-	if err := shc.ShipUsecase.UpdateShip(ctx, uint(id), request); err != nil {
+	request.ID = uint(id)
+	if err := shc.ShipUsecase.UpdateShip(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update ship", err.Error()))
 		return
 	}

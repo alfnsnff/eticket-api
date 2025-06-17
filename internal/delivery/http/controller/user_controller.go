@@ -94,8 +94,8 @@ func (uc *UserController) UpdateUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("User ID is required", nil))
 		return
 	}
-
-	if err := uc.UserUsecase.UpdateUser(ctx, uint(id), request); err != nil {
+	request.ID = uint(id)
+	if err := uc.UserUsecase.UpdateUser(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update user", err.Error()))
 		return
 	}

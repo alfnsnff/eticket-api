@@ -3,7 +3,6 @@ package class
 import (
 	"context"
 	"errors"
-	"eticket-api/internal/common/tx"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
 	"eticket-api/internal/model/mapper"
@@ -14,104 +13,170 @@ import (
 )
 
 type ClassUsecase struct {
-	Tx              *tx.TxManager
+	DB              *gorm.DB
 	ClassRepository *repository.ClassRepository
 }
 
 func NewClassUsecase(
-	tx *tx.TxManager,
+	db *gorm.DB,
 	class_repository *repository.ClassRepository,
 ) *ClassUsecase {
 	return &ClassUsecase{
-		Tx:              tx,
+		DB:              db,
 		ClassRepository: class_repository,
 	}
 }
 
 func (c *ClassUsecase) CreateClass(ctx context.Context, request *model.WriteClassRequest) error {
-	class := mapper.ClassMapper.FromWrite(request)
+	tx := c.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
+		}
+	}()
+
+	class := &entity.Class{
+		ClassName:  request.ClassName,
+		Type:       request.Type,
+		ClassAlias: request.ClassAlias,
+	}
 
 	if class.ClassName == "" {
 		return fmt.Errorf("class name cannot be empty")
 	}
 
-	return c.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		return c.ClassRepository.Create(tx, class)
-	})
+	if err := c.ClassRepository.Create(tx, class); err != nil {
+		return fmt.Errorf("failed to create class: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }
 
 func (c *ClassUsecase) GetAllClasses(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadClassResponse, int, error) {
-	classes := []*entity.Class{}
-	var total int64
-
-	err := c.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		var err error
-		total, err = c.ClassRepository.Count(tx)
-		if err != nil {
-			return err
+	tx := c.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
 		}
-		classes, err = c.ClassRepository.GetAll(tx, limit, offset, sort, search)
-		return err
-	})
+	}()
 
+	total, err := c.ClassRepository.Count(tx)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get all books: %w", err)
+		return nil, 0, fmt.Errorf("failed to count classes: %w", err)
+	}
+
+	classes, err := c.ClassRepository.GetAll(tx, limit, offset, sort, search)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get all classes: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return mapper.ClassMapper.ToModels(classes), int(total), nil
-
 }
 
-// GetClassByID retrieves a class by its ID
 func (c *ClassUsecase) GetClassByID(ctx context.Context, id uint) (*model.ReadClassResponse, error) {
-	class := new(entity.Class)
+	tx := c.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
+		}
+	}()
 
-	err := c.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		var err error
-		class, err = c.ClassRepository.GetByID(tx, id)
-		return err
-	})
-
+	class, err := c.ClassRepository.GetByID(tx, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get class: %w", err)
 	}
-
 	if class == nil {
 		return nil, errors.New("class not found")
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return mapper.ClassMapper.ToModel(class), nil
 }
 
-func (c *ClassUsecase) UpdateClass(ctx context.Context, id uint, request *model.UpdateClassRequest) error {
-	class := mapper.ClassMapper.FromUpdate(request)
-	class.ID = id
+func (c *ClassUsecase) UpdateClass(ctx context.Context, request *model.UpdateClassRequest) error {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
+		}
+	}()
 
-	if class.ID == 0 {
+	if request.ID == 0 {
 		return fmt.Errorf("class ID cannot be zero")
 	}
-	if class.ClassName == "" {
-		return fmt.Errorf("class name cannot be empty")
+
+	class, err := c.ClassRepository.GetByID(tx, request.ID)
+	if err != nil {
+		return fmt.Errorf("failed to find class: %w", err)
+	}
+	if class == nil {
+		return errors.New("class not found")
 	}
 
-	return c.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		return c.ClassRepository.Update(tx, class)
-	})
+	class.ClassName = request.ClassName
+	class.Type = request.Type
+	class.ClassAlias = request.ClassAlias
 
+	if err := c.ClassRepository.Update(tx, class); err != nil {
+		return fmt.Errorf("failed to update class: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }
 
-// DeleteClass deletes a class by its ID
 func (c *ClassUsecase) DeleteClass(ctx context.Context, id uint) error {
-
-	return c.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		class, err := c.ClassRepository.GetByID(tx, id)
-		if err != nil {
-			return err
+	tx := c.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
 		}
-		if class == nil {
-			return errors.New("route not found")
-		}
-		return c.ClassRepository.Delete(tx, class)
-	})
+	}()
 
+	class, err := c.ClassRepository.GetByID(tx, id)
+	if err != nil {
+		return fmt.Errorf("failed to get class: %w", err)
+	}
+	if class == nil {
+		return errors.New("class not found")
+	}
+
+	if err := c.ClassRepository.Delete(tx, class); err != nil {
+		return fmt.Errorf("failed to delete class: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }

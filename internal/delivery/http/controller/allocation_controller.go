@@ -95,7 +95,9 @@ func (mc *AllocationController) UpdateAllocation(ctx *gin.Context) {
 		return
 	}
 
-	if err := mc.AllocationUsecase.UpdateAllocation(ctx, uint(id), request); err != nil {
+	request.ID = uint(id)
+
+	if err := mc.AllocationUsecase.UpdateAllocation(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update allocation", err.Error()))
 		return
 	}

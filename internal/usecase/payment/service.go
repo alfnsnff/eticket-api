@@ -19,6 +19,7 @@ import (
 
 type PaymentUsecase struct {
 	Tx                *tx.TxManager
+	DB                *gorm.DB // Assuming you have a DB field for the transaction manager
 	TripayClient      *client.TripayClient
 	BookingRepository *repository.BookingRepository
 	TicketRepository  *repository.TicketRepository
@@ -27,6 +28,7 @@ type PaymentUsecase struct {
 
 func NewPaymentUsecase(
 	tx *tx.TxManager,
+	db *gorm.DB,
 	tripay_client *client.TripayClient,
 	booking_repository *repository.BookingRepository,
 	ticket_repository *repository.TicketRepository,
@@ -34,6 +36,7 @@ func NewPaymentUsecase(
 ) *PaymentUsecase {
 	return &PaymentUsecase{
 		Tx:                tx,
+		DB:                db,
 		TripayClient:      tripay_client,
 		BookingRepository: booking_repository,
 		TicketRepository:  ticket_repository,

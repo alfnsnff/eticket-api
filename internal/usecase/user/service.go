@@ -3,7 +3,6 @@ package user
 import (
 	"context"
 	"errors"
-	"eticket-api/internal/common/tx"
 	"eticket-api/internal/common/utils"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
@@ -15,125 +14,196 @@ import (
 )
 
 type UserUsecase struct {
-	Tx             *tx.TxManager
+	DB             *gorm.DB
 	UserRepository *repository.UserRepository
 }
 
 func NewUserUsecase(
-	tx *tx.TxManager,
+	db *gorm.DB,
 	user_repository *repository.UserRepository,
 ) *UserUsecase {
 	return &UserUsecase{
-		Tx:             tx,
+		DB:             db,
 		UserRepository: user_repository,
 	}
 }
 
 func (u *UserUsecase) CreateUser(ctx context.Context, request *model.WriteUserRequest) error {
-	user := mapper.UserMapper.FromWrite(request)
+	tx := u.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else if tx.Error != nil {
+			tx.Rollback()
+		}
+	}()
 
-	if user.Username == "" {
+	if request.Username == "" {
 		return fmt.Errorf("username cannot be empty")
 	}
 
-	if user.Email == "" {
+	if request.Email == "" {
 		return fmt.Errorf("email cannot be empty")
 	}
 
-	if user.Password == "" {
+	if request.Password == "" {
 		return fmt.Errorf("password cannot be empty")
 	}
 
-	if user.FullName == "" {
+	if request.FullName == "" {
 		return fmt.Errorf("full name cannot be empty")
 	}
 
-	return u.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		hashedPassword, err := utils.HashPassword(request.Password) // Use the helper from utils
-		if err != nil {
-			return fmt.Errorf("failed to hash password: %w", err)
-		}
-		user.Password = hashedPassword
-		return u.UserRepository.Create(tx, user)
-	})
+	hashedPassword, err := utils.HashPassword(request.Password)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	user := &entity.User{
+		RoleID:   request.RoleID,
+		Username: request.Username,
+		Email:    request.Email,
+		Password: hashedPassword,
+		FullName: request.FullName,
+	}
+
+	if err := u.UserRepository.Create(tx, user); err != nil {
+		return fmt.Errorf("failed to create user: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }
 
 func (u *UserUsecase) GetAllUsers(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadUserResponse, int, error) {
-	users := []*entity.User{}
-	var total int64
-	err := u.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		var err error
-		total, err = u.UserRepository.Count(tx)
-		if err != nil {
-			return err
+	tx := u.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
 		}
-		users, err = u.UserRepository.GetAll(tx, limit, offset, sort, search)
-		return err
-	})
+	}()
 
+	total, err := u.UserRepository.Count(tx)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get users: %w", err)
+		return nil, 0, fmt.Errorf("failed to count users: %w", err)
+	}
+
+	users, err := u.UserRepository.GetAll(tx, limit, offset, sort, search)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get all users: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return mapper.UserMapper.ToModels(users), int(total), nil
 }
 
 func (u *UserUsecase) GetUserByID(ctx context.Context, id uint) (*model.ReadUserResponse, error) {
-	user := new(entity.User)
+	tx := u.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else if tx.Error != nil {
+			tx.Rollback()
+		}
+	}()
 
-	err := u.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		var err error
-		user, err = u.UserRepository.GetByID(tx, id)
-		return err
-	})
-
+	user, err := u.UserRepository.GetByID(tx, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
 	if user == nil {
-		return nil, errors.New("user role not found")
+		return nil, errors.New("user not found")
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return mapper.UserMapper.ToModel(user), nil
 }
 
-func (u *UserUsecase) UpdateUser(ctx context.Context, id uint, request *model.UpdateUserRequest) error {
-	user := mapper.UserMapper.FromUpdate(request)
-	user.ID = id
+func (u *UserUsecase) UpdateUser(ctx context.Context, request *model.UpdateUserRequest) error {
+	tx := u.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
+		}
+	}()
 
-	if user.ID == 0 {
-		return fmt.Errorf("role ID cannot be zero")
+	// Validate input
+	if request.ID == 0 {
+		return fmt.Errorf("allocation ID cannot be zero")
 	}
 
-	if user.Username == "" {
-		return fmt.Errorf("role name cannot be empty")
+	// Fetch existing allocation
+	user, err := u.UserRepository.GetByID(tx, request.ID)
+	if err != nil {
+		return fmt.Errorf("failed to find user: %w", err)
+	}
+	if user == nil {
+		return errors.New("user not found")
 	}
 
-	if user.Email == "" {
-		return fmt.Errorf("desription cannot be empty")
+	user.Username = request.Username
+	user.Email = request.Email
+	user.Password = request.Password
+	user.FullName = request.FullName
+	user.RoleID = request.RoleID
+
+	if err := u.UserRepository.Update(tx, user); err != nil {
+		return fmt.Errorf("failed to update user: %w", err)
 	}
 
-	if user.Password == "" {
-		return fmt.Errorf("desription cannot be empty")
+	// Commit the transaction
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return u.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		return u.UserRepository.Update(tx, user)
-	})
+	return nil
 }
 
 func (u *UserUsecase) DeleteUser(ctx context.Context, id uint) error {
-
-	return u.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		role, err := u.UserRepository.GetByID(tx, id)
-		if err != nil {
-			return err
+	tx := u.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
 		}
-		if role == nil {
-			return errors.New("route not found")
-		}
-		return u.UserRepository.Delete(tx, role)
-	})
+	}()
 
+	user, err := u.UserRepository.GetByID(tx, id)
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+	if user == nil {
+		return fmt.Errorf("user not found")
+	}
+
+	if err := u.UserRepository.Delete(tx, user); err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }

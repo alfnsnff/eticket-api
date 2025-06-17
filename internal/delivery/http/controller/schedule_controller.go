@@ -104,8 +104,8 @@ func (scc *ScheduleController) UpdateSchedule(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Schedule ID is required", nil))
 		return
 	}
-
-	if err := scc.ScheduleUsecase.UpdateSchedule(ctx, uint(id), request); err != nil {
+	request.ID = uint(id)
+	if err := scc.ScheduleUsecase.UpdateSchedule(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update schedule", err.Error()))
 		return
 	}

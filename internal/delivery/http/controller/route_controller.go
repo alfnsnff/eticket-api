@@ -93,8 +93,8 @@ func (rc *RouteController) UpdateRoute(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Route ID is required", nil))
 		return
 	}
-
-	if err := rc.RouteUsecase.UpdateRoute(ctx, uint(id), request); err != nil {
+	request.ID = uint(id)
+	if err := rc.RouteUsecase.UpdateRoute(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update route", err.Error()))
 		return
 	}

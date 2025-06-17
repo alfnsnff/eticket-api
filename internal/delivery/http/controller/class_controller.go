@@ -94,8 +94,9 @@ func (cc *ClassController) UpdateClass(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Class ID is required", nil))
 		return
 	}
+	request.ID = uint(id)
 
-	if err := cc.ClassUsecase.UpdateClass(ctx, uint(id), request); err != nil {
+	if err := cc.ClassUsecase.UpdateClass(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update class", err.Error()))
 		return
 	}

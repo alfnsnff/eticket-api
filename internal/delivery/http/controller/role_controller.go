@@ -94,8 +94,8 @@ func (rc *RoleController) UpdateRole(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Role ID is required", nil))
 		return
 	}
-
-	if err := rc.RoleUsecase.UpdateRole(ctx, uint(id), request); err != nil {
+	request.ID = uint(id)
+	if err := rc.RoleUsecase.UpdateRole(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update role", err.Error()))
 		return
 	}

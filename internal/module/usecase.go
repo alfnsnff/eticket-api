@@ -19,6 +19,8 @@ import (
 	"eticket-api/internal/usecase/ship"
 	"eticket-api/internal/usecase/ticket"
 	"eticket-api/internal/usecase/user"
+
+	"gorm.io/gorm"
 )
 
 type UsecaseModule struct {
@@ -40,24 +42,24 @@ type UsecaseModule struct {
 	PaymentUsecase    *payment.PaymentUsecase
 }
 
-func NewUsecaseModule(tx *tx.TxManager, repository *RepositoryModule, client *ClientModule, tm *jwt.TokenUtil, mailer *mailer.SMTPMailer) *UsecaseModule {
+func NewUsecaseModule(tx *tx.TxManager, db *gorm.DB, repository *RepositoryModule, client *ClientModule, tm *jwt.TokenUtil, mailer *mailer.SMTPMailer) *UsecaseModule {
 	return &UsecaseModule{
 
-		AuthUsecase: auth.NewAuthUsecase(tx, repository.AuthRepository, repository.UserRepository, mailer, tm),
-		RoleUsecase: role.NewRoleUsecase(tx, repository.RoleRepository),
-		UserUsecase: user.NewUserUsecase(tx, repository.UserRepository),
+		AuthUsecase: auth.NewAuthUsecase(tx, db, repository.AuthRepository, repository.UserRepository, mailer, tm),
+		RoleUsecase: role.NewRoleUsecase(db, repository.RoleRepository),
+		UserUsecase: user.NewUserUsecase(db, repository.UserRepository),
 
-		ShipUsecase:       ship.NewShipUsecase(tx, repository.ShipRepository),
-		AllocationUsecase: allocation.NewAllocationUsecase(tx, repository.AllocationRepository, repository.ScheduleRepository, repository.FareRepository),
-		ManifestUsecase:   manifest.NewManifestUsecase(tx, repository.ManifestRepository),
-		TicketUsecase:     ticket.NewTicketUsecase(tx, repository.TicketRepository, repository.ScheduleRepository, repository.FareRepository, repository.SessionRepository),
-		FareUsecase:       fare.NewFareUsecase(tx, repository.FareRepository),
-		ScheduleUsecase:   schedule.NewScheduleUsecase(tx, repository.AllocationRepository, repository.ClassRepository, repository.FareRepository, repository.ManifestRepository, repository.RouteRepository, repository.ShipRepository, repository.ScheduleRepository, repository.TicketRepository),
-		BookingUsecase:    booking.NewBookingUsecase(tx, repository.BookingRepository, repository.TicketRepository, repository.SessionRepository),
+		ShipUsecase:       ship.NewShipUsecase(db, repository.ShipRepository),
+		AllocationUsecase: allocation.NewAllocationUsecase(tx, db, repository.AllocationRepository, repository.ScheduleRepository, repository.FareRepository),
+		ManifestUsecase:   manifest.NewManifestUsecase(db, repository.ManifestRepository),
+		TicketUsecase:     ticket.NewTicketUsecase(db, repository.TicketRepository, repository.ScheduleRepository, repository.FareRepository, repository.SessionRepository),
+		FareUsecase:       fare.NewFareUsecase(db, repository.FareRepository),
+		ScheduleUsecase:   schedule.NewScheduleUsecase(tx, db, repository.AllocationRepository, repository.ClassRepository, repository.FareRepository, repository.ManifestRepository, repository.RouteRepository, repository.ShipRepository, repository.ScheduleRepository, repository.TicketRepository),
+		BookingUsecase:    booking.NewBookingUsecase(tx, db, repository.BookingRepository, repository.TicketRepository, repository.SessionRepository),
 		SessionUsecase:    claim_session.NewSessionUsecase(tx, repository.SessionRepository, repository.TicketRepository, repository.ScheduleRepository, repository.AllocationRepository, repository.ManifestRepository, repository.FareRepository, repository.BookingRepository, client.TripayClient),
-		RouteUsecase:      route.NewRouteUsecase(tx, repository.RouteRepository),
-		HarborUsecase:     harbor.NewHarborUsecase(tx, repository.HarborRepository),
-		ClassUsecase:      class.NewClassUsecase(tx, repository.ClassRepository),
-		PaymentUsecase:    payment.NewPaymentUsecase(tx, client.TripayClient, repository.BookingRepository, repository.TicketRepository, mailer),
+		RouteUsecase:      route.NewRouteUsecase(db, repository.RouteRepository),
+		HarborUsecase:     harbor.NewHarborUsecase(db, repository.HarborRepository),
+		ClassUsecase:      class.NewClassUsecase(db, repository.ClassRepository),
+		PaymentUsecase:    payment.NewPaymentUsecase(tx, db, client.TripayClient, repository.BookingRepository, repository.TicketRepository, mailer),
 	}
 }

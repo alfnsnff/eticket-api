@@ -9,13 +9,13 @@ import (
 	"eticket-api/internal/model/mapper"
 	"eticket-api/internal/repository"
 	"fmt"
-	"time"
 
 	"gorm.io/gorm"
 )
 
 type BookingUsecase struct {
 	Tx                *tx.TxManager
+	DB                *gorm.DB
 	BookingRepository *repository.BookingRepository
 	TicketRepository  *repository.TicketRepository
 	SessionRepository *repository.SessionRepository
@@ -23,13 +23,14 @@ type BookingUsecase struct {
 
 func NewBookingUsecase(
 	tx *tx.TxManager,
+	db *gorm.DB,
 	booking_repository *repository.BookingRepository,
 	ticket_repository *repository.TicketRepository,
 	session_repository *repository.SessionRepository,
-
 ) *BookingUsecase {
 	return &BookingUsecase{
 		Tx:                tx,
+		DB:                db,
 		BookingRepository: booking_repository,
 		TicketRepository:  ticket_repository,
 		SessionRepository: session_repository,
@@ -37,179 +38,204 @@ func NewBookingUsecase(
 }
 
 func (b *BookingUsecase) CreateBooking(ctx context.Context, request *model.WriteBookingRequest) error {
-	booking := mapper.BookingMapper.FromWrite(request)
+	tx := b.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else if tx.Error != nil {
+			tx.Rollback()
+		}
+	}()
 
-	if booking.CustomerName == "" {
+	if request.CustomerName == "" {
 		return fmt.Errorf("booking name cannot be empty")
 	}
 
-	return b.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		return b.BookingRepository.Create(tx, booking)
-	})
+	booking := &entity.Booking{
+		OrderID:         request.OrderID,
+		ScheduleID:      request.ScheduleID,
+		CustomerName:    request.CustomerName,
+		CustomerAge:     &request.CustomerAge,
+		CustomerGender:  &request.CustomerGender,
+		Email:           request.Email,
+		PhoneNumber:     request.PhoneNumber,
+		IDType:          request.IDType,
+		IDNumber:        request.IDNumber,
+		ReferenceNumber: request.ReferenceNumber,
+		Status:          request.Status,
+	}
+
+	if err := b.BookingRepository.Create(tx, booking); err != nil {
+		return fmt.Errorf("failed to create booking: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }
 
 func (b *BookingUsecase) GetAllBookings(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadBookingResponse, int, error) {
-	bookings := []*entity.Booking{}
-	var total int64
-	err := b.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		var err error
-		total, err = b.BookingRepository.Count(tx)
-		if err != nil {
-			return err
+	tx := b.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
 		}
-		bookings, err = b.BookingRepository.GetAll(tx, limit, offset, sort, search)
-		return err
-	})
+	}()
 
+	total, err := b.BookingRepository.Count(tx)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get all books: %w", err)
+		return nil, 0, fmt.Errorf("failed to count bookings: %w", err)
+	}
+
+	bookings, err := b.BookingRepository.GetAll(tx, limit, offset, sort, search)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get all bookings: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return mapper.BookingMapper.ToModels(bookings), int(total), nil
 }
 
 func (b *BookingUsecase) GetBookingByID(ctx context.Context, id uint) (*model.ReadBookingResponse, error) {
-	booking := new(entity.Booking)
+	tx := b.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else if tx.Error != nil {
+			tx.Rollback()
+		}
+	}()
 
-	err := b.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		var err error
-		booking, err = b.BookingRepository.GetByID(tx, id)
-		return err
-	})
-
+	booking, err := b.BookingRepository.GetByID(tx, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get booking: %w", err)
 	}
-
 	if booking == nil {
 		return nil, errors.New("booking not found")
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return mapper.BookingMapper.ToModel(booking), nil
 }
 
-func (b *BookingUsecase) GetBookingByOrderID(ctx context.Context, id string) (*model.ReadBookingResponse, error) {
-	booking := new(entity.Booking)
+func (b *BookingUsecase) GetBookingByOrderID(ctx context.Context, orderID string) (*model.ReadBookingResponse, error) {
+	tx := b.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else if tx.Error != nil {
+			tx.Rollback()
+		}
+	}()
 
-	err := b.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		var err error
-		booking, err = b.BookingRepository.GetByOrderID(tx, id)
-		return err
-	})
-
+	booking, err := b.BookingRepository.GetByOrderID(tx, orderID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get booking: %w", err)
 	}
-
 	if booking == nil {
 		return nil, errors.New("booking not found")
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return mapper.BookingMapper.ToModel(booking), nil
 }
 
-func (b *BookingUsecase) UpdateBooking(ctx context.Context, id uint, request *model.UpdateBookingRequest) error {
-	booking := mapper.BookingMapper.FromUpdate(request)
-	booking.ID = id
+func (b *BookingUsecase) UpdateBooking(ctx context.Context, request *model.UpdateBookingRequest) error {
+	tx := b.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
+		}
+	}()
 
-	if booking.ID == 0 {
+	if request.ID == 0 {
 		return fmt.Errorf("booking ID cannot be zero")
 	}
-	if booking.CustomerName == "" {
-		return fmt.Errorf("booking name cannot be empty")
+
+	// Fetch existing allocation
+	booking, err := b.BookingRepository.GetByID(tx, request.ID)
+	if err != nil {
+		return fmt.Errorf("failed to find booking: %w", err)
+	}
+	if booking == nil {
+		return errors.New("booking not found")
 	}
 
-	return b.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		return b.BookingRepository.Update(tx, booking)
-	})
+	booking.ScheduleID = request.ScheduleID
+	booking.CustomerAge = &request.CustomerAge
+	booking.CustomerGender = &request.CustomerGender
+	booking.CustomerName = request.CustomerName
+	booking.Email = request.Email
+	booking.PhoneNumber = request.PhoneNumber
+	booking.IDType = request.IDType
+	booking.IDNumber = request.IDNumber
+	booking.ReferenceNumber = request.ReferenceNumber
+	booking.Status = request.Status
+	booking.OrderID = request.OrderID
+
+	if err := b.BookingRepository.Update(tx, booking); err != nil {
+		return fmt.Errorf("failed to update booking: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }
 
-// Deletebooking deletes a booking by its ID
 func (b *BookingUsecase) DeleteBooking(ctx context.Context, id uint) error {
-
-	return b.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		booking, err := b.BookingRepository.GetByID(tx, id)
-		if err != nil {
-			return err
+	tx := b.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
 		}
-		if booking == nil {
-			return errors.New("route not found")
-		}
-		return b.BookingRepository.Delete(tx, booking)
-	})
+	}()
 
+	booking, err := b.BookingRepository.GetByID(tx, id)
+	if err != nil {
+		return fmt.Errorf("failed to get booking: %w", err)
+	}
+	if booking == nil {
+		return errors.New("booking not found")
+	}
+
+	if err := b.BookingRepository.Delete(tx, booking); err != nil {
+		return fmt.Errorf("failed to delete booking: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }
 
 func (b *BookingUsecase) PaidConfirm(ctx context.Context, id uint) error {
 	return b.Tx.Execute(ctx, func(tx *gorm.DB) error {
 		return b.BookingRepository.PaidConfirm(tx, id)
 	})
-}
-
-func (b *BookingUsecase) ConfirmBooking(ctx context.Context, sessionID string) (*model.ConfirmBookingResponse, error) {
-	// Inlined HelperValidateConfirmRequest logic
-	var confirmedBooking *entity.Booking
-	var confirmedTicketIDs []uint
-
-	err := b.Tx.Execute(ctx, func(tx *gorm.DB) error {
-
-		session, err := b.SessionRepository.GetByUUIDWithLock(tx, sessionID, true)
-		if err != nil {
-			return fmt.Errorf("failed to retrieve claim session %s within transaction: %w", sessionID, err)
-		}
-		if session == nil {
-			return errors.New("claim session not found")
-		}
-
-		tickets, err := b.TicketRepository.FindManyBySessionID(tx, session.ID)
-		if err != nil {
-			return fmt.Errorf("failed to retrieve tickets: %w", err)
-		}
-
-		var total float32
-		now := time.Now()
-		for _, ticket := range tickets {
-			if ticket.Status != "pending_payment" {
-				return fmt.Errorf("ticket %d not in pending_payment state", ticket.ID)
-			}
-			ticket.Status = "paid_confirmed"
-			ticket.ClaimSessionID = nil
-			ticket.BookedAt = &now
-			total += ticket.Price
-		}
-
-		// Inlined HelperBuildBooking logic
-		booking := &entity.Booking{
-			Status: "paid_comfirmed",
-		}
-
-		if err := b.BookingRepository.Update(tx, booking); err != nil {
-			return fmt.Errorf("failed to update booking: %w", err)
-		}
-		confirmedBooking = booking
-
-		// Inlined HelperUpdateTicketsWithBooking logic
-		ids := make([]uint, len(tickets))
-		for i, t := range tickets {
-			t.BookingID = &booking.ID
-			ids[i] = t.ID
-		}
-		confirmedTicketIDs = ids
-
-		if err := b.TicketRepository.UpdateBulk(tx, tickets); err != nil {
-			return fmt.Errorf("failed to update tickets: %w", err)
-		}
-		return nil
-
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("confirm book transaction failed: %w", err)
-	}
-
-	return &model.ConfirmBookingResponse{
-		BookingID:          confirmedBooking.ID,
-		BookingStatus:      confirmedBooking.Status,
-		ConfirmedTicketIDs: confirmedTicketIDs,
-	}, nil
 }
