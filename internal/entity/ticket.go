@@ -16,11 +16,12 @@ type Ticket struct {
 
 	Price float32 `gorm:"column:price;not null"`
 
-	PassengerName *string `gorm:"column:passenger_name;type:varchar(32)"`
-	PassengerAge  *int    `gorm:"column:passenger_age;"`
-	Address       *string `gorm:"column:address;type:varchar(32)"`
-	IDType        *string `gorm:"column:id_type;type:varchar(24)"`
-	IDNumber      *string `gorm:"column:id_number;type:varchar(24)"`
+	PassengerName   *string `gorm:"column:passenger_name;type:varchar(32)"`
+	PassengerAge    *int    `gorm:"column:passenger_age;"`
+	PassengerGender *string `gorm:"column:passenger_gender;type:varchar(24);"`
+	Address         *string `gorm:"column:address;type:varchar(32)"`
+	IDType          *string `gorm:"column:id_type;type:varchar(24)"`
+	IDNumber        *string `gorm:"column:id_number;type:varchar(24)"`
 
 	//Passenger Data
 	SeatNumber *string `gorm:"column:seat_number;type:varchar(24)"`
