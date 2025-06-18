@@ -3,6 +3,7 @@ package controller
 import (
 	"encoding/json"
 	"eticket-api/internal/common/response"
+	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/booking"
 	"fmt"
@@ -14,11 +15,34 @@ import (
 
 type BookingController struct {
 	BookingUsecase *booking.BookingUsecase
+	Authenticate   *middleware.AuthenticateMiddleware
+	Authorized     *middleware.AuthorizeMiddleware
 }
 
 // NewBookingController creates a new BookingController instance
-func NewBookingController(booking_usecase *booking.BookingUsecase) *BookingController {
-	return &BookingController{BookingUsecase: booking_usecase}
+func NewBookingController(
+	g *gin.Engine, booking_usecase *booking.BookingUsecase,
+	authtenticate *middleware.AuthenticateMiddleware,
+	authorized *middleware.AuthorizeMiddleware,
+) {
+	bc := &BookingController{
+		BookingUsecase: booking_usecase,
+		Authenticate:   authtenticate,
+		Authorized:     authorized}
+
+	public := g.Group("") // No middleware
+	public.GET("/bookings", bc.GetAllBookings)
+	public.GET("/booking/:id", bc.GetBookingByID)
+	public.GET("/booking/order/:id", bc.GetBookingByOrderID)
+	public.GET("/booking/payment/callback", bc.GetBookingByID)
+
+	protected := g.Group("")
+	protected.Use(bc.Authenticate.Set())
+	// protected.Use(ac.Authorized.Set())
+
+	protected.POST("/booking/create", bc.CreateBooking)
+	protected.PUT("/booking/update/:id", bc.UpdateBooking)
+	protected.DELETE("/booking/:id", bc.DeleteBooking)
 }
 
 func (bc *BookingController) CreateBooking(ctx *gin.Context) {

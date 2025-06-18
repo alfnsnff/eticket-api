@@ -3,7 +3,6 @@ package allocation
 import (
 	"context"
 	"errors"
-	"eticket-api/internal/common/tx"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
 	"eticket-api/internal/model/mapper"
@@ -14,25 +13,19 @@ import (
 )
 
 type AllocationUsecase struct {
-	Tx                   *tx.TxManager
 	DB                   *gorm.DB // Assuming you have a DB field for the transaction manager
 	AllocationRepository *repository.AllocationRepository
-	ScheduleRepository   *repository.ScheduleRepository
 	FareRepository       *repository.FareRepository
 }
 
 func NewAllocationUsecase(
-	tx *tx.TxManager,
 	db *gorm.DB,
 	allocation_repository *repository.AllocationRepository,
-	schedule_repository *repository.ScheduleRepository,
 	fare_repository *repository.FareRepository,
 ) *AllocationUsecase {
 	return &AllocationUsecase{
-		Tx:                   tx,
 		DB:                   db,
 		AllocationRepository: allocation_repository,
-		ScheduleRepository:   schedule_repository,
 		FareRepository:       fare_repository,
 	}
 }

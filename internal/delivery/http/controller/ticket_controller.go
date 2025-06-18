@@ -2,6 +2,7 @@ package controller
 
 import (
 	"eticket-api/internal/common/response"
+	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/ticket"
 	"net/http"
@@ -12,10 +13,33 @@ import (
 
 type TicketController struct {
 	TicketUsecase *ticket.TicketUsecase
+	Authenticate  *middleware.AuthenticateMiddleware
+	Authorized    *middleware.AuthorizeMiddleware
 }
 
-func NewTicketController(ticket_usecase *ticket.TicketUsecase) *TicketController {
-	return &TicketController{TicketUsecase: ticket_usecase}
+func NewTicketController(
+	g *gin.Engine, ticket_usecase *ticket.TicketUsecase,
+	authtenticate *middleware.AuthenticateMiddleware,
+	authorized *middleware.AuthorizeMiddleware,
+) {
+	tc := &TicketController{
+		TicketUsecase: ticket_usecase,
+		Authenticate:  authtenticate,
+		Authorized:    authorized}
+
+	public := g.Group("") // No middleware
+	public.GET("/tickets", tc.GetAllTickets)
+	public.GET("/ticket/:id", tc.GetTicketByID)
+
+	protected := g.Group("")
+	protected.Use(tc.Authenticate.Set())
+	// protected.Use(ac.Authorized.Set())
+
+	public.GET("/ticket/schedule/:id", tc.GetAllTicketsByScheduleID)
+	protected.POST("/ticket/check-in/:id", tc.CheckIn)
+	protected.POST("/ticket/create", tc.CreateTicket)
+	protected.PUT("/ticket//update:id", tc.UpdateTicket)
+	protected.DELETE("/ticket/:id", tc.DeleteTicket)
 }
 
 func (tc *TicketController) CreateTicket(ctx *gin.Context) {

@@ -1,4 +1,4 @@
-package route
+package routes
 
 import (
 	"eticket-api/internal/delivery/http/controller"
@@ -7,24 +7,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type RouteRouter struct {
+type RouteRoute struct {
 	Controller   *controller.RouteController
 	Authenticate *middleware.AuthenticateMiddleware
 	Authorized   *middleware.AuthorizeMiddleware
 }
 
-func NewRouteRouter(route_controller *controller.RouteController, authtenticate *middleware.AuthenticateMiddleware, authorized *middleware.AuthorizeMiddleware) *RouteRouter {
-	return &RouteRouter{Controller: route_controller, Authenticate: authtenticate, Authorized: authorized}
+func NewRouteRoute(route_controller *controller.RouteController, authtenticate *middleware.AuthenticateMiddleware, authorized *middleware.AuthorizeMiddleware) *RouteRoute {
+	return &RouteRoute{Controller: route_controller, Authenticate: authtenticate, Authorized: authorized}
 }
 
-func (i RouteRouter) Set(router *gin.Engine, rg *gin.RouterGroup) {
+func (i RouteRoute) Set(router *gin.Engine) {
 	rc := i.Controller
 
-	public := rg.Group("") // No middleware
+	public := router.Group("") // No middleware
 	public.GET("/routes", rc.GetAllRoutes)
 	public.GET("/route/:id", rc.GetRouteByID)
 
-	protected := rg.Group("")
+	protected := router.Group("")
 	protected.Use(i.Authenticate.Handle())
 	// protected.Use(i.Authorized.Handle())
 

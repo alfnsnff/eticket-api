@@ -3,7 +3,6 @@ package schedule
 import (
 	"context"
 	"errors"
-	"eticket-api/internal/common/tx"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
 	"eticket-api/internal/model/mapper"
@@ -15,38 +14,32 @@ import (
 )
 
 type ScheduleUsecase struct {
-	Tx                   *tx.TxManager
 	DB                   *gorm.DB // Assuming you have a DB field for the transaction manager
 	AllocationRepository *repository.AllocationRepository
 	ClassRepository      *repository.ClassRepository
 	FareRepository       *repository.FareRepository
 	ManifestRepository   *repository.ManifestRepository
-	RouteRepository      *repository.RouteRepository
 	ShipRepository       *repository.ShipRepository
 	ScheduleRepository   *repository.ScheduleRepository
 	TicketRepository     *repository.TicketRepository
 }
 
 func NewScheduleUsecase(
-	tx *tx.TxManager,
 	db *gorm.DB,
 	allocation_repository *repository.AllocationRepository,
 	class_repository *repository.ClassRepository,
 	fare_repository *repository.FareRepository,
 	manifest_repository *repository.ManifestRepository,
-	route_repository *repository.RouteRepository,
 	ship_repository *repository.ShipRepository,
 	schedule_repository *repository.ScheduleRepository,
 	ticket_repository *repository.TicketRepository,
 ) *ScheduleUsecase {
 	return &ScheduleUsecase{
-		Tx:                   tx,
 		DB:                   db,
 		AllocationRepository: allocation_repository,
 		ClassRepository:      class_repository,
 		FareRepository:       fare_repository,
 		ManifestRepository:   manifest_repository,
-		RouteRepository:      route_repository,
 		ShipRepository:       ship_repository,
 		ScheduleRepository:   schedule_repository,
 		TicketRepository:     ticket_repository,
@@ -179,23 +172,15 @@ func (sc *ScheduleUsecase) UpdateSchedule(ctx context.Context, request *model.Up
 	schedule.ArrivalDatetime = &request.ArrivalDatetime
 	schedule.Status = &request.Status
 
-	if schedule.ID == 0 {
-		return fmt.Errorf("schedule ID cannot be zero")
+	if err := sc.ScheduleRepository.Update(tx, schedule); err != nil {
+		return fmt.Errorf("failed to update schedule: %w", err)
 	}
 
-	if schedule.DepartureDatetime.IsZero() {
-		return errors.New("schedule datetime cannot be empty")
-	}
-	if schedule.ArrivalDatetime.IsZero() {
-		return errors.New("schedule datetime cannot be empty")
-	}
-	if schedule.DepartureDatetime == schedule.ArrivalDatetime {
-		return errors.New("schedule datetime cannot be same")
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return sc.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		return sc.ScheduleRepository.Update(tx, schedule)
-	})
+	return nil
 }
 
 func (sc *ScheduleUsecase) DeleteSchedule(ctx context.Context, id uint) error {

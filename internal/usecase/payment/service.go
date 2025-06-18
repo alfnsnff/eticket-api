@@ -6,8 +6,6 @@ import (
 	"eticket-api/internal/client"
 	"eticket-api/internal/common/mailer"
 	"eticket-api/internal/common/templates"
-	"eticket-api/internal/common/tx"
-	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
 	"eticket-api/internal/repository"
 	"fmt"
@@ -18,7 +16,6 @@ import (
 )
 
 type PaymentUsecase struct {
-	Tx                *tx.TxManager
 	DB                *gorm.DB // Assuming you have a DB field for the transaction manager
 	TripayClient      *client.TripayClient
 	BookingRepository *repository.BookingRepository
@@ -27,7 +24,6 @@ type PaymentUsecase struct {
 }
 
 func NewPaymentUsecase(
-	tx *tx.TxManager,
 	db *gorm.DB,
 	tripay_client *client.TripayClient,
 	booking_repository *repository.BookingRepository,
@@ -35,7 +31,6 @@ func NewPaymentUsecase(
 	mailer *mailer.SMTPMailer,
 ) *PaymentUsecase {
 	return &PaymentUsecase{
-		Tx:                tx,
 		DB:                db,
 		TripayClient:      tripay_client,
 		BookingRepository: booking_repository,
@@ -61,39 +56,40 @@ func (c *PaymentUsecase) GetTransactionDetail(ctx context.Context, reference str
 }
 
 func (c *PaymentUsecase) CreatePayment(ctx context.Context, request *model.WritePaymentRequest) (*model.ReadTransactionResponse, error) {
-	if request.OrderID == "" {
-		return nil, errors.New("invalid request: all customer fields are required")
-	}
+	tx := c.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
+		}
+	}()
 
-	var Booking *entity.Booking
-	var Tickets []*entity.Ticket
+	if request.OrderID == "" {
+		return nil, errors.New("missing required field: OrderID")
+	}
 	var Amount float32
 
-	// Retrieve booking and tickets
-	if err := c.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		var err error
-		Booking, err = c.BookingRepository.GetByOrderID(tx, request.OrderID)
-		if err != nil {
-			return err
-		}
-		if Booking == nil {
-			return fmt.Errorf("booking not found")
-		}
+	var err error
+	booking, err := c.BookingRepository.GetByOrderID(tx, request.OrderID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get booking: %w", err)
+	}
+	if booking == nil {
+		return nil, fmt.Errorf("booking not found")
+	}
 
-		Tickets, err = c.TicketRepository.GetByBookingID(tx, Booking.ID)
-		if err != nil {
-			return err
-		}
-		if len(Tickets) == 0 {
-			return fmt.Errorf("tickets not found")
-		}
-		return nil
-	}); err != nil {
-		return nil, err
+	tickets, err := c.TicketRepository.GetByBookingID(tx, booking.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve tickets: %w", err)
+	}
+	if len(tickets) == 0 {
+		return nil, fmt.Errorf("no tickets found for booking %s", booking.OrderID)
 	}
 
 	// Sum ticket prices
-	for _, ticket := range Tickets {
+	for _, ticket := range tickets {
 		Amount += ticket.Price
 	}
 
@@ -101,11 +97,11 @@ func (c *PaymentUsecase) CreatePayment(ctx context.Context, request *model.Write
 	response, err := c.TripayClient.CreatePayment(
 		request.PaymentMethod,
 		int(Amount),
-		Booking.CustomerName,
-		Booking.Email,
-		Booking.PhoneNumber,
-		Booking.OrderID,
-		Tickets,
+		booking.CustomerName,
+		booking.Email,
+		booking.PhoneNumber,
+		booking.OrderID,
+		tickets,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create Tripay payment failed: %w", err)
@@ -114,58 +110,66 @@ func (c *PaymentUsecase) CreatePayment(ctx context.Context, request *model.Write
 	// Update booking with reference number
 	if response.Reference != "" {
 		ref := response.Reference // make a pointer
-		if err := c.Tx.Execute(ctx, func(tx *gorm.DB) error {
-			Booking.ReferenceNumber = &ref
-			return c.BookingRepository.UpdateReferenceNumber(tx, Booking.ID, &ref)
-		}); err != nil {
+		booking.ReferenceNumber = &ref
+		if err := c.BookingRepository.UpdateReferenceNumber(tx, booking.ID, &ref); err != nil {
 			return nil, fmt.Errorf("failed to update booking with reference number: %w", err)
 		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return &response, nil
 }
 
 func (c *PaymentUsecase) HandleCallback(ctx context.Context, r *http.Request, request *model.WriteCallbackRequest) error {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
+		}
+	}()
+
 	if request.MerchantRef == "" {
 		return errors.New("invalid request: all customer fields are required")
 	}
-	err := c.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		var err error
-		booking, err := c.BookingRepository.GetByOrderID(tx, request.MerchantRef)
-		if err != nil {
-			return err
-		}
-		if booking == nil {
-			return fmt.Errorf("booking not found")
-		}
 
-		tickets, err := c.TicketRepository.GetByBookingID(tx, booking.ID)
-
-		if err != nil {
-			return err
-		}
-		if tickets == nil {
-			return fmt.Errorf("tiket is empty not found")
-		}
-
-		for _, ticket := range tickets {
-			c.TicketRepository.Paid(tx, ticket.ID)
-		}
-
-		subject := "Your Booking is Confirmed"
-
-		// Inside your callback logic:
-		htmlBody := templates.BookingSuccessEmail(booking.CustomerName, booking.OrderID, len(tickets), time.Now().Year())
-
-		if err := c.Mailer.Send(booking.Email, subject, htmlBody); err != nil {
-			return fmt.Errorf("failed to send confirmation email: %w", err)
-		}
-
-		return err
-	})
-
+	booking, err := c.BookingRepository.GetByOrderID(tx, request.MerchantRef)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get booking: %w", err)
 	}
-	return err
+	if booking == nil {
+		return fmt.Errorf("booking not found")
+	}
+
+	tickets, err := c.TicketRepository.GetByBookingID(tx, booking.ID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve tickets: %w", err)
+	}
+	if tickets == nil {
+		return fmt.Errorf("tiket is empty not found")
+	}
+
+	for _, ticket := range tickets {
+		c.TicketRepository.Paid(tx, ticket.ID)
+	}
+
+	subject := "Your Booking is Confirmed"
+
+	// Inside your callback logic:
+	htmlBody := templates.BookingSuccessEmail(booking.CustomerName, booking.OrderID, len(tickets), time.Now().Year())
+
+	if err := c.Mailer.Send(booking.Email, subject, htmlBody); err != nil {
+		return fmt.Errorf("failed to send confirmation email: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }

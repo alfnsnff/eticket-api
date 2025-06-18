@@ -2,6 +2,7 @@ package controller
 
 import (
 	"eticket-api/internal/common/response"
+	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/schedule"
 	"net/http"
@@ -12,10 +13,34 @@ import (
 
 type ScheduleController struct {
 	ScheduleUsecase *schedule.ScheduleUsecase
+	Authenticate    *middleware.AuthenticateMiddleware
+	Authorized      *middleware.AuthorizeMiddleware
 }
 
-func NewScheduleController(schedule_usecase *schedule.ScheduleUsecase) *ScheduleController {
-	return &ScheduleController{ScheduleUsecase: schedule_usecase}
+func NewScheduleController(
+	g *gin.Engine, schedule_usecase *schedule.ScheduleUsecase,
+	authtenticate *middleware.AuthenticateMiddleware,
+	authorized *middleware.AuthorizeMiddleware,
+) {
+	scc := &ScheduleController{
+		ScheduleUsecase: schedule_usecase,
+		Authenticate:    authtenticate,
+		Authorized:      authorized}
+
+	public := g.Group("") // No middleware
+	public.GET("/schedules", scc.GetAllSchedules)
+	public.GET("/schedules/active", scc.GetAllScheduled)
+	public.GET("/schedule/:id", scc.GetScheduleByID)
+	public.GET("/schedule/:id/quota", scc.GetQuotaByScheduleID)
+
+	protected := g.Group("")
+	protected.Use(scc.Authenticate.Set())
+	// protected.Use(ac.Authorized.Set())
+
+	protected.POST("/schedule/create", scc.CreateSchedule)
+	protected.POST("/schedule/Schedule/create", scc.CreateScheduleWithAllocation)
+	protected.PUT("/schedule/update/:id", scc.UpdateSchedule)
+	protected.DELETE("/schedule/:id", scc.DeleteSchedule)
 }
 
 func (scc *ScheduleController) CreateSchedule(ctx *gin.Context) {

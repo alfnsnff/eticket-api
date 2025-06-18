@@ -3,7 +3,6 @@ package booking
 import (
 	"context"
 	"errors"
-	"eticket-api/internal/common/tx"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
 	"eticket-api/internal/model/mapper"
@@ -14,26 +13,17 @@ import (
 )
 
 type BookingUsecase struct {
-	Tx                *tx.TxManager
 	DB                *gorm.DB
 	BookingRepository *repository.BookingRepository
-	TicketRepository  *repository.TicketRepository
-	SessionRepository *repository.SessionRepository
 }
 
 func NewBookingUsecase(
-	tx *tx.TxManager,
 	db *gorm.DB,
 	booking_repository *repository.BookingRepository,
-	ticket_repository *repository.TicketRepository,
-	session_repository *repository.SessionRepository,
 ) *BookingUsecase {
 	return &BookingUsecase{
-		Tx:                tx,
 		DB:                db,
 		BookingRepository: booking_repository,
-		TicketRepository:  ticket_repository,
-		SessionRepository: session_repository,
 	}
 }
 
@@ -235,7 +225,25 @@ func (b *BookingUsecase) DeleteBooking(ctx context.Context, id uint) error {
 }
 
 func (b *BookingUsecase) PaidConfirm(ctx context.Context, id uint) error {
-	return b.Tx.Execute(ctx, func(tx *gorm.DB) error {
-		return b.BookingRepository.PaidConfirm(tx, id)
-	})
+	tx := b.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
+		}
+	}()
+
+	err := b.BookingRepository.PaidConfirm(tx, id)
+
+	if err != nil {
+		return fmt.Errorf("failed to update booking status: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }

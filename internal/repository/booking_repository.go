@@ -91,16 +91,7 @@ func (br *BookingRepository) PaidConfirm(db *gorm.DB, id uint) error {
 	if result.Error != nil {
 		return result.Error
 	}
-	return nil
-}
-
-func (br *BookingRepository) UpdateStatus(db *gorm.DB) error {
-	booking := new(entity.Booking)
-	result := db.First(&booking).Update("status", "paid")
-	if result.Error != nil {
-		return result.Error
-	}
-	return nil
+	return result.Error
 }
 
 func (r *BookingRepository) UpdateReferenceNumber(tx *gorm.DB, bookingID uint, reference *string) error {

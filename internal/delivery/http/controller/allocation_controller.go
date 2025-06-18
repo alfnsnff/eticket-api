@@ -2,6 +2,7 @@ package controller
 
 import (
 	"eticket-api/internal/common/response"
+	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/allocation"
 	"net/http"
@@ -12,12 +13,32 @@ import (
 
 type AllocationController struct {
 	AllocationUsecase *allocation.AllocationUsecase
+	Authenticate      *middleware.AuthenticateMiddleware
+	Authorized        *middleware.AuthorizeMiddleware
 }
 
-func NewAllocationController(allocation_usecase *allocation.AllocationUsecase) *AllocationController {
-	return &AllocationController{AllocationUsecase: allocation_usecase}
-}
+func NewAllocationController(g *gin.Engine, allocation_usecase *allocation.AllocationUsecase,
+	authtenticate *middleware.AuthenticateMiddleware,
+	authorized *middleware.AuthorizeMiddleware,
+) {
+	ac := &AllocationController{AllocationUsecase: allocation_usecase,
+		Authenticate: authtenticate,
+		Authorized:   authorized,
+	}
 
+	public := g.Group("") // No middleware
+	public.GET("/allocations", ac.GetAllAllocations)
+	public.GET("/allocation/:id", ac.GetAllocationByID)
+
+	protected := g.Group("")
+	protected.Use(ac.Authenticate.Set())
+	// protected.Use(ac.Authorized.Set())
+
+	protected.POST("/allocation/create", ac.CreateAllocation)
+	protected.PUT("/allocation/update/:id", ac.UpdateAllocation)
+	protected.DELETE("/allocation/:id", ac.DeleteAllocation)
+
+}
 func (mc *AllocationController) CreateAllocation(ctx *gin.Context) {
 	request := new(model.WriteAllocationRequest)
 

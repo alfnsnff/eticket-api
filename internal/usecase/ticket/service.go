@@ -13,26 +13,17 @@ import (
 )
 
 type TicketUsecase struct {
-	DB                 *gorm.DB
-	TicketRepository   *repository.TicketRepository
-	ScheduleRepository *repository.ScheduleRepository
-	FareRepository     *repository.FareRepository
-	SessionRepository  *repository.SessionRepository
+	DB               *gorm.DB
+	TicketRepository *repository.TicketRepository
 }
 
 func NewTicketUsecase(
 	db *gorm.DB,
 	ticket_repository *repository.TicketRepository,
-	schedule_repository *repository.ScheduleRepository,
-	fare_repository *repository.FareRepository,
-	session_repository *repository.SessionRepository,
 ) *TicketUsecase {
 	return &TicketUsecase{
-		DB:                 db,
-		TicketRepository:   ticket_repository,
-		ScheduleRepository: schedule_repository,
-		FareRepository:     fare_repository,
-		SessionRepository:  session_repository,
+		DB:               db,
+		TicketRepository: ticket_repository,
 	}
 }
 

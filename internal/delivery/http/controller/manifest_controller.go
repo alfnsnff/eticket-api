@@ -2,6 +2,7 @@ package controller
 
 import (
 	"eticket-api/internal/common/response"
+	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/manifest" // Import the response package
 	"net/http"
@@ -12,10 +13,31 @@ import (
 
 type ManifestController struct {
 	ManifestUsecase *manifest.ManifestUsecase
+	Authenticate    *middleware.AuthenticateMiddleware
+	Authorized      *middleware.AuthorizeMiddleware
 }
 
-func NewManifestController(manifest_usecase *manifest.ManifestUsecase) *ManifestController {
-	return &ManifestController{ManifestUsecase: manifest_usecase}
+func NewManifestController(
+	g *gin.Engine, manifest_usecase *manifest.ManifestUsecase,
+	authtenticate *middleware.AuthenticateMiddleware,
+	authorized *middleware.AuthorizeMiddleware,
+) {
+	mc := &ManifestController{
+		ManifestUsecase: manifest_usecase,
+		Authenticate:    authtenticate,
+		Authorized:      authorized}
+
+	public := g.Group("") // No middleware
+	public.GET("/manifests", mc.GetAllManifests)
+	public.GET("/manifest/:id", mc.GetManifestByID)
+
+	protected := g.Group("")
+	protected.Use(mc.Authenticate.Set())
+	// protected.Use(ac.Authorized.Set())
+
+	protected.POST("/manifest/create", mc.CreateManifest)
+	protected.PUT("/manifest/update/:id", mc.UpdateManifest)
+	protected.DELETE("/manifest/:id", mc.DeleteManifest)
 }
 
 func (mc *ManifestController) CreateManifest(ctx *gin.Context) {

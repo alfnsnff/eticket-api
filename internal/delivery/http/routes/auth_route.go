@@ -1,4 +1,4 @@
-package route
+package routes
 
 import (
 	"eticket-api/internal/delivery/http/controller"
@@ -7,25 +7,25 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type AuthRouter struct {
+type AuthRoute struct {
 	Controller   *controller.AuthController
 	Authenticate *middleware.AuthenticateMiddleware
 	Authorized   *middleware.AuthorizeMiddleware
 }
 
-func NewAuthRouter(auth_controller *controller.AuthController, authtenticate *middleware.AuthenticateMiddleware, authorized *middleware.AuthorizeMiddleware) *AuthRouter {
-	return &AuthRouter{Controller: auth_controller, Authenticate: authtenticate, Authorized: authorized}
+func NewAuthRoute(auth_controller *controller.AuthController, authtenticate *middleware.AuthenticateMiddleware, authorized *middleware.AuthorizeMiddleware) *AuthRoute {
+	return &AuthRoute{Controller: auth_controller, Authenticate: authtenticate, Authorized: authorized}
 }
 
-func (i AuthRouter) Set(router *gin.Engine, rg *gin.RouterGroup) {
+func (i AuthRoute) Set(router *gin.Engine) {
 
-	public := rg.Group("") // No middleware
+	public := router.Group("") // No middleware
 	public.GET("/auth/me", i.Controller.Me)
 	public.POST("/auth/login", i.Controller.Login)
 	public.POST("/auth/refresh", i.Controller.RefreshToken)
 	public.POST("/auth/forget-password", i.Controller.ForgetPassword)
 
-	protected := rg.Group("")
+	protected := router.Group("")
 	protected.Use(i.Authenticate.Handle())
 	// protected.Use(i.Authorized.Handle())
 

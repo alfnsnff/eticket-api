@@ -3,6 +3,7 @@ package controller
 import (
 	"eticket-api/internal/common/jwt"
 	"eticket-api/internal/common/response"
+	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/auth"
 	"net/http"
@@ -13,15 +14,34 @@ import (
 type AuthController struct {
 	TokenManager *jwt.TokenUtil
 	AuthUsecase  *auth.AuthUsecase
+	Authenticate *middleware.AuthenticateMiddleware
+	Authorized   *middleware.AuthorizeMiddleware
 }
 
 // NewUserRoleController creates a new UserRoleController instance
 func NewAuthController(
+	g *gin.Engine,
 	auth_usecase *auth.AuthUsecase,
-) *AuthController {
-	return &AuthController{
-		AuthUsecase: auth_usecase,
+	authtenticate *middleware.AuthenticateMiddleware,
+	authorized *middleware.AuthorizeMiddleware,
+) {
+	ac := &AuthController{
+		AuthUsecase:  auth_usecase,
+		Authenticate: authtenticate,
+		Authorized:   authorized,
 	}
+
+	public := g.Group("") // No middleware
+	public.GET("/auth/me", ac.Me)
+	public.POST("/auth/login", ac.Login)
+	public.POST("/auth/refresh", ac.RefreshToken)
+	public.POST("/auth/forget-password", ac.ForgetPassword)
+
+	protected := g.Group("")
+	protected.Use(ac.Authenticate.Set())
+	// protected.Use(ac.Authorized.Set())
+
+	protected.POST("/auth/logout", ac.Logout)
 }
 
 func (auc *AuthController) Login(ctx *gin.Context) {

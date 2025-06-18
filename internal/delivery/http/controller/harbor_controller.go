@@ -2,6 +2,7 @@ package controller
 
 import (
 	"eticket-api/internal/common/response"
+	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/harbor"
 	"net/http"
@@ -12,10 +13,31 @@ import (
 
 type HarborController struct {
 	HarborUsecase *harbor.HarborUsecase
+	Authenticate  *middleware.AuthenticateMiddleware
+	Authorized    *middleware.AuthorizeMiddleware
 }
 
-func NewHarborController(harbor_usecase *harbor.HarborUsecase) *HarborController {
-	return &HarborController{HarborUsecase: harbor_usecase}
+func NewHarborController(
+	g *gin.Engine, harbor_usecase *harbor.HarborUsecase,
+	authtenticate *middleware.AuthenticateMiddleware,
+	authorized *middleware.AuthorizeMiddleware,
+) {
+	hc := &HarborController{
+		HarborUsecase: harbor_usecase,
+		Authenticate:  authtenticate,
+		Authorized:    authorized}
+
+	public := g.Group("") // No middleware
+	public.GET("/harbors", hc.GetAllHarbors)
+	public.GET("/harbor/:id", hc.GetHarborByID)
+
+	protected := g.Group("")
+	protected.Use(hc.Authenticate.Set())
+	// protected.Use(ac.Authorized.Set())
+
+	protected.POST("/harbor/create", hc.CreateHarbor)
+	protected.PUT("/harbor/update/:id", hc.UpdateHarbor)
+	protected.DELETE("/harbor/:id", hc.DeleteHarbor)
 }
 
 func (hc *HarborController) CreateHarbor(ctx *gin.Context) {

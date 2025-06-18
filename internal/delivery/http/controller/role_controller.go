@@ -2,6 +2,7 @@ package controller
 
 import (
 	"eticket-api/internal/common/response"
+	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/role"
 	"net/http"
@@ -11,12 +12,33 @@ import (
 )
 
 type RoleController struct {
-	RoleUsecase *role.RoleUsecase
+	RoleUsecase  *role.RoleUsecase
+	Authenticate *middleware.AuthenticateMiddleware
+	Authorized   *middleware.AuthorizeMiddleware
 }
 
 // NewRoleController creates a new RoleController instance
-func NewRoleController(role_usecase *role.RoleUsecase) *RoleController {
-	return &RoleController{RoleUsecase: role_usecase}
+func NewRoleController(
+	g *gin.Engine, role_usecase *role.RoleUsecase,
+	authtenticate *middleware.AuthenticateMiddleware,
+	authorized *middleware.AuthorizeMiddleware,
+) {
+	roc := &RoleController{
+		RoleUsecase:  role_usecase,
+		Authenticate: authtenticate,
+		Authorized:   authorized}
+
+	public := g.Group("") // No middleware
+	public.GET("/roles", roc.GetAllRoles)
+	public.GET("/role/:id", roc.GetRoleByID)
+
+	protected := g.Group("")
+	protected.Use(roc.Authenticate.Set())
+	// protected.Use(ac.Authorized.Set())
+
+	protected.POST("/role/create", roc.CreateRole)
+	protected.PUT("/role/update/:id", roc.UpdateRole)
+	protected.DELETE("/role/:id", roc.DeleteRole)
 }
 
 func (rc *RoleController) CreateRole(ctx *gin.Context) {

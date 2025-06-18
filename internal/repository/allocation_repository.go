@@ -37,7 +37,6 @@ func (ar *AllocationRepository) GetAll(db *gorm.DB, limit, offset int, sort, sea
 		query = query.Where("schedule_id ILIKE ?", search)
 	}
 
-	// 🔃 Sort (with default)
 	if sort == "" {
 		sort = "id asc"
 	} else {

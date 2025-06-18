@@ -2,6 +2,7 @@ package controller
 
 import (
 	"eticket-api/internal/common/response"
+	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/payment"
 	"net/http"
@@ -11,11 +12,30 @@ import (
 
 type PaymentController struct {
 	PaymentUsecase *payment.PaymentUsecase
+	Authenticate   *middleware.AuthenticateMiddleware
+	Authorized     *middleware.AuthorizeMiddleware
 }
 
 // NewPaymentController creates a new PaymentController instance
-func NewPaymentController(payment_usecase *payment.PaymentUsecase) *PaymentController {
-	return &PaymentController{PaymentUsecase: payment_usecase}
+func NewPaymentController(
+	g *gin.Engine, payment_usecase *payment.PaymentUsecase,
+	authtenticate *middleware.AuthenticateMiddleware,
+	authorized *middleware.AuthorizeMiddleware,
+) {
+	pc := &PaymentController{
+		PaymentUsecase: payment_usecase,
+		Authenticate:   authtenticate,
+		Authorized:     authorized}
+
+	public := g.Group("") // No middleware
+	public.GET("/payment-channels", pc.GetPaymentChannels)
+	public.GET("/payment/transaction/detail/:id", pc.GetTransactionDetail)
+	public.POST("/payment/transaction/create", pc.CreatePayment)
+	public.POST("/payment/callback", pc.HandleCallback)
+
+	protected := g.Group("")
+	protected.Use(pc.Authenticate.Set())
+	// protected.Use(ac.Authorized.Set())
 }
 
 func (pc *PaymentController) GetPaymentChannels(ctx *gin.Context) {

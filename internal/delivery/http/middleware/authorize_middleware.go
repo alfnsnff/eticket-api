@@ -21,7 +21,7 @@ func NewAuthorizeMiddleware(enforcer *casbin.Enforcer) *AuthorizeMiddleware {
 }
 
 // Gin middleware to enforce RBAC
-func (i *AuthorizeMiddleware) Handle() gin.HandlerFunc {
+func (i *AuthorizeMiddleware) Set() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Extract user role from context (set during auth middleware)
 		role, exists := c.Get("rolename")

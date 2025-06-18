@@ -2,6 +2,7 @@ package controller
 
 import (
 	"eticket-api/internal/common/response"
+	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/user"
 	"net/http"
@@ -11,12 +12,33 @@ import (
 )
 
 type UserController struct {
-	UserUsecase *user.UserUsecase
+	UserUsecase  *user.UserUsecase
+	Authenticate *middleware.AuthenticateMiddleware
+	Authorized   *middleware.AuthorizeMiddleware
 }
 
 // NewUserController creates a new UserController instance
-func NewUserController(user_usecase *user.UserUsecase) *UserController {
-	return &UserController{UserUsecase: user_usecase}
+func NewUserController(
+	g *gin.Engine, user_usecase *user.UserUsecase,
+	authtenticate *middleware.AuthenticateMiddleware,
+	authorized *middleware.AuthorizeMiddleware,
+) {
+	uc := &UserController{
+		UserUsecase:  user_usecase,
+		Authenticate: authtenticate,
+		Authorized:   authorized}
+
+	public := g.Group("") // No middleware
+	public.GET("/users", uc.GetAllUsers)
+	public.GET("/user/:id", uc.GetUserByID)
+	public.POST("/user/create", uc.CreateUser)
+
+	protected := g.Group("")
+	protected.Use(uc.Authenticate.Set())
+	// protected.Use(ac.Authorized.Set())
+
+	protected.PUT("/user/update/:id", uc.UpdateUser)
+	protected.DELETE("/user/:id", uc.DeleteUser)
 }
 
 func (uc *UserController) CreateUser(ctx *gin.Context) {

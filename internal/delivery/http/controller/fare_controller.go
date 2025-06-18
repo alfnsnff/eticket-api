@@ -2,6 +2,7 @@ package controller
 
 import (
 	"eticket-api/internal/common/response"
+	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/model" // Import the response package
 	"eticket-api/internal/usecase/fare"
 	"net/http"
@@ -11,11 +12,32 @@ import (
 )
 
 type FareController struct {
-	FareUsecase *fare.FareUsecase
+	FareUsecase  *fare.FareUsecase
+	Authenticate *middleware.AuthenticateMiddleware
+	Authorized   *middleware.AuthorizeMiddleware
 }
 
-func NewFareController(Fare_usecase *fare.FareUsecase) *FareController {
-	return &FareController{FareUsecase: Fare_usecase}
+func NewFareController(
+	g *gin.Engine, Fare_usecase *fare.FareUsecase,
+	authtenticate *middleware.AuthenticateMiddleware,
+	authorized *middleware.AuthorizeMiddleware,
+) {
+	fc := &FareController{
+		FareUsecase:  Fare_usecase,
+		Authenticate: authtenticate,
+		Authorized:   authorized}
+
+	public := g.Group("") // No middleware
+	public.GET("/fares", fc.GetAllFares)
+	public.GET("/fare/:id", fc.GetFareByID)
+
+	protected := g.Group("")
+	protected.Use(fc.Authenticate.Set())
+	// protected.Use(ac.Authorized.Set())
+
+	protected.POST("/fare/create", fc.CreateFare)
+	protected.PUT("/fare/update/:id", fc.UpdateFare)
+	protected.DELETE("/fare/:id", fc.DeleteFare)
 }
 
 func (fc *FareController) CreateFare(ctx *gin.Context) {

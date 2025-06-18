@@ -19,7 +19,6 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
-	"gorm.io/gorm"
 )
 
 func NewHTTPClient() *http.Client {
@@ -59,13 +58,12 @@ func New() (*Server, error) {
 	)))
 }
 
-func NewServer(
-	config *config.Configuration,
-	route *module.RouterModule,
-	job *module.JobModule,
-	db *gorm.DB, // Replace 'interface{}' with the actual type, e.g., *gorm.DB if using GORM
-) *Server {
-	gin.SetMode(gin.DebugMode)
+func NewServer(config *config.Configuration) *Server {
+
+	db, err := NewDatabase(config)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
 
 	// Automatically migrate your models (creating tables, etc.)
 	if err := db.AutoMigrate(
@@ -89,6 +87,8 @@ func NewServer(
 	}
 
 	app := gin.Default()
+
+	Bootstrap(app, NewHTTPClient(), config, db)
 	app.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
 			// TODO: Make dynamic via cfg
@@ -145,23 +145,23 @@ func Job(job *module.JobModule) {
 	}
 }
 
-func Setup(route *module.RouterModule, app *gin.Engine) {
-	group := app.Group("/api/v1")
-	route.AuthRouter.Set(app, group)
-	route.AllocationRouter.Set(app, group)
-	route.BookingRouter.Set(app, group)
-	route.ClassRouter.Set(app, group)
-	route.FareRouter.Set(app, group)
-	route.HarborRouter.Set(app, group)
-	route.ManifestRouter.Set(app, group)
-	route.RoleRouter.Set(app, group)
-	route.RouteRouter.Set(app, group)
-	route.ScheduleRouter.Set(app, group)
-	route.SessionRouter.Set(app, group)
-	route.ShipRouter.Set(app, group)
-	route.TicketRouter.Set(app, group)
-	route.UserRouter.Set(app, group)
-	route.PaymentRouter.Set(app, group)
+func Setup(route *module.RouteModule, app *gin.Engine) {
+	app.Group("/api/v1")
+	route.AuthRoute.Set(app)
+	route.AllocationRoute.Set(app)
+	route.BookingRoute.Set(app)
+	route.ClassRoute.Set(app)
+	route.FareRoute.Set(app)
+	route.HarborRoute.Set(app)
+	route.ManifestRoute.Set(app)
+	route.RoleRoute.Set(app)
+	route.Routeouter.Set(app)
+	route.ScheduleRoute.Set(app)
+	// route.SessionRoute.Set(app)
+	route.ShipRoute.Set(app)
+	route.TicketRoute.Set(app)
+	route.UserRoute.Set(app)
+	route.PaymentRoute.Set(app)
 }
 
 func (server Server) App() *gin.Engine {

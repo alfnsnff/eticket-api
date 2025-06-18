@@ -2,6 +2,7 @@ package controller
 
 import (
 	"eticket-api/internal/common/response"
+	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/ship" // Import the response package
 	"net/http"
@@ -11,11 +12,32 @@ import (
 )
 
 type ShipController struct {
-	ShipUsecase *ship.ShipUsecase
+	ShipUsecase  *ship.ShipUsecase
+	Authenticate *middleware.AuthenticateMiddleware
+	Authorized   *middleware.AuthorizeMiddleware
 }
 
-func NewShipController(ship_usecase *ship.ShipUsecase) *ShipController {
-	return &ShipController{ShipUsecase: ship_usecase}
+func NewShipController(
+	g *gin.Engine, ship_usecase *ship.ShipUsecase,
+	authtenticate *middleware.AuthenticateMiddleware,
+	authorized *middleware.AuthorizeMiddleware,
+) {
+	shc := &ShipController{
+		ShipUsecase:  ship_usecase,
+		Authenticate: authtenticate,
+		Authorized:   authorized}
+
+	public := g.Group("") // No middleware
+	public.GET("/ships", shc.GetAllShips)
+	public.GET("/ships/:id", shc.GetShipByID)
+
+	protected := g.Group("")
+	protected.Use(shc.Authenticate.Set())
+	// protected.Use(ac.Authorized.Set())
+
+	protected.POST("/ship/create", shc.CreateShip)
+	protected.PUT("/ship/:id", shc.UpdateShip)
+	protected.DELETE("/ship/:id", shc.DeleteShip)
 }
 
 func (shc *ShipController) CreateShip(ctx *gin.Context) {

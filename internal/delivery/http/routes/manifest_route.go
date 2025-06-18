@@ -1,4 +1,4 @@
-package route
+package routes
 
 import (
 	"eticket-api/internal/delivery/http/controller"
@@ -7,24 +7,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type ManifestRouter struct {
+type ManifestRoute struct {
 	Controller   *controller.ManifestController
 	Authenticate *middleware.AuthenticateMiddleware
 	Authorized   *middleware.AuthorizeMiddleware
 }
 
-func NewManifestRouter(manifest_controller *controller.ManifestController, authtenticate *middleware.AuthenticateMiddleware, authorized *middleware.AuthorizeMiddleware) *ManifestRouter {
-	return &ManifestRouter{Controller: manifest_controller, Authenticate: authtenticate, Authorized: authorized}
+func NewManifestRoute(manifest_controller *controller.ManifestController, authtenticate *middleware.AuthenticateMiddleware, authorized *middleware.AuthorizeMiddleware) *ManifestRoute {
+	return &ManifestRoute{Controller: manifest_controller, Authenticate: authtenticate, Authorized: authorized}
 }
 
-func (i ManifestRouter) Set(router *gin.Engine, rg *gin.RouterGroup) {
+func (i ManifestRoute) Set(router *gin.Engine) {
 	mc := i.Controller
 
-	public := rg.Group("") // No middleware
+	public := router.Group("") // No middleware
 	public.GET("/manifests", mc.GetAllManifests)
 	public.GET("/manifest/:id", mc.GetManifestByID)
 
-	protected := rg.Group("")
+	protected := router.Group("")
 	protected.Use(i.Authorized.Handle())
 	// protected.Use(i.Authorized.Handle())
 

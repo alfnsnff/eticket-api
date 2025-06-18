@@ -12,14 +12,14 @@ type AuthenticateMiddleware struct {
 	TokenUtil *jwt.TokenUtil
 }
 
-func NewAuthMiddleware(token_util *jwt.TokenUtil) *AuthenticateMiddleware {
+func NewAuthenticateMiddleware(token_util *jwt.TokenUtil) *AuthenticateMiddleware {
 	return &AuthenticateMiddleware{
 		TokenUtil: token_util,
 	}
 }
 
 // Middleware method to authenticate access token via cookie
-func (am *AuthenticateMiddleware) Handle() gin.HandlerFunc {
+func (am *AuthenticateMiddleware) Set() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get access token from cookie
 		tokenStr, err := c.Cookie("access_token")

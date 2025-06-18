@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/class"
 
@@ -13,10 +14,31 @@ import (
 
 type ClassController struct {
 	ClassUsecase *class.ClassUsecase
+	Authenticate *middleware.AuthenticateMiddleware
+	Authorized   *middleware.AuthorizeMiddleware
 }
 
-func NewClassController(class_usecase *class.ClassUsecase) *ClassController {
-	return &ClassController{ClassUsecase: class_usecase}
+func NewClassController(
+	g *gin.Engine, class_usecase *class.ClassUsecase,
+	authtenticate *middleware.AuthenticateMiddleware,
+	authorized *middleware.AuthorizeMiddleware,
+) {
+	cc := &ClassController{
+		ClassUsecase: class_usecase,
+		Authenticate: authtenticate,
+		Authorized:   authorized}
+
+	public := g.Group("") // No middleware
+	public.GET("/classes", cc.GetAllClasses)
+	public.GET("/class/:id", cc.GetClassByID)
+
+	protected := g.Group("")
+	protected.Use(cc.Authenticate.Set())
+	// protected.Use(ac.Authorized.Set())
+
+	protected.POST("/class/create", cc.CreateClass)
+	protected.PUT("/class/update/:id", cc.UpdateClass)
+	protected.DELETE("/class/:id", cc.DeleteClass)
 }
 
 func (cc *ClassController) CreateClass(ctx *gin.Context) {

@@ -2,6 +2,7 @@ package controller
 
 import (
 	"eticket-api/internal/common/response"
+	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/route"
 	"net/http"
@@ -12,10 +13,31 @@ import (
 
 type RouteController struct {
 	RouteUsecase *route.RouteUsecase
+	Authenticate *middleware.AuthenticateMiddleware
+	Authorized   *middleware.AuthorizeMiddleware
 }
 
-func NewRouteController(route_usecase *route.RouteUsecase) *RouteController {
-	return &RouteController{RouteUsecase: route_usecase}
+func NewRouteController(
+	g *gin.Engine, route_usecase *route.RouteUsecase,
+	authtenticate *middleware.AuthenticateMiddleware,
+	authorized *middleware.AuthorizeMiddleware,
+) {
+	rc := &RouteController{
+		RouteUsecase: route_usecase,
+		Authenticate: authtenticate,
+		Authorized:   authorized}
+
+	public := g.Group("") // No middleware
+	public.GET("/routes", rc.GetAllRoutes)
+	public.GET("/route/:id", rc.GetRouteByID)
+
+	protected := g.Group("")
+	protected.Use(rc.Authenticate.Set())
+	// protected.Use(ac.Authorized.Set())
+
+	protected.POST("/route/create", rc.CreateRoute)
+	protected.PUT("/route//update:id", rc.UpdateRoute)
+	protected.DELETE("/route/:id", rc.DeleteRoute)
 }
 
 func (rc *RouteController) CreateRoute(ctx *gin.Context) {

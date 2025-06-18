@@ -1,4 +1,4 @@
-package route
+package routes
 
 import (
 	"eticket-api/internal/delivery/http/controller"
@@ -7,24 +7,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type HarborRouter struct {
+type HarborRoute struct {
 	Controller   *controller.HarborController
 	Authenticate *middleware.AuthenticateMiddleware
 	Authorized   *middleware.AuthorizeMiddleware
 }
 
-func NewHarborRouter(harbor_controller *controller.HarborController, authtenticate *middleware.AuthenticateMiddleware, authorized *middleware.AuthorizeMiddleware) *HarborRouter {
-	return &HarborRouter{Controller: harbor_controller, Authenticate: authtenticate, Authorized: authorized}
+func NewHarborRoute(harbor_controller *controller.HarborController, authtenticate *middleware.AuthenticateMiddleware, authorized *middleware.AuthorizeMiddleware) *HarborRoute {
+	return &HarborRoute{Controller: harbor_controller, Authenticate: authtenticate, Authorized: authorized}
 }
 
-func (i HarborRouter) Set(router *gin.Engine, rg *gin.RouterGroup) {
+func (i HarborRoute) Set(router *gin.Engine) {
 	hc := i.Controller
 
-	public := rg.Group("") // No middleware
+	public := router.Group("") // No middleware
 	public.GET("/harbors", hc.GetAllHarbors)
 	public.GET("/harbor/:id", hc.GetHarborByID)
 
-	protected := rg.Group("")
+	protected := router.Group("")
 	protected.Use(i.Authenticate.Handle())
 	// protected.Use(i.Authorized.Handle())
 
