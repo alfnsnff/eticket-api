@@ -25,7 +25,7 @@ func (i ManifestRouter) Set(router *gin.Engine, rg *gin.RouterGroup) {
 	public.GET("/manifest/:id", mc.GetManifestByID)
 
 	protected := rg.Group("")
-	protected.Use(i.Authorized.Handle())
+	protected.Use(i.Authenticate.Handle())
 	// protected.Use(i.Authorized.Handle())
 
 	protected.POST("/manifest/create", mc.CreateManifest)
