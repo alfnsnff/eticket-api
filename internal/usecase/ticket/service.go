@@ -29,8 +29,8 @@ func NewTicketUsecase(
 		DB:                 db,
 		ScheduleRepository: schedule_repository,
 		TicketRepository:   ticket_repository,
-		ManifestRepository: nil, // Initialize if needed
-		FareRepository:     nil, // Initialize if needed
+		ManifestRepository: manifest_repository, // Initialize if needed
+		FareRepository:     fare_repository,     // Initialize if needed
 	}
 }
 
