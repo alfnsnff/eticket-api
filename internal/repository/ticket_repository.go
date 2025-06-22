@@ -3,7 +3,7 @@ package repository
 import (
 	"errors"
 	enum "eticket-api/internal/common/enums"
-	"eticket-api/internal/entity"
+	"eticket-api/internal/domain"
 	"strings"
 	"time"
 
@@ -17,23 +17,23 @@ func NewTicketRepository() *TicketRepository {
 	return &TicketRepository{}
 }
 
-func (ar *TicketRepository) Create(db *gorm.DB, ticket *entity.Ticket) error {
+func (ar *TicketRepository) Create(db *gorm.DB, ticket *domain.Ticket) error {
 	result := db.Create(ticket)
 	return result.Error
 }
 
-func (ar *TicketRepository) Update(db *gorm.DB, ticket *entity.Ticket) error {
+func (ar *TicketRepository) Update(db *gorm.DB, ticket *domain.Ticket) error {
 	result := db.Save(ticket)
 	return result.Error
 }
 
-func (ar *TicketRepository) Delete(db *gorm.DB, ticket *entity.Ticket) error {
+func (ar *TicketRepository) Delete(db *gorm.DB, ticket *domain.Ticket) error {
 	result := db.Select(clause.Associations).Delete(ticket)
 	return result.Error
 }
 
 func (tr *TicketRepository) Count(db *gorm.DB) (int64, error) {
-	tickets := []*entity.Ticket{}
+	tickets := []*domain.Ticket{}
 	var total int64
 	result := db.Find(&tickets).Count(&total)
 	if result.Error != nil {
@@ -42,8 +42,8 @@ func (tr *TicketRepository) Count(db *gorm.DB) (int64, error) {
 	return total, nil
 }
 
-func (tr *TicketRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*entity.Ticket, error) {
-	tickets := []*entity.Ticket{}
+func (tr *TicketRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.Ticket, error) {
+	tickets := []*domain.Ticket{}
 
 	query := db.Preload("Class").
 		Preload("Schedule").
@@ -68,8 +68,8 @@ func (tr *TicketRepository) GetAll(db *gorm.DB, limit, offset int, sort, search 
 	return tickets, err
 }
 
-func (tr *TicketRepository) GetByScheduleID(db *gorm.DB, id, limit, offset int, sort, search string) ([]*entity.Ticket, error) {
-	tickets := []*entity.Ticket{}
+func (tr *TicketRepository) GetByScheduleID(db *gorm.DB, id, limit, offset int, sort, search string) ([]*domain.Ticket, error) {
+	tickets := []*domain.Ticket{}
 
 	query := db.Preload("Class").
 		Preload("Schedule").
@@ -93,8 +93,8 @@ func (tr *TicketRepository) GetByScheduleID(db *gorm.DB, id, limit, offset int, 
 	return tickets, err
 }
 
-func (tr *TicketRepository) GetByID(db *gorm.DB, id uint) (*entity.Ticket, error) {
-	ticket := new(entity.Ticket)
+func (tr *TicketRepository) GetByID(db *gorm.DB, id uint) (*domain.Ticket, error) {
+	ticket := new(domain.Ticket)
 	result := db.Preload("Class").
 		Preload("Schedule").
 		Preload("Schedule.Ship").
@@ -107,8 +107,8 @@ func (tr *TicketRepository) GetByID(db *gorm.DB, id uint) (*entity.Ticket, error
 	return ticket, result.Error
 }
 
-func (tr *TicketRepository) GetByBookingID(db *gorm.DB, id uint) ([]*entity.Ticket, error) {
-	tickets := []*entity.Ticket{}
+func (tr *TicketRepository) GetByBookingID(db *gorm.DB, id uint) ([]*domain.Ticket, error) {
+	tickets := []*domain.Ticket{}
 	result := db.Preload("Class").
 		Preload("Schedule").
 		Preload("Schedule.Ship").
@@ -126,7 +126,7 @@ func (r *TicketRepository) CountByScheduleClassAndStatuses(db *gorm.DB, schedule
 	var count int64
 	now := time.Now()
 
-	query := db.Model(&entity.Ticket{}).
+	query := db.Model(&domain.Ticket{}).
 		Joins("LEFT JOIN claim_session ON ticket.claim_session_id = claim_session.id").
 		Where("ticket.schedule_id = ? AND ticket.class_id = ?", scheduleID, classID).
 		Where("ticket.claim_session_id IS NOT NULL").
@@ -143,7 +143,7 @@ func (r *TicketRepository) CountByScheduleClassAndStatuses(db *gorm.DB, schedule
 	return count, nil
 }
 
-func (tr *TicketRepository) CreateBulk(db *gorm.DB, tickets []*entity.Ticket) error {
+func (tr *TicketRepository) CreateBulk(db *gorm.DB, tickets []*domain.Ticket) error {
 	result := db.Create(&tickets)
 	if result.Error != nil {
 		return result.Error
@@ -151,7 +151,7 @@ func (tr *TicketRepository) CreateBulk(db *gorm.DB, tickets []*entity.Ticket) er
 	return nil
 }
 
-func (tr *TicketRepository) UpdateBulk(db *gorm.DB, tickets []*entity.Ticket) error {
+func (tr *TicketRepository) UpdateBulk(db *gorm.DB, tickets []*domain.Ticket) error {
 	result := db.Save(&tickets)
 	if result.Error != nil {
 		return result.Error
@@ -159,8 +159,8 @@ func (tr *TicketRepository) UpdateBulk(db *gorm.DB, tickets []*entity.Ticket) er
 	return nil
 }
 
-func (tr *TicketRepository) FindManyByIDs(db *gorm.DB, ids []uint) ([]*entity.Ticket, error) {
-	tickets := []*entity.Ticket{}
+func (tr *TicketRepository) FindManyByIDs(db *gorm.DB, ids []uint) ([]*domain.Ticket, error) {
+	tickets := []*domain.Ticket{}
 	result := db.Preload("Class").
 		Preload("Schedule").
 		Preload("Schedule.Ship").
@@ -174,8 +174,8 @@ func (tr *TicketRepository) FindManyByIDs(db *gorm.DB, ids []uint) ([]*entity.Ti
 	return tickets, nil
 }
 
-func (tr *TicketRepository) FindManyBySessionID(db *gorm.DB, sessionID uint) ([]*entity.Ticket, error) {
-	tickets := []*entity.Ticket{}
+func (tr *TicketRepository) FindManyBySessionID(db *gorm.DB, sessionID uint) ([]*domain.Ticket, error) {
+	tickets := []*domain.Ticket{}
 	result := db.Preload("Class").
 		Preload("Schedule").
 		Preload("Schedule.Ship").
@@ -190,7 +190,7 @@ func (tr *TicketRepository) FindManyBySessionID(db *gorm.DB, sessionID uint) ([]
 }
 
 func (r *TicketRepository) CancelManyBySessionID(db *gorm.DB, sessionID uint) error {
-	result := db.Model(&entity.Ticket{}).
+	result := db.Model(&domain.Ticket{}).
 		Where("claim_session_id = ?", sessionID).
 		Updates(map[string]interface{}{
 			"status":           "cancelled",
@@ -206,14 +206,14 @@ func (r *TicketRepository) CancelManyBySessionID(db *gorm.DB, sessionID uint) er
 }
 
 func (r *TicketRepository) Paid(db *gorm.DB, id uint) error {
-	return db.Model(&entity.Ticket{}).
+	return db.Model(&domain.Ticket{}).
 		Where("id = ?", id).
 		Update("status", "paid").
 		Error
 }
 
 func (r *TicketRepository) CheckIn(db *gorm.DB, id uint) error {
-	return db.Model(&entity.Ticket{}).
+	return db.Model(&domain.Ticket{}).
 		Where("id = ?", id).
 		Update("status", "checkin").
 		Error

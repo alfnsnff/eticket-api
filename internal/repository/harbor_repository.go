@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"eticket-api/internal/entity"
+	"eticket-api/internal/domain"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -16,23 +16,23 @@ func NewHarborRepository() *HarborRepository {
 	return &HarborRepository{}
 }
 
-func (ar *HarborRepository) Create(db *gorm.DB, harbor *entity.Harbor) error {
+func (ar *HarborRepository) Create(db *gorm.DB, harbor *domain.Harbor) error {
 	result := db.Create(harbor)
 	return result.Error
 }
 
-func (ar *HarborRepository) Update(db *gorm.DB, harbor *entity.Harbor) error {
+func (ar *HarborRepository) Update(db *gorm.DB, harbor *domain.Harbor) error {
 	result := db.Save(harbor)
 	return result.Error
 }
 
-func (ar *HarborRepository) Delete(db *gorm.DB, harbor *entity.Harbor) error {
+func (ar *HarborRepository) Delete(db *gorm.DB, harbor *domain.Harbor) error {
 	result := db.Select(clause.Associations).Delete(harbor)
 	return result.Error
 }
 
 func (hr *HarborRepository) Count(db *gorm.DB) (int64, error) {
-	harbors := []*entity.Harbor{}
+	harbors := []*domain.Harbor{}
 	var total int64
 	result := db.Find(&harbors).Count(&total)
 	if result.Error != nil {
@@ -41,8 +41,8 @@ func (hr *HarborRepository) Count(db *gorm.DB) (int64, error) {
 	return total, nil
 }
 
-func (hr *HarborRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*entity.Harbor, error) {
-	harbors := []*entity.Harbor{}
+func (hr *HarborRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.Harbor, error) {
+	harbors := []*domain.Harbor{}
 
 	query := db
 
@@ -62,8 +62,8 @@ func (hr *HarborRepository) GetAll(db *gorm.DB, limit, offset int, sort, search 
 	return harbors, err
 }
 
-func (hr *HarborRepository) GetByID(db *gorm.DB, id uint) (*entity.Harbor, error) {
-	harbor := new(entity.Harbor)
+func (hr *HarborRepository) GetByID(db *gorm.DB, id uint) (*domain.Harbor, error) {
+	harbor := new(domain.Harbor)
 	result := db.First(&harbor, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil

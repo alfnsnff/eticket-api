@@ -2,7 +2,7 @@ package repository
 
 import (
 	"errors"
-	"eticket-api/internal/entity"
+	"eticket-api/internal/domain"
 	"strings"
 
 	"gorm.io/gorm"
@@ -15,23 +15,23 @@ func NewManifestRepository() *ManifestRepository {
 	return &ManifestRepository{}
 }
 
-func (ar *ManifestRepository) Create(db *gorm.DB, manifest *entity.Manifest) error {
+func (ar *ManifestRepository) Create(db *gorm.DB, manifest *domain.Manifest) error {
 	result := db.Create(manifest)
 	return result.Error
 }
 
-func (ar *ManifestRepository) Update(db *gorm.DB, manifest *entity.Manifest) error {
+func (ar *ManifestRepository) Update(db *gorm.DB, manifest *domain.Manifest) error {
 	result := db.Save(manifest)
 	return result.Error
 }
 
-func (ar *ManifestRepository) Delete(db *gorm.DB, manifest *entity.Manifest) error {
+func (ar *ManifestRepository) Delete(db *gorm.DB, manifest *domain.Manifest) error {
 	result := db.Select(clause.Associations).Delete(manifest)
 	return result.Error
 }
 
 func (mr *ManifestRepository) Count(db *gorm.DB) (int64, error) {
-	manifests := []*entity.Manifest{}
+	manifests := []*domain.Manifest{}
 	var total int64
 	result := db.Find(&manifests).Count(&total)
 	if result.Error != nil {
@@ -40,8 +40,8 @@ func (mr *ManifestRepository) Count(db *gorm.DB) (int64, error) {
 	return total, nil
 }
 
-func (mr *ManifestRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*entity.Manifest, error) {
-	manifests := []*entity.Manifest{}
+func (mr *ManifestRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.Manifest, error) {
+	manifests := []*domain.Manifest{}
 
 	query := db.Preload("Class").Preload("Ship")
 
@@ -61,8 +61,8 @@ func (mr *ManifestRepository) GetAll(db *gorm.DB, limit, offset int, sort, searc
 	return manifests, err
 }
 
-func (mr *ManifestRepository) GetByID(db *gorm.DB, id uint) (*entity.Manifest, error) {
-	manifest := new(entity.Manifest)
+func (mr *ManifestRepository) GetByID(db *gorm.DB, id uint) (*domain.Manifest, error) {
+	manifest := new(domain.Manifest)
 	result := db.Preload("Class").
 		Preload("Ship").
 		First(&manifest, id)
@@ -72,8 +72,8 @@ func (mr *ManifestRepository) GetByID(db *gorm.DB, id uint) (*entity.Manifest, e
 	return manifest, result.Error
 }
 
-func (mr *ManifestRepository) GetByShipAndClass(ctx *gorm.DB, shipID uint, classID uint) (*entity.Manifest, error) {
-	manifest := new(entity.Manifest)
+func (mr *ManifestRepository) GetByShipAndClass(ctx *gorm.DB, shipID uint, classID uint) (*domain.Manifest, error) {
+	manifest := new(domain.Manifest)
 	result := ctx.Preload("Class").
 		Preload("Ship").
 		Where("ship_id = ? AND class_id = ?", shipID, classID).First(manifest)
@@ -83,8 +83,8 @@ func (mr *ManifestRepository) GetByShipAndClass(ctx *gorm.DB, shipID uint, class
 	return manifest, result.Error
 }
 
-func (r *ManifestRepository) FindByShipID(db *gorm.DB, shipID uint) ([]*entity.Manifest, error) {
-	manifests := []*entity.Manifest{}
+func (r *ManifestRepository) FindByShipID(db *gorm.DB, shipID uint) ([]*domain.Manifest, error) {
+	manifests := []*domain.Manifest{}
 	result := db.Preload("Class").
 		Preload("Ship").
 		Where("ship_id = ?", shipID).Find(&manifests)

@@ -2,7 +2,7 @@ package repository
 
 import (
 	"errors"
-	"eticket-api/internal/entity"
+	"eticket-api/internal/domain"
 	"strings"
 
 	"gorm.io/gorm"
@@ -15,23 +15,23 @@ func NewFareRepository() *FareRepository {
 	return &FareRepository{}
 }
 
-func (ar *FareRepository) Create(db *gorm.DB, fare *entity.Fare) error {
+func (ar *FareRepository) Create(db *gorm.DB, fare *domain.Fare) error {
 	result := db.Create(fare)
 	return result.Error
 }
 
-func (ar *FareRepository) Update(db *gorm.DB, fare *entity.Fare) error {
+func (ar *FareRepository) Update(db *gorm.DB, fare *domain.Fare) error {
 	result := db.Save(fare)
 	return result.Error
 }
 
-func (ar *FareRepository) Delete(db *gorm.DB, fare *entity.Fare) error {
+func (ar *FareRepository) Delete(db *gorm.DB, fare *domain.Fare) error {
 	result := db.Select(clause.Associations).Delete(fare)
 	return result.Error
 }
 
 func (fr *FareRepository) Count(db *gorm.DB) (int64, error) {
-	fares := []*entity.Fare{}
+	fares := []*domain.Fare{}
 	var total int64
 	result := db.Find(&fares).Count(&total)
 	if result.Error != nil {
@@ -40,8 +40,8 @@ func (fr *FareRepository) Count(db *gorm.DB) (int64, error) {
 	return total, nil
 }
 
-func (fr *FareRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*entity.Fare, error) {
-	fares := []*entity.Fare{}
+func (fr *FareRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.Fare, error) {
+	fares := []*domain.Fare{}
 
 	query := db.Preload("Route").
 		Preload("Route.DepartureHarbor").
@@ -66,8 +66,8 @@ func (fr *FareRepository) GetAll(db *gorm.DB, limit, offset int, sort, search st
 	return fares, err
 }
 
-func (fr *FareRepository) GetByID(db *gorm.DB, id uint) (*entity.Fare, error) {
-	fare := new(entity.Fare)
+func (fr *FareRepository) GetByID(db *gorm.DB, id uint) (*domain.Fare, error) {
+	fare := new(domain.Fare)
 	result := db.Preload("Route").
 		Preload("Route.DepartureHarbor").
 		Preload("Route.ArrivalHarbor").
@@ -81,8 +81,8 @@ func (fr *FareRepository) GetByID(db *gorm.DB, id uint) (*entity.Fare, error) {
 	return fare, result.Error
 }
 
-func (fr *FareRepository) GetByManifestAndRoute(db *gorm.DB, manifestID uint, routeID uint) (*entity.Fare, error) {
-	fare := new(entity.Fare)
+func (fr *FareRepository) GetByManifestAndRoute(db *gorm.DB, manifestID uint, routeID uint) (*domain.Fare, error) {
+	fare := new(domain.Fare)
 	result := db.Preload("Route").
 		Preload("Route.DepartureHarbor").
 		Preload("Route.ArrivalHarbor").

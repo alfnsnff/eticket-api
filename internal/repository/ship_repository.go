@@ -2,7 +2,7 @@ package repository
 
 import (
 	"errors"
-	"eticket-api/internal/entity"
+	"eticket-api/internal/domain"
 	"strings"
 
 	"gorm.io/gorm"
@@ -15,23 +15,23 @@ func NewShipRepository() *ShipRepository {
 	return &ShipRepository{}
 }
 
-func (ar *ShipRepository) Create(db *gorm.DB, ship *entity.Ship) error {
+func (ar *ShipRepository) Create(db *gorm.DB, ship *domain.Ship) error {
 	result := db.Create(ship)
 	return result.Error
 }
 
-func (ar *ShipRepository) Update(db *gorm.DB, ship *entity.Ship) error {
+func (ar *ShipRepository) Update(db *gorm.DB, ship *domain.Ship) error {
 	result := db.Save(ship)
 	return result.Error
 }
 
-func (ar *ShipRepository) Delete(db *gorm.DB, ship *entity.Ship) error {
+func (ar *ShipRepository) Delete(db *gorm.DB, ship *domain.Ship) error {
 	result := db.Select(clause.Associations).Delete(ship)
 	return result.Error
 }
 
 func (shr *ShipRepository) Count(db *gorm.DB) (int64, error) {
-	ships := []*entity.Ship{}
+	ships := []*domain.Ship{}
 	var total int64
 	result := db.Find(&ships).Count(&total)
 	if result.Error != nil {
@@ -40,8 +40,8 @@ func (shr *ShipRepository) Count(db *gorm.DB) (int64, error) {
 	return total, nil
 }
 
-func (shr *ShipRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*entity.Ship, error) {
-	ships := []*entity.Ship{}
+func (shr *ShipRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.Ship, error) {
+	ships := []*domain.Ship{}
 
 	query := db
 
@@ -61,8 +61,8 @@ func (shr *ShipRepository) GetAll(db *gorm.DB, limit, offset int, sort, search s
 	return ships, err
 }
 
-func (shr *ShipRepository) GetByID(db *gorm.DB, id uint) (*entity.Ship, error) {
-	ship := new(entity.Ship)
+func (shr *ShipRepository) GetByID(db *gorm.DB, id uint) (*domain.Ship, error) {
+	ship := new(domain.Ship)
 	result := db.First(&ship, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil

@@ -1,72 +1,96 @@
 package claim_session
 
 import (
-	"eticket-api/internal/entity"
+	"eticket-api/internal/domain"
 	"eticket-api/internal/model"
 )
 
-// Map ClaimSession entity to ReadClaimSessionResponse model
-func ToReadClaimSessionResponse(session *entity.ClaimSession, tickets []*entity.Ticket) *model.ReadClaimSessionResponse {
-	if session == nil {
-		return nil
-	}
-
-	var ticketPrices []model.ClaimSessionTicketPricesResponse
-	var ticketDetails []model.ClaimSessionTicketDetailResponse
-	var total float32
-
-	// Build ticket prices and details
-	if len(tickets) > 0 {
-		ticketPrices, total = BuildPriceBreakdown(tickets)
-		ticketDetails = BuildTicketBreakdown(tickets)
-	}
-
-	// Map schedule
-	var scheduleModel model.ClaimSessionSchedule
-	if session.Schedule.ID != 0 {
-		scheduleModel = ToScheduleModel(&session.Schedule)
-	}
-
+// Map ClaimSession domain to ReadClaimSessionResponse model
+func ClaimSessionToResponse(session *domain.ClaimSession) *model.ReadClaimSessionResponse {
+	prices, total := BuildPriceBreakdown(session.Tickets)
+	details := BuildTicketBreakdown(session.Tickets)
 	return &model.ReadClaimSessionResponse{
-		ID:          session.ID,
-		SessionID:   session.SessionID,
-		ScheduleID:  session.ScheduleID,
-		Schedule:    scheduleModel,
+		ID:        session.ID,
+		SessionID: session.SessionID,
+		Schedule: model.ClaimSessionSchedule{
+			ID: session.Schedule.ID,
+			Ship: model.ClaimSessionScheduleShip{
+				ID:       session.Schedule.Ship.ID,
+				ShipName: session.Schedule.Ship.ShipName,
+			},
+			Route: model.ClaimSessionScheduleRoute{
+				ID: session.Schedule.Route.ID,
+				DepartureHarbor: model.ClaimSessionScheduleHarbor{
+					ID:         session.Schedule.Route.DepartureHarbor.ID,
+					HarborName: session.Schedule.Route.DepartureHarbor.HarborName,
+				},
+				ArrivalHarbor: model.ClaimSessionScheduleHarbor{
+					ID:         session.Schedule.Route.ArrivalHarbor.ID,
+					HarborName: session.Schedule.Route.ArrivalHarbor.HarborName,
+				},
+			},
+			DepartureDatetime: *session.Schedule.DepartureDatetime,
+			ArrivalDatetime:   *session.Schedule.ArrivalDatetime,
+		},
 		ExpiresAt:   session.ExpiresAt,
-		Prices:      ticketPrices,
-		Tickets:     ticketDetails,
+		Prices:      prices,
+		Tickets:     details,
 		TotalAmount: total,
 		CreatedAt:   session.CreatedAt,
 		UpdatedAt:   session.UpdatedAt,
 	}
 }
 
-// Map Schedule entity to ClaimSessionSchedule model
-func ToScheduleModel(schedule *entity.Schedule) model.ClaimSessionSchedule {
-	return model.ClaimSessionSchedule{
-		ID: schedule.ID,
-		Ship: model.ClaimSessionScheduleShip{
-			ID:       schedule.Ship.ID,
-			ShipName: schedule.Ship.ShipName,
-		},
-		Route: model.ClaimSessionScheduleRoute{
-			ID: schedule.Route.ID,
-			DepartureHarbor: model.ClaimSessionScheduleHarbor{
-				ID:         schedule.Route.DepartureHarbor.ID,
-				HarborName: schedule.Route.DepartureHarbor.HarborName,
-			},
-			ArrivalHarbor: model.ClaimSessionScheduleHarbor{
-				ID:         schedule.Route.ArrivalHarbor.ID,
-				HarborName: schedule.Route.ArrivalHarbor.HarborName,
-			},
-		},
-		DepartureDatetime: *schedule.DepartureDatetime,
-		ArrivalDatetime:   *schedule.ArrivalDatetime,
-	}
-}
+// // Map ClaimSession domain to ReadClaimSessionResponse model
+// func ToReadClaimSessionResponse(session *domain.ClaimSession, tickets []*domain.Ticket) *model.ReadClaimSessionResponse {
+// 	if session == nil {
+// 		return nil
+// 	}
+
+// 	var prices []model.ClaimSessionTicketPricesResponse
+// 	var details []model.ClaimSessionTicketDetailResponse
+// 	var total float32
+
+// 	// Build ticket prices and details
+// 	if len(tickets) > 0 {
+// 		prices, total = BuildPriceBreakdown(tickets)
+// 		details = BuildTicketBreakdown(tickets)
+// 	}
+
+// 	return &model.ReadClaimSessionResponse{
+// 		ID:        session.ID,
+// 		SessionID: session.SessionID,
+// 		Schedule: model.ClaimSessionSchedule{
+// 			ID: session.Schedule.ID,
+// 			Ship: model.ClaimSessionScheduleShip{
+// 				ID:       session.Schedule.Ship.ID,
+// 				ShipName: session.Schedule.Ship.ShipName,
+// 			},
+// 			Route: model.ClaimSessionScheduleRoute{
+// 				ID: session.Schedule.Route.ID,
+// 				DepartureHarbor: model.ClaimSessionScheduleHarbor{
+// 					ID:         session.Schedule.Route.DepartureHarbor.ID,
+// 					HarborName: session.Schedule.Route.DepartureHarbor.HarborName,
+// 				},
+// 				ArrivalHarbor: model.ClaimSessionScheduleHarbor{
+// 					ID:         session.Schedule.Route.ArrivalHarbor.ID,
+// 					HarborName: session.Schedule.Route.ArrivalHarbor.HarborName,
+// 				},
+// 			},
+// 			DepartureDatetime: *session.Schedule.DepartureDatetime,
+// 			ArrivalDatetime:   *session.Schedule.ArrivalDatetime,
+// 		},
+// 		ExpiresAt:   session.ExpiresAt,
+// 		Prices:      prices,
+// 		Tickets:     details,
+// 		TotalAmount: total,
+// 		CreatedAt:   session.CreatedAt,
+// 		UpdatedAt:   session.UpdatedAt,
+// 	}
+// }
 
 // Build ticket breakdown
-func BuildTicketBreakdown(tickets []*entity.Ticket) []model.ClaimSessionTicketDetailResponse {
+func BuildTicketBreakdown(tickets []domain.Ticket) []model.ClaimSessionTicketDetailResponse {
 	result := make([]model.ClaimSessionTicketDetailResponse, len(tickets))
 	for i, ticket := range tickets {
 		result[i] = model.ClaimSessionTicketDetailResponse{
@@ -84,7 +108,7 @@ func BuildTicketBreakdown(tickets []*entity.Ticket) []model.ClaimSessionTicketDe
 }
 
 // Build price breakdown
-func BuildPriceBreakdown(tickets []*entity.Ticket) ([]model.ClaimSessionTicketPricesResponse, float32) {
+func BuildPriceBreakdown(tickets []domain.Ticket) ([]model.ClaimSessionTicketPricesResponse, float32) {
 	ticketSummary := make(map[uint]*model.ClaimSessionTicketPricesResponse)
 	var total float32
 

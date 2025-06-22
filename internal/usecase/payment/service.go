@@ -7,7 +7,7 @@ import (
 	enum "eticket-api/internal/common/enums"
 	"eticket-api/internal/common/mailer"
 	"eticket-api/internal/common/templates"
-	"eticket-api/internal/entity"
+	"eticket-api/internal/domain"
 	"eticket-api/internal/model"
 	"fmt"
 	"net/http"
@@ -127,7 +127,7 @@ func (c *PaymentUsecase) CreatePayment(ctx context.Context, request *model.Write
 			return nil, fmt.Errorf("failed to update booking with reference number: %w", err)
 		}
 	}
-	session = &entity.ClaimSession{
+	session = &domain.ClaimSession{
 		ID:         session.ID,
 		SessionID:  session.SessionID,
 		ScheduleID: session.ScheduleID,
@@ -174,7 +174,7 @@ func (c *PaymentUsecase) HandleCallback(ctx context.Context, r *http.Request, re
 	}
 
 	// Get session from the first ticket's claim_session_id
-	var session *entity.ClaimSession
+	var session *domain.ClaimSession
 	if tickets[0].ClaimSessionID != nil {
 		session, err = c.ClaimSessionRepository.GetByID(tx, *tickets[0].ClaimSessionID)
 		if err != nil {
@@ -213,7 +213,7 @@ func (c *PaymentUsecase) HandleCallback(ctx context.Context, r *http.Request, re
 }
 
 // Handle successful payment
-func (c *PaymentUsecase) HandleSuccessfulPayment(tx *gorm.DB, booking *entity.Booking, tickets []*entity.Ticket, session *entity.ClaimSession) error {
+func (c *PaymentUsecase) HandleSuccessfulPayment(tx *gorm.DB, booking *domain.Booking, tickets []*domain.Ticket, session *domain.ClaimSession) error {
 	// Update session to success status
 	session.Status = enum.ClaimSessionSuccess.String()
 
@@ -233,7 +233,7 @@ func (c *PaymentUsecase) HandleSuccessfulPayment(tx *gorm.DB, booking *entity.Bo
 }
 
 // Handle unsuccessful payment
-func (c *PaymentUsecase) HandleUnsuccessfulPayment(tx *gorm.DB, booking *entity.Booking, tickets []*entity.Ticket, session *entity.ClaimSession, status string) error {
+func (c *PaymentUsecase) HandleUnsuccessfulPayment(tx *gorm.DB, booking *domain.Booking, tickets []*domain.Ticket, session *domain.ClaimSession, status string) error {
 
 	// Update session to failed status
 	session.Status = enum.ClaimSessionFailed.String() // Expire immediately

@@ -1,14 +1,18 @@
 package booking
 
 import (
-	"eticket-api/internal/entity"
+	"eticket-api/internal/common/utils"
+	"eticket-api/internal/domain"
 	"eticket-api/internal/model"
+	"fmt"
 )
 
-// Map Booking entity to ReadBookingResponse model
-func ToReadBookingResponse(booking *entity.Booking) *model.ReadBookingResponse {
-	if booking == nil {
-		return nil
+// Map Booking domain to ReadBookingResponse model
+func BookingToResponse(booking *domain.Booking) *model.ReadBookingResponse {
+
+	// Print tickets to terminal
+	for _, ticket := range booking.Tickets {
+		fmt.Printf("Ticket: %+v\n", ticket)
 	}
 
 	// Map tickets
@@ -30,7 +34,7 @@ func ToReadBookingResponse(booking *entity.Booking) *model.ReadBookingResponse {
 
 	return &model.ReadBookingResponse{
 		ID:      booking.ID,
-		OrderID: *booking.OrderID,
+		OrderID: booking.OrderID,
 		Schedule: model.BookingSchedule{
 			ID: booking.Schedule.ID,
 			Ship: model.BookingScheduleShip{
@@ -48,8 +52,8 @@ func ToReadBookingResponse(booking *entity.Booking) *model.ReadBookingResponse {
 					HarborName: booking.Schedule.Route.ArrivalHarbor.HarborName,
 				},
 			},
-			DepartureDatetime: *booking.Schedule.DepartureDatetime,
-			ArrivalDatetime:   *booking.Schedule.ArrivalDatetime,
+			DepartureDatetime: utils.SafeTimeDeref(booking.Schedule.DepartureDatetime),
+			ArrivalDatetime:   utils.SafeTimeDeref(booking.Schedule.ArrivalDatetime),
 		},
 		CustomerName:    booking.CustomerName,
 		CustomerAge:     booking.CustomerAge,
@@ -63,42 +67,4 @@ func ToReadBookingResponse(booking *entity.Booking) *model.ReadBookingResponse {
 		UpdatedAt:       booking.UpdatedAt,
 		Tickets:         tickets,
 	}
-}
-
-// Map a slice of Allocation entities to ReadAllocationResponse models
-func ToReadBookingResponses(bookings []*entity.Booking) []*model.ReadBookingResponse {
-	responses := make([]*model.ReadBookingResponse, len(bookings))
-	for i, booking := range bookings {
-		responses[i] = ToReadBookingResponse(booking)
-	}
-	return responses
-}
-
-// Map WriteBookingRequest model to Booking entity
-func FromWriteBookingRequest(request *model.WriteBookingRequest) *entity.Booking {
-	return &entity.Booking{
-		OrderID:         request.OrderID,
-		ScheduleID:      request.ScheduleID,
-		CustomerName:    request.CustomerName,
-		CustomerAge:     request.CustomerAge,
-		CustomerGender:  request.CustomerGender,
-		Email:           request.Email,
-		PhoneNumber:     request.PhoneNumber,
-		IDType:          request.IDType,
-		IDNumber:        request.IDNumber,
-		ReferenceNumber: request.ReferenceNumber,
-	}
-}
-
-// Map UpdateBookingRequest model to Booking entity
-func FromUpdateBookingRequest(request *model.UpdateBookingRequest, booking *entity.Booking) {
-	booking.ScheduleID = request.ScheduleID
-	booking.CustomerName = request.CustomerName
-	booking.CustomerAge = request.CustomerAge
-	booking.CustomerGender = request.CustomerGender
-	booking.Email = request.Email
-	booking.PhoneNumber = request.PhoneNumber
-	booking.IDType = request.IDType
-	booking.IDNumber = request.IDNumber
-	booking.ReferenceNumber = request.ReferenceNumber
 }

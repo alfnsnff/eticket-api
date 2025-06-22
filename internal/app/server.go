@@ -9,7 +9,7 @@ import (
 	"eticket-api/internal/common/mailer"
 	"eticket-api/internal/common/token"
 	"eticket-api/internal/common/validator"
-	"eticket-api/internal/entity"
+	"eticket-api/internal/domain"
 	"fmt"
 
 	"log"
@@ -35,21 +35,21 @@ func NewApp(cfg *config.Config) (*Server, error) {
 
 	// Automatically migrate your models (creating tables, etc.)
 	if err := db.AutoMigrate(
-		&entity.Route{},
-		&entity.Class{},
-		&entity.Schedule{},
-		&entity.Ship{},
-		&entity.Harbor{},
-		&entity.Booking{},
-		&entity.ClaimSession{},
-		&entity.Ticket{},
-		&entity.Manifest{},
-		&entity.Fare{},
-		&entity.Allocation{},
-		&entity.Role{},
-		&entity.User{},
-		&entity.RefreshToken{},
-		&entity.PasswordReset{},
+		&domain.Route{},
+		&domain.Class{},
+		&domain.Schedule{},
+		&domain.Ship{},
+		&domain.Harbor{},
+		&domain.Booking{},
+		&domain.ClaimSession{},
+		&domain.Ticket{},
+		&domain.Manifest{},
+		&domain.Fare{},
+		&domain.Allocation{},
+		&domain.Role{},
+		&domain.User{},
+		&domain.RefreshToken{},
+		&domain.PasswordReset{},
 	); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}

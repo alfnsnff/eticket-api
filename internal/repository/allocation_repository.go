@@ -2,7 +2,7 @@ package repository
 
 import (
 	"errors"
-	"eticket-api/internal/entity"
+	"eticket-api/internal/domain"
 	"strings"
 
 	"gorm.io/gorm"
@@ -15,23 +15,23 @@ func NewAllocationRepository() *AllocationRepository {
 	return &AllocationRepository{}
 }
 
-func (ar *AllocationRepository) Create(db *gorm.DB, allocation *entity.Allocation) error {
+func (ar *AllocationRepository) Create(db *gorm.DB, allocation *domain.Allocation) error {
 	result := db.Create(allocation)
 	return result.Error
 }
 
-func (ar *AllocationRepository) Update(db *gorm.DB, allocation *entity.Allocation) error {
+func (ar *AllocationRepository) Update(db *gorm.DB, allocation *domain.Allocation) error {
 	result := db.Save(allocation)
 	return result.Error
 }
 
-func (ar *AllocationRepository) Delete(db *gorm.DB, allocation *entity.Allocation) error {
+func (ar *AllocationRepository) Delete(db *gorm.DB, allocation *domain.Allocation) error {
 	result := db.Select(clause.Associations).Delete(allocation)
 	return result.Error
 }
 
 func (ar *AllocationRepository) Count(db *gorm.DB) (int64, error) {
-	allocations := []*entity.Allocation{}
+	allocations := []*domain.Allocation{}
 	var total int64
 	result := db.Find(&allocations).Count(&total)
 	if result.Error != nil {
@@ -40,8 +40,8 @@ func (ar *AllocationRepository) Count(db *gorm.DB) (int64, error) {
 	return total, nil
 }
 
-func (ar *AllocationRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*entity.Allocation, error) {
-	allocations := []*entity.Allocation{}
+func (ar *AllocationRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.Allocation, error) {
+	allocations := []*domain.Allocation{}
 
 	query := db.Preload("Class")
 
@@ -60,8 +60,8 @@ func (ar *AllocationRepository) GetAll(db *gorm.DB, limit, offset int, sort, sea
 	return allocations, err
 }
 
-func (ar *AllocationRepository) GetByID(db *gorm.DB, id uint) (*entity.Allocation, error) {
-	allocation := new(entity.Allocation)
+func (ar *AllocationRepository) GetByID(db *gorm.DB, id uint) (*domain.Allocation, error) {
+	allocation := new(domain.Allocation)
 	result := db.Preload("Class").First(&allocation, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
@@ -69,8 +69,8 @@ func (ar *AllocationRepository) GetByID(db *gorm.DB, id uint) (*entity.Allocatio
 	return allocation, result.Error
 }
 
-func (ar *AllocationRepository) LockByScheduleAndClass(db *gorm.DB, scheduleID uint, classID uint) (*entity.Allocation, error) {
-	allocation := new(entity.Allocation)
+func (ar *AllocationRepository) LockByScheduleAndClass(db *gorm.DB, scheduleID uint, classID uint) (*domain.Allocation, error) {
+	allocation := new(domain.Allocation)
 	result := db.Where("schedule_id = ? AND class_id = ?", scheduleID, classID).Clauses(clause.Locking{Strength: "UPDATE"}).First(allocation)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
@@ -78,8 +78,8 @@ func (ar *AllocationRepository) LockByScheduleAndClass(db *gorm.DB, scheduleID u
 	return allocation, result.Error
 }
 
-func (ar *AllocationRepository) GetByScheduleAndClass(db *gorm.DB, scheduleID uint, classID uint) (*entity.Allocation, error) {
-	allocation := new(entity.Allocation)
+func (ar *AllocationRepository) GetByScheduleAndClass(db *gorm.DB, scheduleID uint, classID uint) (*domain.Allocation, error) {
+	allocation := new(domain.Allocation)
 	result := db.Where("schedule_id = ? AND class_id = ?", scheduleID, classID).Find(allocation)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
@@ -87,8 +87,8 @@ func (ar *AllocationRepository) GetByScheduleAndClass(db *gorm.DB, scheduleID ui
 	return allocation, result.Error
 }
 
-func (ar *AllocationRepository) FindByScheduleID(db *gorm.DB, scheduleID uint) ([]*entity.Allocation, error) {
-	allocations := []*entity.Allocation{} // Declare an empty slice of pointers
+func (ar *AllocationRepository) FindByScheduleID(db *gorm.DB, scheduleID uint) ([]*domain.Allocation, error) {
+	allocations := []*domain.Allocation{} // Declare an empty slice of pointers
 
 	// CORRECT LINE: Pass a POINTER to the slice (&allocations)
 	result := db.Where("schedule_id = ?", scheduleID).Find(&allocations)
@@ -102,7 +102,7 @@ func (ar *AllocationRepository) FindByScheduleID(db *gorm.DB, scheduleID uint) (
 	return allocations, nil
 }
 
-func (tr *AllocationRepository) CreateBulk(db *gorm.DB, allocations []*entity.Allocation) error {
+func (tr *AllocationRepository) CreateBulk(db *gorm.DB, allocations []*domain.Allocation) error {
 	result := db.Create(&allocations)
 	if result.Error != nil {
 		return result.Error

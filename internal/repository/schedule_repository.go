@@ -2,7 +2,7 @@ package repository
 
 import (
 	"errors"
-	"eticket-api/internal/entity"
+	"eticket-api/internal/domain"
 	"strings"
 	"time"
 
@@ -16,23 +16,23 @@ func NewScheduleRepository() *ScheduleRepository {
 	return &ScheduleRepository{}
 }
 
-func (ar *ScheduleRepository) Create(db *gorm.DB, schedule *entity.Schedule) error {
+func (ar *ScheduleRepository) Create(db *gorm.DB, schedule *domain.Schedule) error {
 	result := db.Create(schedule)
 	return result.Error
 }
 
-func (ar *ScheduleRepository) Update(db *gorm.DB, schedule *entity.Schedule) error {
+func (ar *ScheduleRepository) Update(db *gorm.DB, schedule *domain.Schedule) error {
 	result := db.Save(schedule)
 	return result.Error
 }
 
-func (ar *ScheduleRepository) Delete(db *gorm.DB, schedule *entity.Schedule) error {
+func (ar *ScheduleRepository) Delete(db *gorm.DB, schedule *domain.Schedule) error {
 	result := db.Select(clause.Associations).Delete(schedule)
 	return result.Error
 }
 
 func (scr *ScheduleRepository) Count(db *gorm.DB) (int64, error) {
-	schedules := []*entity.Schedule{}
+	schedules := []*domain.Schedule{}
 	var total int64
 	result := db.Find(&schedules).Count(&total)
 	if result.Error != nil {
@@ -41,8 +41,8 @@ func (scr *ScheduleRepository) Count(db *gorm.DB) (int64, error) {
 	return total, nil
 }
 
-func (scr *ScheduleRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*entity.Schedule, error) {
-	schedules := []*entity.Schedule{}
+func (scr *ScheduleRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.Schedule, error) {
+	schedules := []*domain.Schedule{}
 
 	query := db.Preload("Route").
 		Preload("Route.DepartureHarbor").
@@ -65,8 +65,8 @@ func (scr *ScheduleRepository) GetAll(db *gorm.DB, limit, offset int, sort, sear
 	return schedules, err
 }
 
-func (scr *ScheduleRepository) GetByID(db *gorm.DB, id uint) (*entity.Schedule, error) {
-	schedule := new(entity.Schedule)
+func (scr *ScheduleRepository) GetByID(db *gorm.DB, id uint) (*domain.Schedule, error) {
+	schedule := new(domain.Schedule)
 	result := db.Preload("Route").Preload("Route.DepartureHarbor").Preload("Route.ArrivalHarbor").Preload("Ship").First(&schedule, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
@@ -74,8 +74,8 @@ func (scr *ScheduleRepository) GetByID(db *gorm.DB, id uint) (*entity.Schedule, 
 	return schedule, result.Error
 }
 
-func (scr *ScheduleRepository) GetAllScheduled(db *gorm.DB) ([]*entity.Schedule, error) {
-	schedules := []*entity.Schedule{}
+func (scr *ScheduleRepository) GetAllScheduled(db *gorm.DB) ([]*domain.Schedule, error) {
+	schedules := []*domain.Schedule{}
 
 	// Corrected line: Use "?" as a placeholder and pass the string value as a parameter
 	result := db.Preload("Route").Preload("Route.DepartureHarbor").Preload("Route.ArrivalHarbor").Preload("Ship").Where("status = ?", "scheduled").Find(&schedules)
@@ -87,8 +87,8 @@ func (scr *ScheduleRepository) GetAllScheduled(db *gorm.DB) ([]*entity.Schedule,
 	return schedules, nil
 }
 
-func (scr *ScheduleRepository) GetActiveSchedule(db *gorm.DB) ([]*entity.Schedule, error) {
-	schedules := []*entity.Schedule{}
+func (scr *ScheduleRepository) GetActiveSchedule(db *gorm.DB) ([]*domain.Schedule, error) {
+	schedules := []*domain.Schedule{}
 
 	// Corrected line: Use "?" as a placeholder and pass the string value as a parameter
 	result := db.Preload("Route").Preload("Route.DepartureHarbor").Preload("Route.ArrivalHarbor").Preload("Ship").Where("departure_datetime > ?", time.Now()).Find(&schedules)

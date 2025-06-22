@@ -48,7 +48,7 @@ func NewScheduleController(
 	// protected.Use(ac.Authorized.Set())
 
 	protected.POST("/schedule/create", scc.CreateSchedule)
-	protected.POST("/schedule/Schedule/create", scc.CreateScheduleWithAllocation)
+	protected.POST("/schedule/allocation/create", scc.CreateScheduleWithAllocation)
 	protected.PUT("/schedule/update/:id", scc.UpdateSchedule)
 	protected.DELETE("/schedule/:id", scc.DeleteSchedule)
 }

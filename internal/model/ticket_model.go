@@ -42,18 +42,18 @@ type TicketClassItem struct {
 // TicketDTO represents a ticket.
 type ReadTicketResponse struct {
 	ID             uint            `json:"id"`
-	ClaimSessionID uint            `json:"claim_session_id"`
 	Schedule       TicketSchedule  `json:"schedule"`
 	Class          TicketClassItem `json:"class"`
-	BookingID      uint            `json:"booking_id"`
-	Type           string          `json:"type" binding:"required,oneof=passenger vehicle"`
-	PassengerName  string          `json:"passenger_name"`
-	PassengerAge   int             `json:"passenger_age"`
-	Address        string          `json:"address"`
-	IDType         string          `json:"id_type"`
-	IDNumber       string          `json:"id_number"`
+	ClaimSessionID *uint           `json:"claim_session_id"`
+	BookingID      *uint           `json:"booking_id"`
+	PassengerName  *string         `json:"passenger_name"`
+	PassengerAge   *int            `json:"passenger_age"`
+	Address        *string         `json:"address"`
+	IDType         *string         `json:"id_type"`
+	IDNumber       *string         `json:"id_number"`
 	SeatNumber     *string         `json:"seat_number"`
 	LicensePlate   *string         `json:"license_plate"`
+	Type           string          `json:"type" binding:"required,oneof=passenger vehicle"`
 	Price          float32         `json:"price"`
 	ExpiresAt      time.Time       `json:"expires_at"`
 	ClaimedAt      time.Time       `json:"claimed_at"`
@@ -62,11 +62,10 @@ type ReadTicketResponse struct {
 }
 
 type WriteTicketRequest struct {
-	ClaimSessionID  *uint   `json:"claim_session_id"`
-	BookingID       *uint   `json:"booking_id"`
 	ScheduleID      uint    `json:"schedule_id" validate:"required"`
 	ClassID         uint    `json:"class_id" validate:"required"`
-	Type            string  `json:"type" validate:"required,oneof=passenger vehicle"`
+	ClaimSessionID  *uint   `json:"claim_session_id"`
+	BookingID       *uint   `json:"booking_id"`
 	PassengerName   *string `json:"passenger_name"`
 	PassengerAge    *int    `json:"passenger_age"`
 	PassengerGender *string `json:"passenger_gender"`
@@ -75,23 +74,24 @@ type WriteTicketRequest struct {
 	IDNumber        *string `json:"id_number"`
 	SeatNumber      *string `json:"seat_number"`
 	LicensePlate    *string `json:"license_plate"`
+	Type            string  `json:"type" validate:"required,oneof=passenger vehicle"`
 	Price           float32 `json:"price" validate:"required,gte=0"`
 }
 
 type UpdateTicketRequest struct {
 	ID              uint    `json:"id" validate:"required"`
-	ClaimSessionID  uint    `json:"claim_session_id" validate:"required"`
 	ScheduleID      uint    `json:"schedule_id" validate:"required"`
 	ClassID         uint    `json:"class_id" validate:"required"`
-	BookingID       uint    `json:"booking_id" validate:"required"`
-	Type            string  `json:"type" validate:"required,oneof=passenger vehicle"`
-	PassengerName   string  `json:"passenger_name" validate:"required"`
-	PassengerAge    int     `json:"passenger_age" validate:"required,min=0"`
-	PassengerGender string  `json:"passenger_gender" validate:"required"`
-	Address         string  `json:"address" validate:"required"`
-	IDType          string  `json:"id_type" validate:"required"`
-	IDNumber        string  `json:"id_number" validate:"required"`
+	ClaimSessionID  *uint   `json:"claim_session_id"`
+	BookingID       *uint   `json:"booking_id"`
+	PassengerName   *string `json:"passenger_name"`
+	PassengerAge    *int    `json:"passenger_age"`
+	PassengerGender *string `json:"passenger_gender"`
+	Address         *string `json:"address"`
+	IDType          *string `json:"id_type"`
+	IDNumber        *string `json:"id_number"`
 	SeatNumber      *string `json:"seat_number"`
 	LicensePlate    *string `json:"license_plate"`
+	Type            string  `json:"type" validate:"required,oneof=passenger vehicle"`
 	Price           float32 `json:"price" validate:"required,gte=0"`
 }

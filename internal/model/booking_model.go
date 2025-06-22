@@ -50,7 +50,7 @@ type BookingTicket struct {
 // BookingDTO represents the person who booked the ticket.
 type ReadBookingResponse struct {
 	ID              uint            `json:"id"`
-	OrderID         string          `json:"order_id"` // Unique identifier for the booking, e.g., 'ORD123456'
+	OrderID         *string         `json:"order_id"` // Unique identifier for the booking, e.g., 'ORD123456'
 	Schedule        BookingSchedule `json:"schedule"`
 	CustomerName    string          `json:"customer_name"`
 	CustomerAge     int             `json:"customer_age"`    // Age of the customer
@@ -58,7 +58,7 @@ type ReadBookingResponse struct {
 	IDType          string          `json:"id_type"`
 	IDNumber        string          `json:"id_number"`
 	PhoneNumber     string          `json:"phone_number"` // Changed to string to support leading zeros
-	Email           string          `json:"email_address"`
+	Email           string          `json:"email"`
 	ReferenceNumber *string         `json:"reference_number"` // Optional reference number for payment or external tracking
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
@@ -66,28 +66,28 @@ type ReadBookingResponse struct {
 }
 
 type WriteBookingRequest struct {
-	OrderID         *string `json:"order_id" validate:"required"`                                // Required
+	OrderID         *string `json:"order_id"`                                                    // Required
 	ScheduleID      uint    `json:"schedule_id" validate:"required"`                             // Required
 	IDType          string  `json:"id_type" validate:"required"`                                 // Required
 	IDNumber        string  `json:"id_number" validate:"required"`                               // Required
 	CustomerName    string  `json:"customer_name" validate:"required"`                           // Required
 	CustomerAge     int     `json:"customer_age" validate:"required,min=0,max=120"`              // Basic age range
 	CustomerGender  string  `json:"customer_gender" validate:"required,oneof=male female other"` // Must be one of these values
-	PhoneNumber     string  `json:"phone_number" validate:"required,e164"`                       // Uses E.164 format (e.g., +62812345678)
-	Email           string  `json:"email_address" validate:"required,email"`                     // Must be valid email
+	PhoneNumber     string  `json:"phone_number" validate:"required"`                            // Uses E.164 format (e.g., +62812345678)
+	Email           string  `json:"email" validate:"required,email"`                             // Must be valid email
 	ReferenceNumber *string `json:"reference_number"`                                            // Optional
 }
 
 type UpdateBookingRequest struct {
 	ID              uint    `json:"id,omitempty"`
-	OrderID         *string `json:"order_id" validate:"required"`
+	OrderID         *string `json:"order_id"`
 	ScheduleID      uint    `json:"schedule_id" validate:"required"`
 	CustomerName    string  `json:"customer_name" validate:"required"`
 	CustomerAge     int     `json:"customer_age" validate:"required,min=0,max=120"`
 	CustomerGender  string  `json:"customer_gender" validate:"required,oneof=male female other"`
 	IDType          string  `json:"id_type" validate:"required"`
 	IDNumber        string  `json:"id_number" validate:"required"`
-	PhoneNumber     string  `json:"phone_number" validate:"required,e164"`
-	Email           string  `json:"email_address" validate:"required,email"`
+	PhoneNumber     string  `json:"phone_number" validate:"required"`
+	Email           string  `json:"email" validate:"required,email"`
 	ReferenceNumber *string `json:"reference_number"`
 }

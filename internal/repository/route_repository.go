@@ -2,7 +2,7 @@ package repository
 
 import (
 	"errors"
-	"eticket-api/internal/entity"
+	"eticket-api/internal/domain"
 	"strings"
 
 	"gorm.io/gorm"
@@ -15,23 +15,23 @@ func NewRouteRepository() *RouteRepository {
 	return &RouteRepository{}
 }
 
-func (ar *RouteRepository) Create(db *gorm.DB, route *entity.Route) error {
+func (ar *RouteRepository) Create(db *gorm.DB, route *domain.Route) error {
 	result := db.Create(route)
 	return result.Error
 }
 
-func (ar *RouteRepository) Update(db *gorm.DB, route *entity.Route) error {
+func (ar *RouteRepository) Update(db *gorm.DB, route *domain.Route) error {
 	result := db.Save(route)
 	return result.Error
 }
 
-func (ar *RouteRepository) Delete(db *gorm.DB, route *entity.Route) error {
+func (ar *RouteRepository) Delete(db *gorm.DB, route *domain.Route) error {
 	result := db.Select(clause.Associations).Delete(route)
 	return result.Error
 }
 
 func (rr *RouteRepository) Count(db *gorm.DB) (int64, error) {
-	routes := []*entity.Route{}
+	routes := []*domain.Route{}
 	var total int64
 	result := db.Find(&routes).Count(&total)
 	if result.Error != nil {
@@ -40,8 +40,8 @@ func (rr *RouteRepository) Count(db *gorm.DB) (int64, error) {
 	return total, nil
 }
 
-func (rr *RouteRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*entity.Route, error) {
-	routes := []*entity.Route{}
+func (rr *RouteRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.Route, error) {
+	routes := []*domain.Route{}
 
 	query := db.Preload("DepartureHarbor").Preload("ArrivalHarbor")
 
@@ -61,8 +61,8 @@ func (rr *RouteRepository) GetAll(db *gorm.DB, limit, offset int, sort, search s
 	return routes, err
 }
 
-func (rr *RouteRepository) GetByID(db *gorm.DB, id uint) (*entity.Route, error) {
-	route := new(entity.Route)
+func (rr *RouteRepository) GetByID(db *gorm.DB, id uint) (*domain.Route, error) {
+	route := new(domain.Route)
 	result := db.Preload("DepartureHarbor").
 		Preload("ArrivalHarbor").
 		First(&route, id)

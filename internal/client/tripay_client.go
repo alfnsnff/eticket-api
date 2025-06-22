@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"eticket-api/config"
-	"eticket-api/internal/entity"
+	"eticket-api/internal/domain"
 	"eticket-api/internal/model"
 	"fmt"
 	"io"
@@ -38,7 +38,7 @@ func GenerateTransactionSignature(merchantCode, merchantRef string, amount int, 
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func (c *TripayClient) CreatePayment(method string, amount int, name string, email string, phone string, orderID string, items []*entity.Ticket) (model.ReadTransactionResponse, error) {
+func (c *TripayClient) CreatePayment(method string, amount int, name string, email string, phone string, orderID string, items []*domain.Ticket) (model.ReadTransactionResponse, error) {
 	payload := model.WriteTransactionRequest{
 		Method:        method,
 		MerchantRef:   orderID,
@@ -208,7 +208,7 @@ func GenerateCallbackSignature(privateKey string, rawBody []byte) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func TicketsToItemsTr(tickets []*entity.Ticket) []model.OrderItem {
+func TicketsToItemsTr(tickets []*domain.Ticket) []model.OrderItem {
 	var items []model.OrderItem
 	for _, t := range tickets {
 		name := "Tiket " + t.Type

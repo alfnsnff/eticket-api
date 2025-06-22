@@ -4,7 +4,7 @@ import (
 	"errors"
 	"eticket-api/config"
 	constant "eticket-api/internal/common/constants"
-	"eticket-api/internal/entity"
+	"eticket-api/internal/domain"
 	"fmt"
 	"time"
 
@@ -13,8 +13,8 @@ import (
 )
 
 type TokenUtil interface {
-	GenerateAccessToken(user *entity.User) (string, error)
-	GenerateRefreshToken(user *entity.User) (string, error)
+	GenerateAccessToken(user *domain.User) (string, error)
+	GenerateRefreshToken(user *domain.User) (string, error)
 	ValidateToken(token string) (*Claims, error)
 }
 
@@ -37,7 +37,7 @@ func NewJWT(cfg *config.Config) *JWT {
 	}
 }
 
-func (tm *JWT) GenerateAccessToken(user *entity.User) (string, error) {
+func (tm *JWT) GenerateAccessToken(user *domain.User) (string, error) {
 	expirationTime := time.Now().Add(constant.AccessTokenExpiry)
 
 	claims := &Claims{
@@ -58,7 +58,7 @@ func (tm *JWT) GenerateAccessToken(user *entity.User) (string, error) {
 	return token.SignedString(tm.secretKey)
 }
 
-func (tm *JWT) GenerateRefreshToken(user *entity.User) (string, error) {
+func (tm *JWT) GenerateRefreshToken(user *domain.User) (string, error) {
 	expirationTime := time.Now().Add(constant.RefreshTokenExpiry)
 
 	claims := &Claims{

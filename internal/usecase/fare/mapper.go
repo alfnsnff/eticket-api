@@ -1,16 +1,12 @@
 package fare
 
 import (
-	"eticket-api/internal/entity"
+	"eticket-api/internal/domain"
 	"eticket-api/internal/model"
 )
 
-// Map Fare entity to ReadFareResponse model
-func ToReadFareResponse(fare *entity.Fare) *model.ReadFareResponse {
-	if fare == nil {
-		return nil
-	}
-
+// Map Fare domain to ReadFareResponse model
+func FareToResponse(fare *domain.Fare) *model.ReadFareResponse {
 	return &model.ReadFareResponse{
 		ID: fare.ID,
 		Route: model.FareRoute{
@@ -40,29 +36,4 @@ func ToReadFareResponse(fare *entity.Fare) *model.ReadFareResponse {
 		CreatedAt:   fare.CreatedAt,
 		UpdatedAt:   fare.UpdatedAt,
 	}
-}
-
-// Map a slice of Fare entities to ReadFareResponse models
-func ToReadFareResponses(fares []*entity.Fare) []*model.ReadFareResponse {
-	responses := make([]*model.ReadFareResponse, len(fares))
-	for i, fare := range fares {
-		responses[i] = ToReadFareResponse(fare)
-	}
-	return responses
-}
-
-// Map WriteFareRequest model to Fare entity
-func FromWriteFareRequest(request *model.WriteFareRequest) *entity.Fare {
-	return &entity.Fare{
-		RouteID:     request.RouteID,
-		ManifestID:  request.ManifestID,
-		TicketPrice: request.TicketPrice,
-	}
-}
-
-// Map UpdateFareRequest model to Fare entity
-func FromUpdateFareRequest(request *model.UpdateFareRequest, fare *entity.Fare) {
-	fare.RouteID = request.RouteID
-	fare.ManifestID = request.ManifestID
-	fare.TicketPrice = request.TicketPrice
 }
