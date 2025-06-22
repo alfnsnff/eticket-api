@@ -12,9 +12,9 @@ func ToReadTicketResponse(ticket *entity.Ticket) *model.ReadTicketResponse {
 		return nil
 	}
 
-	return &model.ReadTicketResponse{
-		ID:             ticket.ID,
-		ClaimSessionID: *ticket.ClaimSessionID,
+	response := &model.ReadTicketResponse{
+		ID:   ticket.ID,
+		Type: ticket.Type,
 		Schedule: model.TicketSchedule{
 			ID: ticket.Schedule.ID,
 			Ship: model.TicketScheduleShip{
@@ -32,29 +32,68 @@ func ToReadTicketResponse(ticket *entity.Ticket) *model.ReadTicketResponse {
 					HarborName: ticket.Schedule.Route.ArrivalHarbor.HarborName,
 				},
 			},
-			DepartureDatetime: *ticket.Schedule.DepartureDatetime,
-			ArrivalDatetime:   *ticket.Schedule.ArrivalDatetime,
 		},
 		Class: model.TicketClassItem{
 			ID:        ticket.Class.ID,
 			ClassName: ticket.Class.ClassName,
 			Type:      ticket.Class.Type,
 		},
-		BookingID:     *ticket.BookingID,
-		Type:          ticket.Type,
-		PassengerName: *ticket.PassengerName,
-		PassengerAge:  *ticket.PassengerAge,
-		Address:       *ticket.Address,
-		IDType:        *ticket.IDType,
-		IDNumber:      *ticket.IDNumber,
-		SeatNumber:    ticket.SeatNumber,
-		LicensePlate:  ticket.LicensePlate,
-		Price:         ticket.Price,
-		ExpiresAt:     ticket.CreatedAt.Add(24 * time.Hour), // Example expiration logic
-		ClaimedAt:     ticket.UpdatedAt,                     // Example claimed logic
-		CreatedAt:     ticket.CreatedAt,
-		UpdatedAt:     ticket.UpdatedAt,
+		Price:     ticket.Price,
+		CreatedAt: ticket.CreatedAt,
+		UpdatedAt: ticket.UpdatedAt,
 	}
+
+	// Handle nullable fields safely
+	if ticket.ClaimSessionID != nil {
+		response.ClaimSessionID = *ticket.ClaimSessionID
+	}
+
+	if ticket.BookingID != nil {
+		response.BookingID = *ticket.BookingID
+	}
+
+	if ticket.PassengerName != nil {
+		response.PassengerName = *ticket.PassengerName
+	}
+
+	if ticket.PassengerAge != nil {
+		response.PassengerAge = *ticket.PassengerAge
+	}
+
+	if ticket.Address != nil {
+		response.Address = *ticket.Address
+	}
+
+	if ticket.IDType != nil {
+		response.IDType = *ticket.IDType
+	}
+
+	if ticket.IDNumber != nil {
+		response.IDNumber = *ticket.IDNumber
+	}
+
+	if ticket.SeatNumber != nil {
+		response.SeatNumber = ticket.SeatNumber
+	}
+
+	if ticket.LicensePlate != nil {
+		response.LicensePlate = ticket.LicensePlate
+	}
+
+	// Handle schedule datetime fields
+	if ticket.Schedule.DepartureDatetime != nil {
+		response.Schedule.DepartureDatetime = *ticket.Schedule.DepartureDatetime
+	}
+
+	if ticket.Schedule.ArrivalDatetime != nil {
+		response.Schedule.ArrivalDatetime = *ticket.Schedule.ArrivalDatetime
+	}
+
+	// Set expiration and claimed time logic
+	response.ExpiresAt = ticket.CreatedAt.Add(24 * time.Hour)
+	response.ClaimedAt = ticket.UpdatedAt
+
+	return response
 }
 
 // Map a slice of Ticket entities to ReadTicketResponse models
