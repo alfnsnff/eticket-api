@@ -5,8 +5,6 @@ import (
 	"errors"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
-	"eticket-api/internal/model/mapper"
-	"eticket-api/internal/repository"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -14,12 +12,12 @@ import (
 
 type BookingUsecase struct {
 	DB                *gorm.DB
-	BookingRepository *repository.BookingRepository
+	BookingRepository BookingRepository
 }
 
 func NewBookingUsecase(
 	db *gorm.DB,
-	booking_repository *repository.BookingRepository,
+	booking_repository BookingRepository,
 ) *BookingUsecase {
 	return &BookingUsecase{
 		DB:                db,
@@ -38,22 +36,17 @@ func (b *BookingUsecase) CreateBooking(ctx context.Context, request *model.Write
 		}
 	}()
 
-	if request.CustomerName == "" {
-		return fmt.Errorf("booking name cannot be empty")
-	}
-
 	booking := &entity.Booking{
 		OrderID:         request.OrderID,
 		ScheduleID:      request.ScheduleID,
 		CustomerName:    request.CustomerName,
-		CustomerAge:     &request.CustomerAge,
-		CustomerGender:  &request.CustomerGender,
+		CustomerAge:     request.CustomerAge,
+		CustomerGender:  request.CustomerGender,
 		Email:           request.Email,
 		PhoneNumber:     request.PhoneNumber,
 		IDType:          request.IDType,
 		IDNumber:        request.IDNumber,
 		ReferenceNumber: request.ReferenceNumber,
-		Status:          request.Status,
 	}
 
 	if err := b.BookingRepository.Create(tx, booking); err != nil {
@@ -92,7 +85,7 @@ func (b *BookingUsecase) GetAllBookings(ctx context.Context, limit, offset int, 
 		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.BookingMapper.ToModels(bookings), int(total), nil
+	return ToReadBookingResponses(bookings), int(total), nil
 }
 
 func (b *BookingUsecase) GetBookingByID(ctx context.Context, id uint) (*model.ReadBookingResponse, error) {
@@ -118,7 +111,7 @@ func (b *BookingUsecase) GetBookingByID(ctx context.Context, id uint) (*model.Re
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.BookingMapper.ToModel(booking), nil
+	return ToReadBookingResponse(booking), nil
 }
 
 func (b *BookingUsecase) GetBookingByOrderID(ctx context.Context, orderID string) (*model.ReadBookingResponse, error) {
@@ -144,7 +137,7 @@ func (b *BookingUsecase) GetBookingByOrderID(ctx context.Context, orderID string
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.BookingMapper.ToModel(booking), nil
+	return ToReadBookingResponse(booking), nil
 }
 
 func (b *BookingUsecase) UpdateBooking(ctx context.Context, request *model.UpdateBookingRequest) error {
@@ -158,10 +151,6 @@ func (b *BookingUsecase) UpdateBooking(ctx context.Context, request *model.Updat
 		}
 	}()
 
-	if request.ID == 0 {
-		return fmt.Errorf("booking ID cannot be zero")
-	}
-
 	// Fetch existing allocation
 	booking, err := b.BookingRepository.GetByID(tx, request.ID)
 	if err != nil {
@@ -172,15 +161,14 @@ func (b *BookingUsecase) UpdateBooking(ctx context.Context, request *model.Updat
 	}
 
 	booking.ScheduleID = request.ScheduleID
-	booking.CustomerAge = &request.CustomerAge
-	booking.CustomerGender = &request.CustomerGender
+	booking.CustomerAge = request.CustomerAge
+	booking.CustomerGender = request.CustomerGender
 	booking.CustomerName = request.CustomerName
 	booking.Email = request.Email
 	booking.PhoneNumber = request.PhoneNumber
 	booking.IDType = request.IDType
 	booking.IDNumber = request.IDNumber
 	booking.ReferenceNumber = request.ReferenceNumber
-	booking.Status = request.Status
 	booking.OrderID = request.OrderID
 
 	if err := b.BookingRepository.Update(tx, booking); err != nil {

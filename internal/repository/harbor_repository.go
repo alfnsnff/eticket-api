@@ -7,14 +7,28 @@ import (
 	"eticket-api/internal/entity"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
-type HarborRepository struct {
-	Repository[entity.Harbor]
-}
+type HarborRepository struct{}
 
 func NewHarborRepository() *HarborRepository {
 	return &HarborRepository{}
+}
+
+func (ar *HarborRepository) Create(db *gorm.DB, harbor *entity.Harbor) error {
+	result := db.Create(harbor)
+	return result.Error
+}
+
+func (ar *HarborRepository) Update(db *gorm.DB, harbor *entity.Harbor) error {
+	result := db.Save(harbor)
+	return result.Error
+}
+
+func (ar *HarborRepository) Delete(db *gorm.DB, harbor *entity.Harbor) error {
+	result := db.Select(clause.Associations).Delete(harbor)
+	return result.Error
 }
 
 func (hr *HarborRepository) Count(db *gorm.DB) (int64, error) {

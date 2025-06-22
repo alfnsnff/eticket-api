@@ -35,9 +35,9 @@ type FareRouteHarbor struct {
 
 // RouteDTO represents a travel route.
 type FareRoute struct {
-	ID              uint           `json:"id"`
-	DepartureHarbor ScheduleHarbor `json:"departure_harbor"`
-	ArrivalHarbor   ScheduleHarbor `json:"arrival_harbor"`
+	ID              uint            `json:"id"`
+	DepartureHarbor FareRouteHarbor `json:"departure_harbor"`
+	ArrivalHarbor   FareRouteHarbor `json:"arrival_harbor"`
 }
 
 // ShipDTO represents a Ship.
@@ -51,14 +51,14 @@ type ReadFareResponse struct {
 }
 
 type WriteFareRequest struct {
-	RouteID     uint    `json:"route_id"`
-	ManifestID  uint    `json:"manifest_id"`
-	TicketPrice float32 `json:"ticket_price"`
+	RouteID     uint    `json:"route_id" validate:"required"`
+	ManifestID  uint    `json:"manifest_id" validate:"required"`
+	TicketPrice float32 `json:"ticket_price" validate:"required,gt=0"`
 }
 
 type UpdateFareRequest struct {
-	ID          uint    `json:"id"`
-	RouteID     uint    `json:"route_id"`
-	ManifestID  uint    `json:"manifest_id"`
-	TicketPrice float32 `json:"ticket_price"`
+	ID          uint    `json:"id" validate:"required"`
+	RouteID     uint    `json:"route_id" validate:"required"`
+	ManifestID  uint    `json:"manifest_id" validate:"required"`
+	TicketPrice float32 `json:"ticket_price" validate:"required,gt=0"`
 }

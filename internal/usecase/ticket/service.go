@@ -5,8 +5,6 @@ import (
 	"errors"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
-	"eticket-api/internal/model/mapper"
-	"eticket-api/internal/repository"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -14,12 +12,12 @@ import (
 
 type TicketUsecase struct {
 	DB               *gorm.DB
-	TicketRepository *repository.TicketRepository
+	TicketRepository TicketRepository
 }
 
 func NewTicketUsecase(
 	db *gorm.DB,
-	ticket_repository *repository.TicketRepository,
+	ticket_repository TicketRepository,
 ) *TicketUsecase {
 	return &TicketUsecase{
 		DB:               db,
@@ -41,22 +39,17 @@ func (t *TicketUsecase) CreateTicket(ctx context.Context, request *model.WriteTi
 	ticket := &entity.Ticket{
 		ScheduleID:      request.ScheduleID,
 		ClassID:         request.ClassID,
-		BookingID:       &request.BookingID,
-		ClaimSessionID:  &request.ClaimSessionID,
-		Status:          request.Status,
+		BookingID:       request.BookingID,
+		ClaimSessionID:  request.ClaimSessionID,
 		Type:            request.Type,
 		Price:           request.Price,
-		PassengerName:   &request.PassengerName,
-		PassengerAge:    &request.PassengerAge,
-		PassengerGender: &request.PassengerGender,
-		IDType:          &request.IDType,
-		IDNumber:        &request.IDNumber,
+		PassengerName:   request.PassengerName,
+		PassengerAge:    request.PassengerAge,
+		PassengerGender: request.PassengerGender,
+		IDType:          request.IDType,
+		IDNumber:        request.IDNumber,
 		SeatNumber:      request.SeatNumber,
 		LicensePlate:    request.LicensePlate,
-	}
-
-	if ticket.Status == "" {
-		return fmt.Errorf("booking name cannot be empty")
 	}
 
 	if err := t.TicketRepository.Create(tx, ticket); err != nil {
@@ -95,7 +88,7 @@ func (t *TicketUsecase) GetAllTickets(ctx context.Context, limit, offset int, so
 		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.TicketMapper.ToModels(tickets), int(total), nil
+	return ToReadTicketResponses(tickets), int(total), nil
 }
 
 func (t *TicketUsecase) GetAllTicketsByScheduleID(ctx context.Context, schedule_id, limit, offset int, sort, search string) ([]*model.ReadTicketResponse, int, error) {
@@ -119,7 +112,7 @@ func (t *TicketUsecase) GetAllTicketsByScheduleID(ctx context.Context, schedule_
 		return nil, 0, fmt.Errorf("failed to count tickets: %w", err)
 	}
 
-	tickets, err := t.TicketRepository.GetBySchedulseID(tx, schedule_id, limit, offset, sort, search)
+	tickets, err := t.TicketRepository.GetByScheduleID(tx, schedule_id, limit, offset, sort, search)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get all tickets: %w", err)
 	}
@@ -128,7 +121,7 @@ func (t *TicketUsecase) GetAllTicketsByScheduleID(ctx context.Context, schedule_
 		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.TicketMapper.ToModels(tickets), int(total), nil
+	return ToReadTicketResponses(tickets), int(total), nil
 }
 
 func (t *TicketUsecase) GetTicketByID(ctx context.Context, id uint) (*model.ReadTicketResponse, error) {
@@ -154,7 +147,7 @@ func (t *TicketUsecase) GetTicketByID(ctx context.Context, id uint) (*model.Read
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.TicketMapper.ToModel(ticket), nil
+	return ToReadTicketResponse(ticket), nil
 }
 
 func (t *TicketUsecase) UpdateTicket(ctx context.Context, request *model.UpdateTicketRequest) error {
@@ -167,11 +160,6 @@ func (t *TicketUsecase) UpdateTicket(ctx context.Context, request *model.UpdateT
 			tx.Rollback()
 		}
 	}()
-
-	// Validate input
-	if request.ID == 0 {
-		return fmt.Errorf("ticket ID cannot be zero")
-	}
 
 	// Fetch existing allocation
 	ticket, err := t.TicketRepository.GetByID(tx, request.ID)
@@ -186,7 +174,6 @@ func (t *TicketUsecase) UpdateTicket(ctx context.Context, request *model.UpdateT
 	ticket.ClassID = request.ClassID
 	ticket.BookingID = &request.BookingID
 	ticket.ClaimSessionID = &request.ClaimSessionID
-	ticket.Status = request.Status
 	ticket.Type = request.Type
 	ticket.Price = request.Price
 	ticket.PassengerName = &request.PassengerName

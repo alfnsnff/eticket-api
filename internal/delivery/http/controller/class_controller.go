@@ -1,11 +1,14 @@
 package controller
 
 import (
+	"eticket-api/internal/common/logger"
+	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/class"
+	"fmt"
 
-	"eticket-api/internal/common/response"
+	"eticket-api/internal/delivery/response"
 	"net/http"
 	"strconv"
 
@@ -13,26 +16,34 @@ import (
 )
 
 type ClassController struct {
+	Validate     validator.Validator
+	Log          logger.Logger
 	ClassUsecase *class.ClassUsecase
 	Authenticate *middleware.AuthenticateMiddleware
 	Authorized   *middleware.AuthorizeMiddleware
 }
 
 func NewClassController(
-	g *gin.Engine, class_usecase *class.ClassUsecase,
+	g *gin.Engine,
+	log logger.Logger,
+	validate validator.Validator,
+	class_usecase *class.ClassUsecase,
 	authtenticate *middleware.AuthenticateMiddleware,
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	cc := &ClassController{
 		ClassUsecase: class_usecase,
 		Authenticate: authtenticate,
-		Authorized:   authorized}
+		Authorized:   authorized,
+		Validate:     validate,
+		Log:          log,
+	}
 
-	public := g.Group("") // No middleware
+	public := g.Group("/api/v1") // No middleware
 	public.GET("/classes", cc.GetAllClasses)
 	public.GET("/class/:id", cc.GetClassByID)
 
-	protected := g.Group("")
+	protected := g.Group("/api/v1")
 	protected.Use(cc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 
@@ -46,6 +57,13 @@ func (cc *ClassController) CreateClass(ctx *gin.Context) {
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+		return
+	}
+
+	if err := cc.Validate.Struct(request); err != nil {
+		cc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
 
@@ -65,7 +83,7 @@ func (cc *ClassController) GetAllClasses(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve classes", err.Error()))
 		return
 	}
-
+	fmt.Println("🎯 Hit GetAllTickets")
 	ctx.JSON(http.StatusOK, response.NewMetaResponse(
 		datas,
 		"Classes retrieved successfully",
@@ -104,19 +122,25 @@ func (cc *ClassController) GetClassByID(ctx *gin.Context) {
 }
 
 func (cc *ClassController) UpdateClass(ctx *gin.Context) {
-	request := new(model.UpdateClassRequest)
-	id, _ := strconv.Atoi(ctx.Param("id"))
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil || id == 0 {
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid or missing ship ID", nil))
+		return
+	}
 
+	request := new(model.UpdateClassRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	if id == 0 {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Class ID is required", nil))
+	request.ID = uint(id)
+	if err := cc.Validate.Struct(request); err != nil {
+		cc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
-	request.ID = uint(id)
 
 	if err := cc.ClassUsecase.UpdateClass(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update class", err.Error()))

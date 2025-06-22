@@ -6,14 +6,28 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
-type RouteRepository struct {
-	Repository[entity.Route]
-}
+type RouteRepository struct{}
 
 func NewRouteRepository() *RouteRepository {
 	return &RouteRepository{}
+}
+
+func (ar *RouteRepository) Create(db *gorm.DB, route *entity.Route) error {
+	result := db.Create(route)
+	return result.Error
+}
+
+func (ar *RouteRepository) Update(db *gorm.DB, route *entity.Route) error {
+	result := db.Save(route)
+	return result.Error
+}
+
+func (ar *RouteRepository) Delete(db *gorm.DB, route *entity.Route) error {
+	result := db.Select(clause.Associations).Delete(route)
+	return result.Error
 }
 
 func (rr *RouteRepository) Count(db *gorm.DB) (int64, error) {

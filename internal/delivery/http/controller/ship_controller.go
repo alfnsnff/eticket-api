@@ -1,8 +1,10 @@
 package controller
 
 import (
-	"eticket-api/internal/common/response"
+	"eticket-api/internal/common/logger"
+	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/ship" // Import the response package
 	"net/http"
@@ -12,31 +14,39 @@ import (
 )
 
 type ShipController struct {
+	Validate     validator.Validator
+	Log          logger.Logger
 	ShipUsecase  *ship.ShipUsecase
 	Authenticate *middleware.AuthenticateMiddleware
 	Authorized   *middleware.AuthorizeMiddleware
 }
 
 func NewShipController(
-	g *gin.Engine, ship_usecase *ship.ShipUsecase,
+	g *gin.Engine,
+	log logger.Logger,
+	validate validator.Validator,
+	ship_usecase *ship.ShipUsecase,
 	authtenticate *middleware.AuthenticateMiddleware,
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	shc := &ShipController{
 		ShipUsecase:  ship_usecase,
 		Authenticate: authtenticate,
-		Authorized:   authorized}
+		Authorized:   authorized,
+		Validate:     validate,
+		Log:          log,
+	}
 
-	public := g.Group("") // No middleware
+	public := g.Group("/api/v1") // No middleware
 	public.GET("/ships", shc.GetAllShips)
-	public.GET("/ships/:id", shc.GetShipByID)
+	public.GET("/ship/:id", shc.GetShipByID)
 
-	protected := g.Group("")
+	protected := g.Group("/api/v1")
 	protected.Use(shc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 
 	protected.POST("/ship/create", shc.CreateShip)
-	protected.PUT("/ship/:id", shc.UpdateShip)
+	protected.PUT("/ship/update/:id", shc.UpdateShip)
 	protected.DELETE("/ship/:id", shc.DeleteShip)
 }
 
@@ -45,6 +55,13 @@ func (shc *ShipController) CreateShip(ctx *gin.Context) {
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+		return
+	}
+
+	if err := shc.Validate.Struct(request); err != nil {
+		shc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
 
@@ -104,19 +121,26 @@ func (shc *ShipController) GetShipByID(ctx *gin.Context) {
 }
 
 func (shc *ShipController) UpdateShip(ctx *gin.Context) {
-	request := new(model.UpdateShipRequest)
-	id, _ := strconv.Atoi(ctx.Param("id"))
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil || id == 0 {
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid or missing ship ID", nil))
+		return
+	}
 
+	request := new(model.UpdateShipRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	if id == 0 {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Ship ID is required", nil))
+	request.ID = uint(id)
+	if err := shc.Validate.Struct(request); err != nil {
+		shc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
-	request.ID = uint(id)
+
 	if err := shc.ShipUsecase.UpdateShip(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update ship", err.Error()))
 		return

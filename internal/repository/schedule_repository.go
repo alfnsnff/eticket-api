@@ -7,14 +7,28 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
-type ScheduleRepository struct {
-	Repository[entity.Schedule]
-}
+type ScheduleRepository struct{}
 
 func NewScheduleRepository() *ScheduleRepository {
 	return &ScheduleRepository{}
+}
+
+func (ar *ScheduleRepository) Create(db *gorm.DB, schedule *entity.Schedule) error {
+	result := db.Create(schedule)
+	return result.Error
+}
+
+func (ar *ScheduleRepository) Update(db *gorm.DB, schedule *entity.Schedule) error {
+	result := db.Save(schedule)
+	return result.Error
+}
+
+func (ar *ScheduleRepository) Delete(db *gorm.DB, schedule *entity.Schedule) error {
+	result := db.Select(clause.Associations).Delete(schedule)
+	return result.Error
 }
 
 func (scr *ScheduleRepository) Count(db *gorm.DB) (int64, error) {

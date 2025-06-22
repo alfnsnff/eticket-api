@@ -6,14 +6,28 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
-type ManifestRepository struct {
-	Repository[entity.Manifest]
-}
+type ManifestRepository struct{}
 
 func NewManifestRepository() *ManifestRepository {
 	return &ManifestRepository{}
+}
+
+func (ar *ManifestRepository) Create(db *gorm.DB, manifest *entity.Manifest) error {
+	result := db.Create(manifest)
+	return result.Error
+}
+
+func (ar *ManifestRepository) Update(db *gorm.DB, manifest *entity.Manifest) error {
+	result := db.Save(manifest)
+	return result.Error
+}
+
+func (ar *ManifestRepository) Delete(db *gorm.DB, manifest *entity.Manifest) error {
+	result := db.Select(clause.Associations).Delete(manifest)
+	return result.Error
 }
 
 func (mr *ManifestRepository) Count(db *gorm.DB) (int64, error) {

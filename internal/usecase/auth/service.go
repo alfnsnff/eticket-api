@@ -3,14 +3,12 @@ package auth
 import (
 	"context"
 	"errors"
-	"eticket-api/internal/common/jwt"
 	"eticket-api/internal/common/mailer"
 	"eticket-api/internal/common/templates"
+	"eticket-api/internal/common/token"
 	"eticket-api/internal/common/utils"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
-	"eticket-api/internal/model/mapper"
-	"eticket-api/internal/repository"
 	"fmt"
 	"time"
 
@@ -20,18 +18,18 @@ import (
 
 type AuthUsecase struct {
 	DB             *gorm.DB // Assuming you have a DB field for the transaction manager
-	AuthRepository *repository.AuthRepository
-	UserRepository *repository.UserRepository
-	Mailer         *mailer.SMTPMailer
-	TokenUtil      *jwt.TokenUtil
+	AuthRepository AuthRepository
+	UserRepository UserRepository
+	Mailer         mailer.Mailer
+	TokenUtil      token.TokenUtil
 }
 
 func NewAuthUsecase(
 	db *gorm.DB,
-	auth_repository *repository.AuthRepository,
-	user_repository *repository.UserRepository,
-	mailer *mailer.SMTPMailer,
-	tm *jwt.TokenUtil,
+	auth_repository AuthRepository,
+	user_repository UserRepository,
+	mailer mailer.Mailer,
+	tm token.TokenUtil,
 ) *AuthUsecase {
 	return &AuthUsecase{
 		DB:             db,
@@ -43,7 +41,7 @@ func NewAuthUsecase(
 }
 
 // Login authenticates a user and returns access and refresh tokens.
-func (au *AuthUsecase) Login(ctx context.Context, request *model.UserLoginRequest) (*model.ReadUserResponse, string, string, error) {
+func (au *AuthUsecase) Login(ctx context.Context, request *model.WriteLoginRequest) (*model.ReadLoginResponse, string, string, error) {
 	tx := au.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -53,10 +51,6 @@ func (au *AuthUsecase) Login(ctx context.Context, request *model.UserLoginReques
 			tx.Rollback()
 		}
 	}()
-
-	if request.Username == "" || request.Password == "" {
-		return nil, "", "", errors.New("username and password are required")
-	}
 
 	user, err := au.UserRepository.GetByUsername(tx, request.Username)
 	if err != nil {
@@ -104,7 +98,7 @@ func (au *AuthUsecase) Login(ctx context.Context, request *model.UserLoginReques
 		return nil, "", "", fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.UserMapper.ToModel(user), accessToken, refreshToken, nil
+	return ToReadLoginResponse(user), accessToken, refreshToken, nil
 }
 
 func (au *AuthUsecase) RefreshToken(ctx context.Context, refreshToken string) (string, error) {
@@ -208,7 +202,7 @@ func (au *AuthUsecase) Me(ctx context.Context, accessToken string) (*model.ReadU
 		return nil, fmt.Errorf("user not found")
 	}
 
-	return mapper.UserMapper.ToModel(user), nil
+	return ToReadUserResponse(user), nil
 }
 
 func (au *AuthUsecase) RequestPasswordReset(ctx context.Context, email string) error {

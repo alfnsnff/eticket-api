@@ -6,15 +6,28 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
-type ClassRepository struct {
-	Repository[entity.Class]
-	DB *gorm.DB
-}
+type ClassRepository struct{}
 
 func NewClassRepository(db *gorm.DB) *ClassRepository {
-	return &ClassRepository{DB: db}
+	return &ClassRepository{}
+}
+
+func (ar *ClassRepository) Create(db *gorm.DB, class *entity.Class) error {
+	result := db.Create(class)
+	return result.Error
+}
+
+func (ar *ClassRepository) Update(db *gorm.DB, class *entity.Class) error {
+	result := db.Save(class)
+	return result.Error
+}
+
+func (ar *ClassRepository) Delete(db *gorm.DB, class *entity.Class) error {
+	result := db.Select(clause.Associations).Delete(class)
+	return result.Error
 }
 
 func (cr *ClassRepository) Count(db *gorm.DB) (int64, error) {
@@ -25,10 +38,6 @@ func (cr *ClassRepository) Count(db *gorm.DB) (int64, error) {
 		return 0, result.Error
 	}
 	return total, nil
-}
-
-func (cr *ClassRepository) Createtest(entity *entity.Class) error {
-	return cr.DB.Create(entity).Error
 }
 
 func (cr *ClassRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*entity.Class, error) {

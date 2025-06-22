@@ -27,14 +27,14 @@ type ReadManifestResponse struct {
 }
 
 type WriteManifestRequest struct {
-	ShipID   uint `json:"ship_id"`
-	ClassID  uint `json:"class_id"`
-	Capacity int  `json:"capacity"`
+	ShipID   uint `json:"ship_id" validate:"required"`
+	ClassID  uint `json:"class_id" validate:"required"`
+	Capacity int  `json:"capacity" validate:"required,min=1"`
 }
 
 type UpdateManifestRequest struct {
-	ID       uint `json:"id"`
-	ShipID   uint `json:"ship_id"`
-	ClassID  uint `json:"class_id"`
-	Capacity int  `json:"capacity"`
+	ID       uint `json:"id" validate:"required"`
+	ShipID   uint `json:"ship_id" validate:"required"`
+	ClassID  uint `json:"class_id" validate:"required"`
+	Capacity int  `json:"capacity" validate:"required,min=1"`
 }

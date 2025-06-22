@@ -3,11 +3,10 @@ package claim_session
 import (
 	"context"
 	"errors"
+	enum "eticket-api/internal/common/enums"
 	"eticket-api/internal/common/utils"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
-	"eticket-api/internal/model/mapper"
-	"eticket-api/internal/repository"
 	"fmt"
 	"time"
 
@@ -17,24 +16,24 @@ import (
 
 type ClaimSessionUsecase struct {
 	DB                   *gorm.DB
-	SessionRepository    *repository.SessionRepository
-	TicketRepository     *repository.TicketRepository
-	ScheduleRepository   *repository.ScheduleRepository
-	AllocationRepository *repository.AllocationRepository // Your AllocationRepository implements this
-	ManifestRepository   *repository.ManifestRepository
-	FareRepository       *repository.FareRepository
-	BookingRepository    *repository.BookingRepository
+	SessionRepository    SessionRepository
+	TicketRepository     TicketRepository
+	ScheduleRepository   ScheduleRepository
+	AllocationRepository AllocationRepository // Your AllocationRepository implements this
+	ManifestRepository   ManifestRepository
+	FareRepository       FareRepository
+	BookingRepository    BookingRepository
 }
 
 func NewClaimSessionUsecase(
 	db *gorm.DB,
-	session_repository *repository.SessionRepository,
-	ticket_repository *repository.TicketRepository,
-	schedule_repository *repository.ScheduleRepository,
-	allocation_repository *repository.AllocationRepository,
-	manifest_repository *repository.ManifestRepository,
-	fare_repository *repository.FareRepository,
-	booking_repository *repository.BookingRepository,
+	session_repository SessionRepository,
+	ticket_repository TicketRepository,
+	schedule_repository ScheduleRepository,
+	allocation_repository AllocationRepository,
+	manifest_repository ManifestRepository,
+	fare_repository FareRepository,
+	booking_repository BookingRepository,
 ) *ClaimSessionUsecase {
 	return &ClaimSessionUsecase{
 		DB:                   db,
@@ -48,7 +47,7 @@ func NewClaimSessionUsecase(
 	}
 }
 
-func (cs *ClaimSessionUsecase) CreateClaimSession(ctx context.Context, request *model.ClaimedSessionLockTicketsRequest) (*model.ClaimedSessionLockTicketsResponse, error) {
+func (cs *ClaimSessionUsecase) CreateClaimSession(ctx context.Context, request *model.WriteClaimSessionLockTicketsRequest) (*model.ReadClaimSessionLockTicketsResponse, error) {
 	tx := cs.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -59,12 +58,6 @@ func (cs *ClaimSessionUsecase) CreateClaimSession(ctx context.Context, request *
 		}
 	}()
 
-	if request.ScheduleID == 0 {
-		return nil, fmt.Errorf("mssing schedule ID")
-	}
-	if len(request.Items) == 0 {
-		return nil, fmt.Errorf("missing request items")
-	}
 	for id, item := range request.Items {
 		if item.Quantity == 0 {
 			return nil, fmt.Errorf("missing quantity field for item %d", id)
@@ -91,7 +84,7 @@ func (cs *ClaimSessionUsecase) CreateClaimSession(ctx context.Context, request *
 			return nil, fmt.Errorf("allocation not found for class %d schedule %d", item.ClassID, request.ScheduleID)
 		}
 
-		count, err := cs.TicketRepository.CountByScheduleClassAndStatuses(tx, request.ScheduleID, item.ClassID, []string{"pending_data_entry", "pending_payment", "confirmed"})
+		count, err := cs.TicketRepository.CountByScheduleClassAndStatuses(tx, request.ScheduleID, item.ClassID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to count tickets: %w", err)
 		}
@@ -100,6 +93,22 @@ func (cs *ClaimSessionUsecase) CreateClaimSession(ctx context.Context, request *
 		if available < int64(item.Quantity) {
 			return nil, fmt.Errorf("not enough slots for class %d (Available: %d, Requested: %d)", item.ClassID, available, item.Quantity)
 		}
+	}
+
+	uuid, err := uuid.NewRandom()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate session UUID: %w", err)
+	}
+
+	claimSession := &entity.ClaimSession{
+		SessionID:  uuid.String(),
+		ScheduleID: request.ScheduleID,
+		Status:     enum.ClaimSessionPendingData.String(),
+		ExpiresAt:  time.Now().Add(13 * time.Minute),
+	}
+
+	if err := cs.SessionRepository.Create(tx, claimSession); err != nil {
+		return nil, fmt.Errorf("failed to create claim session: %w", err)
 	}
 
 	var ticketsToBuild []*entity.Ticket
@@ -116,54 +125,36 @@ func (cs *ClaimSessionUsecase) CreateClaimSession(ctx context.Context, request *
 		}
 
 		for i := 0; i < int(item.Quantity); i++ {
+
 			ticketsToBuild = append(ticketsToBuild, &entity.Ticket{
 				ScheduleID:     request.ScheduleID,
 				ClassID:        item.ClassID,
-				Status:         "pending_data_entry",
 				Price:          fare.TicketPrice,
 				Type:           manifest.Class.Type,
-				ClaimSessionID: nil, // Linked after session is created
+				ClaimSessionID: &claimSession.ID,
 			})
 		}
-	}
-
-	uuid, err := uuid.NewRandom()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate session UUID: %w", err)
-	}
-
-	claimSession := &entity.ClaimSession{
-		SessionID:  uuid.String(),
-		ScheduleID: request.ScheduleID,
-		ClaimedAt:  time.Now(),
-		ExpiresAt:  time.Now().Add(15 * time.Minute),
-	}
-
-	if err := cs.SessionRepository.Create(tx, claimSession); err != nil {
-		return nil, fmt.Errorf("failed to create claim session: %w", err)
-	}
-
-	var claimedTicketIDs []uint
-	for _, ticket := range ticketsToBuild {
-		ticket.ClaimSessionID = &claimSession.ID
-		claimedTicketIDs = append(claimedTicketIDs, ticket.ID)
 	}
 
 	if err := cs.TicketRepository.CreateBulk(tx, ticketsToBuild); err != nil {
 		return nil, fmt.Errorf("failed to create tickets: %w", err)
 	}
 
+	var claimedTicketIDs []uint
+	for _, ticket := range ticketsToBuild {
+		claimedTicketIDs = append(claimedTicketIDs, ticket.ID)
+	}
+
 	if err := tx.Commit().Error; err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return &model.ClaimedSessionLockTicketsResponse{
+	return &model.ReadClaimSessionLockTicketsResponse{
 		ClaimedTicketIDs: claimedTicketIDs,
 		ExpiresAt:        claimSession.ExpiresAt,
 		SessionID:        claimSession.SessionID,
 	}, nil
 }
-
 func (cs *ClaimSessionUsecase) GetAllClaimSessions(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadClaimSessionResponse, int, error) {
 	tx := cs.DB.WithContext(ctx).Begin()
 	defer func() {
@@ -175,21 +166,34 @@ func (cs *ClaimSessionUsecase) GetAllClaimSessions(ctx context.Context, limit, o
 		}
 	}()
 
+	// Count total claim sessions
 	total, err := cs.SessionRepository.Count(tx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count claim sessions: %w", err)
 	}
 
-	claimsessions, err := cs.SessionRepository.GetAll(tx, limit, offset, sort, search)
+	// Retrieve claim sessions
+	claimSessions, err := cs.SessionRepository.GetAll(tx, limit, offset, sort, search)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get all claim sessions: %w", err)
+	}
+
+	// Map claim sessions to response models
+	var responses []*model.ReadClaimSessionResponse
+	for _, session := range claimSessions {
+		tickets, err := cs.TicketRepository.FindManyBySessionID(tx, session.ID)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to retrieve tickets for session %d: %w", session.ID, err)
+		}
+
+		responses = append(responses, ToReadClaimSessionResponse(session, tickets))
 	}
 
 	if err := tx.Commit().Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return cs.HelperBuildSessionListResponse(ctx, claimsessions), int(total), nil
+	return responses, int(total), nil
 }
 
 func (cs *ClaimSessionUsecase) GetClaimSessionByID(ctx context.Context, id uint) (*model.ReadClaimSessionResponse, error) {
@@ -220,7 +224,7 @@ func (cs *ClaimSessionUsecase) GetClaimSessionByID(ctx context.Context, id uint)
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return cs.HelperBuildResponse(session, tickets), nil
+	return ToReadClaimSessionResponse(session, tickets), nil
 }
 
 func (cs *ClaimSessionUsecase) GetBySessionID(ctx context.Context, sessionUUID string) (*model.ReadClaimSessionResponse, error) {
@@ -255,10 +259,9 @@ func (cs *ClaimSessionUsecase) GetBySessionID(ctx context.Context, sessionUUID s
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return cs.HelperBuildResponse(session, tickets), nil
+	return ToReadClaimSessionResponse(session, tickets), nil
 }
-
-func (cs *ClaimSessionUsecase) UpdateClaimSession(ctx context.Context, request *model.ClaimedSessionFillPassengerDataRequest, sessionID string) (*model.ClaimedSessionFillPassengerDataResponse, error) {
+func (cs *ClaimSessionUsecase) UpdateClaimSession(ctx context.Context, request *model.WriteClaimSessionDataEntryRequest, sessionID string) (*model.ReadClaimSessionDataEntryResponse, error) {
 	tx := cs.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -269,36 +272,6 @@ func (cs *ClaimSessionUsecase) UpdateClaimSession(ctx context.Context, request *
 		}
 	}()
 
-	if request.CustomerName == "" {
-		return nil, errors.New("missing customer name")
-	}
-
-	if request.IDType == "" {
-		return nil, errors.New("missing ID type")
-	}
-
-	if request.IDNumber == "" {
-		return nil, errors.New("missing ID number")
-	}
-
-	if request.PhoneNumber == "" {
-		return nil, errors.New("missing phone number")
-	}
-
-	if request.Email == "" {
-		return nil, errors.New("missing email")
-	}
-
-	if len(request.TicketData) == 0 {
-		return nil, errors.New("missing ticket data ")
-	}
-
-	// Build passenger map
-	datas := make(map[uint]model.ClaimedSessionTicketDataInput)
-	for _, data := range request.TicketData {
-		datas[data.TicketID] = data
-	}
-
 	session, err := cs.SessionRepository.GetByUUIDWithLock(tx, sessionID, true)
 	if err != nil {
 		return nil, fmt.Errorf("get claim session failed: %w", err)
@@ -306,6 +279,16 @@ func (cs *ClaimSessionUsecase) UpdateClaimSession(ctx context.Context, request *
 
 	if session == nil || session.ExpiresAt.Before(time.Now()) {
 		return nil, errors.New("claim session not found or expired")
+	}
+
+	if session.Status != enum.ClaimSessionPendingData.String() {
+		return nil, fmt.Errorf("claim session has invalid status: %s", session.Status)
+	}
+
+	// Build passenger map
+	datas := make(map[uint]model.ClaimSessionTicketDataEntry)
+	for _, data := range request.TicketData {
+		datas[data.TicketID] = data
 	}
 
 	tickets, err := cs.TicketRepository.FindManyBySessionID(tx, session.ID)
@@ -319,19 +302,20 @@ func (cs *ClaimSessionUsecase) UpdateClaimSession(ctx context.Context, request *
 	}
 
 	orderID := utils.GenerateOrderID(
-		fmt.Sprintf("%s-%s", *schedule.Route.DepartureHarbor.HarborAlias, *schedule.Route.ArrivalHarbor.HarborAlias),
-		*schedule.Ship.ShipAlias, time.Now(),
+		*schedule.Route.DepartureHarbor.HarborAlias,
+		*schedule.Route.ArrivalHarbor.HarborAlias,
+		*schedule.Ship.ShipAlias,
+		time.Now(),
 	)
 
 	booking := &entity.Booking{
-		OrderID:      orderID,
+		OrderID:      &orderID,
 		ScheduleID:   session.ScheduleID,
 		IDType:       request.IDType,
 		IDNumber:     request.IDNumber,
 		PhoneNumber:  request.PhoneNumber,
 		CustomerName: request.CustomerName,
 		Email:        request.Email,
-		Status:       "pending_payment",
 	}
 
 	if err := cs.BookingRepository.Create(tx, booking); err != nil {
@@ -340,7 +324,10 @@ func (cs *ClaimSessionUsecase) UpdateClaimSession(ctx context.Context, request *
 
 	ticketsIds := make(map[uint]*entity.Ticket)
 	for _, t := range tickets {
-		tickets[t.ID] = t
+		if t.ID == 0 {
+			continue
+		}
+		ticketsIds[t.ID] = t // ✅ correct: assigning to the actual map
 	}
 
 	var ticketToUpdate []*entity.Ticket
@@ -351,20 +338,16 @@ func (cs *ClaimSessionUsecase) UpdateClaimSession(ctx context.Context, request *
 		if !ok {
 			return nil, fmt.Errorf("ticket %d not found in session", id)
 		}
-		if ticket.Status != "pending_data_entry" {
-			return nil, fmt.Errorf("ticket %d has invalid status: %s", id, ticket.Status)
-		}
+
 		if data.PassengerName == "" || data.PassengerAge == 0 || data.Address == "" {
 			return nil, fmt.Errorf("missing passenger data for ticket %d", id)
 		}
 
 		ticket.PassengerName = &data.PassengerName
 		ticket.PassengerAge = &data.PassengerAge
+		ticket.PassengerGender = &data.PassengerGender
 		ticket.Address = &data.Address
 		ticket.BookingID = &booking.ID
-		ticket.Status = "pending_payment"
-		now := time.Now()
-		ticket.EntriesAt = &now
 
 		switch ticket.Type {
 		case "passenger":
@@ -375,7 +358,7 @@ func (cs *ClaimSessionUsecase) UpdateClaimSession(ctx context.Context, request *
 			ticket.IDNumber = &data.IDNumber
 
 			count, err := cs.TicketRepository.CountByScheduleClassAndStatuses(
-				tx, ticket.ScheduleID, ticket.ClassID, []string{"pending_data_entry", "pending_payment", "confirmed"},
+				tx, ticket.ScheduleID, ticket.ClassID,
 			)
 			if err != nil {
 				return nil, fmt.Errorf("seat number generation failed: %w", err)
@@ -405,11 +388,23 @@ func (cs *ClaimSessionUsecase) UpdateClaimSession(ctx context.Context, request *
 		}
 	}
 
+	session = &entity.ClaimSession{
+		ID:         session.ID,
+		SessionID:  session.SessionID,
+		ScheduleID: session.ScheduleID,
+		Status:     enum.ClaimSessionPendingPayment.String(),
+		ExpiresAt:  session.ExpiresAt.Add(8 * time.Minute), // Extend expiration for payment
+	}
+
+	if err := cs.SessionRepository.Update(tx, session); err != nil {
+		return nil, fmt.Errorf("update claim session failed: %w", err)
+	}
+
 	if err := tx.Commit().Error; err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return &model.ClaimedSessionFillPassengerDataResponse{
+	return &model.ReadClaimSessionDataEntryResponse{
 		BookingID:        booking.ID,
 		OrderID:          orderID,
 		UpdatedTicketIDs: updatedTicketIDs,
@@ -444,122 +439,4 @@ func (cs *ClaimSessionUsecase) DeleteClaimSession(ctx context.Context, id uint) 
 	}
 
 	return nil
-}
-
-func (cs *ClaimSessionUsecase) HelperBuildResponse(session *entity.ClaimSession, tickets []*entity.Ticket) *model.ReadClaimSessionResponse {
-	var ticketPrices []model.ClaimSessionTicketPricesResponse
-	var ticketDetails []model.ClaimedSessionTicketDetailResponse
-	var total float32
-
-	if len(tickets) > 0 {
-		ticketPrices, total = cs.HelperBuildPriceBreakdown(tickets)
-		ticketDetails = cs.HelperBuildTicketBreakdown(tickets)
-	} else {
-		ticketPrices = []model.ClaimSessionTicketPricesResponse{}    // Ensure empty slice, not nil
-		ticketDetails = []model.ClaimedSessionTicketDetailResponse{} // Ensure empty slice, not nil
-		total = 0
-	}
-
-	// Assuming session.Schedule is preloaded or handled correctly
-	// If session.Schedule might be zero/uninitialized, you'd need a check here
-	var scheduleModel model.ClaimSessionSchedule // Default to zero value if session.Schedule is not populated
-	if session.Schedule.ID != 0 {                // Basic check; adjust as needed based on your entity structure
-		scheduleModel = *mapper.ScheduleSessionMapper.ToModel(&session.Schedule)
-	}
-
-	return &model.ReadClaimSessionResponse{
-		ID:          session.ID,
-		SessionID:   session.SessionID,
-		ScheduleID:  session.ScheduleID,
-		Schedule:    scheduleModel,
-		ClaimedAt:   session.ClaimedAt,
-		ExpiresAt:   session.ExpiresAt,
-		Prices:      ticketPrices,
-		Tickets:     ticketDetails,
-		TotalAmount: total,
-		CreatedAt:   session.CreatedAt,
-		UpdatedAt:   session.UpdatedAt,
-	}
-}
-
-func (cs *ClaimSessionUsecase) HelperBuildTicketBreakdown(tickets []*entity.Ticket) []model.ClaimedSessionTicketDetailResponse {
-	result := make([]model.ClaimedSessionTicketDetailResponse, len(tickets))
-	for i, v := range tickets {
-		var classModel model.ClaimSessionTicketClassItem // Default to zero value
-		if v.Class.ID != 0 {                             // Basic check
-			classModel = *mapper.TicketClassToSessionClassMapper.ToModel(&v.Class)
-		}
-
-		result[i] = model.ClaimedSessionTicketDetailResponse{
-			TicketID: v.ID,
-			Class:    classModel,
-			Price:    v.Price,
-			Type:     v.Type,
-		}
-	}
-	return result
-}
-
-func (cs *ClaimSessionUsecase) HelperBuildPriceBreakdown(tickets []*entity.Ticket) ([]model.ClaimSessionTicketPricesResponse, float32) {
-	ticketSummary := make(map[uint]*model.ClaimSessionTicketPricesResponse)
-	var total float32
-
-	for _, ticket := range tickets {
-		classID := ticket.ClassID
-		price := ticket.Price
-
-		if _, exists := ticketSummary[classID]; !exists {
-			var classModel model.ClaimSessionTicketClassItem
-			if ticket.Class.ID != 0 { // Basic check
-				classModel = *mapper.TicketClassToSessionClassMapper.ToModel(&ticket.Class)
-			}
-			ticketSummary[classID] = &model.ClaimSessionTicketPricesResponse{
-				Class:    classModel,
-				Price:    price, // This is price per ticket
-				Quantity: 0,
-				Subtotal: 0,
-			}
-		}
-
-		ticketSummary[classID].Quantity++
-		ticketSummary[classID].Subtotal += price
-		total += price
-	}
-
-	summaryList := make([]model.ClaimSessionTicketPricesResponse, 0, len(ticketSummary))
-	for _, entry := range ticketSummary {
-		summaryList = append(summaryList, *entry)
-	}
-
-	return summaryList, total
-}
-
-func (cs *ClaimSessionUsecase) HelperBuildSessionListResponse(ctx context.Context, sessions []*entity.ClaimSession) []*model.ReadClaimSessionResponse {
-	tx := cs.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		} else {
-			tx.Rollback()
-		}
-	}()
-
-	result := make([]*model.ReadClaimSessionResponse, len(sessions))
-	for i, session := range sessions {
-		tickets, err := cs.TicketRepository.FindManyBySessionID(tx, session.ID)
-		if err != nil {
-			result[i] = cs.HelperBuildResponse(session, []*entity.Ticket{})                           // build with empty tickets
-			fmt.Printf("Error processing session %s for list response: %v\n", session.SessionID, err) // Example logging
-			continue                                                                                  // Don't let this specific error fail the whole list building
-		}
-		result[i] = cs.HelperBuildResponse(session, tickets)
-	}
-	finalResult := []*model.ReadClaimSessionResponse{}
-	for _, res := range result {
-		if res != nil {
-			finalResult = append(finalResult, res)
-		}
-	}
-	return finalResult
 }

@@ -63,38 +63,38 @@ type ReadTicketResponse struct {
 }
 
 type WriteTicketRequest struct {
-	ClaimSessionID  uint    `json:"claim_session_id"`
-	ScheduleID      uint    `json:"schedule_id"`
-	ClassID         uint    `json:"class_id"`
-	Status          string  `json:"status"`
-	BookingID       uint    `json:"booking_id"`
-	Type            string  `json:"type" binding:"required,oneof=passenger vehicle"`
-	PassengerName   string  `json:"passenger_name"`
-	PassengerAge    int     `json:"passenger_age"`
-	PassengerGender string  `json:"passenger_gender"`
-	Address         string  `json:"address"`
-	IDType          string  `json:"id_type"`
-	IDNumber        string  `json:"id_number"`
+	ClaimSessionID  *uint   `json:"claim_session_id"`
+	BookingID       *uint   `json:"booking_id"`
+	ScheduleID      uint    `json:"schedule_id" validate:"required"`
+	ClassID         uint    `json:"class_id" validate:"required"`
+	Status          string  `json:"status" validate:"required,oneof=active cancelled refunded"`
+	Type            string  `json:"type" validate:"required,oneof=passenger vehicle"`
+	PassengerName   *string `json:"passenger_name"`
+	PassengerAge    *int    `json:"passenger_age"`
+	PassengerGender *string `json:"passenger_gender"`
+	Address         *string `json:"address"`
+	IDType          *string `json:"id_type"`
+	IDNumber        *string `json:"id_number"`
 	SeatNumber      *string `json:"seat_number"`
 	LicensePlate    *string `json:"license_plate"`
-	Price           float32 `json:"price"`
+	Price           float32 `json:"price" validate:"required,gte=0"`
 }
 
 type UpdateTicketRequest struct {
-	ID              uint    `json:"id"`
-	ClaimSessionID  uint    `json:"claim_session_id"`
-	ScheduleID      uint    `json:"schedule_id"`
-	ClassID         uint    `json:"class_id"`
-	Status          string  `json:"status"`
-	BookingID       uint    `json:"booking_id"`
-	Type            string  `json:"type" binding:"required,oneof=passenger vehicle"`
-	PassengerName   string  `json:"passenger_name"`
-	PassengerAge    int     `json:"passenger_age"`
-	PassengerGender string  `json:"passenger_gender"`
-	Address         string  `json:"address"`
-	IDType          string  `json:"id_type"`
-	IDNumber        string  `json:"id_number"`
+	ID              uint    `json:"id" validate:"required"`
+	ClaimSessionID  uint    `json:"claim_session_id" validate:"required"`
+	ScheduleID      uint    `json:"schedule_id" validate:"required"`
+	ClassID         uint    `json:"class_id" validate:"required"`
+	Status          string  `json:"status" validate:"required,oneof=active cancelled refunded"`
+	BookingID       uint    `json:"booking_id" validate:"required"`
+	Type            string  `json:"type" validate:"required,oneof=passenger vehicle"`
+	PassengerName   string  `json:"passenger_name" validate:"required"`
+	PassengerAge    int     `json:"passenger_age" validate:"required,min=0"`
+	PassengerGender string  `json:"passenger_gender" validate:"required"`
+	Address         string  `json:"address" validate:"required"`
+	IDType          string  `json:"id_type" validate:"required"`
+	IDNumber        string  `json:"id_number" validate:"required"`
 	SeatNumber      *string `json:"seat_number"`
 	LicensePlate    *string `json:"license_plate"`
-	Price           float32 `json:"price"`
+	Price           float32 `json:"price" validate:"required,gte=0"`
 }

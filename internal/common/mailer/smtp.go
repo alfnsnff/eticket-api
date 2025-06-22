@@ -3,10 +3,16 @@ package mailer
 import (
 	"eticket-api/config"
 	"fmt"
+	"mime"
 	"net/smtp"
+	"strings"
 )
 
-type SMTPMailer struct {
+type Mailer interface {
+	Send(toEmail, subject, body string) error
+}
+
+type SMTP struct {
 	Host     string
 	Port     int
 	Username string
@@ -14,28 +20,51 @@ type SMTPMailer struct {
 	From     string
 }
 
-func NewSMTPMailer(cfg *config.Configuration) *SMTPMailer {
-	return &SMTPMailer{
-		Host:     cfg.SMTPMailer.Host,
-		Port:     cfg.SMTPMailer.Port,
-		Username: cfg.SMTPMailer.Username,
-		Password: cfg.SMTPMailer.Password,
-		From:     cfg.SMTPMailer.From,
+func NewSMTP(cfg *config.Config) *SMTP {
+	return &SMTP{
+		Host:     cfg.SMTP.Host,
+		Port:     cfg.SMTP.Port,
+		Username: cfg.SMTP.Username,
+		Password: cfg.SMTP.Password,
+		From:     cfg.SMTP.From,
 	}
 }
-func (m *SMTPMailer) Send(toEmail, subject, body string) error {
+
+func (m *SMTP) Send(toEmail, subject, body string) error {
 	addr := fmt.Sprintf("%s:%d", m.Host, m.Port)
 
-	msg := "MIME-Version: 1.0\r\n"
-	msg += "Content-Type: text/html; charset=\"UTF-8\"\r\n"
-	msg += fmt.Sprintf("From: %s\r\n", m.From)
-	msg += fmt.Sprintf("To: %s\r\n", toEmail)
-	msg += fmt.Sprintf("Subject: %s\r\n", subject)
-	msg += "\r\n" + body
+	// Encode Subject and From to ensure they are safe for headers
+	encodedSubject := EncodeRFC2047(subject)
+	encodedFrom := EncodeRFC2047(m.From)
 
-	// Auth method
+	msg := strings.Join([]string{
+		"MIME-Version: 1.0",
+		"Content-Type: text/html; charset=\"UTF-8\"",
+		fmt.Sprintf("From: %s", encodedFrom),
+		fmt.Sprintf("To: %s", toEmail),
+		fmt.Sprintf("Subject: %s", encodedSubject),
+		"", // Blank line between headers and body
+		body,
+	}, "\r\n")
+
 	auth := smtp.PlainAuth("", m.Username, m.Password, m.Host)
 
-	// Send email
 	return smtp.SendMail(addr, auth, m.From, []string{toEmail}, []byte(msg))
+}
+
+// encodeRFC2047 safely encodes a string for use in email headers (Subject, From, etc.)
+func EncodeRFC2047(s string) string {
+	if IsASCII(s) {
+		return s
+	}
+	return mime.QEncoding.Encode("UTF-8", s)
+}
+
+func IsASCII(s string) bool {
+	for _, r := range s {
+		if r > 127 {
+			return false
+		}
+	}
+	return true
 }

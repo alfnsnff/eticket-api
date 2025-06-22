@@ -2,19 +2,34 @@ package repository
 
 import (
 	"errors"
+	enum "eticket-api/internal/common/enums"
 	"eticket-api/internal/entity"
 	"strings"
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
-type TicketRepository struct {
-	Repository[entity.Ticket]
-}
+type TicketRepository struct{}
 
 func NewTicketRepository() *TicketRepository {
 	return &TicketRepository{}
+}
+
+func (ar *TicketRepository) Create(db *gorm.DB, ticket *entity.Ticket) error {
+	result := db.Create(ticket)
+	return result.Error
+}
+
+func (ar *TicketRepository) Update(db *gorm.DB, ticket *entity.Ticket) error {
+	result := db.Save(ticket)
+	return result.Error
+}
+
+func (ar *TicketRepository) Delete(db *gorm.DB, ticket *entity.Ticket) error {
+	result := db.Select(clause.Associations).Delete(ticket)
+	return result.Error
 }
 
 func (tr *TicketRepository) Count(db *gorm.DB) (int64, error) {
@@ -53,7 +68,7 @@ func (tr *TicketRepository) GetAll(db *gorm.DB, limit, offset int, sort, search 
 	return tickets, err
 }
 
-func (tr *TicketRepository) GetBySchedulseID(db *gorm.DB, id, limit, offset int, sort, search string) ([]*entity.Ticket, error) {
+func (tr *TicketRepository) GetByScheduleID(db *gorm.DB, id, limit, offset int, sort, search string) ([]*entity.Ticket, error) {
 	tickets := []*entity.Ticket{}
 
 	query := db.Preload("Class").
@@ -68,7 +83,6 @@ func (tr *TicketRepository) GetBySchedulseID(db *gorm.DB, id, limit, offset int,
 		query = query.Where("passenger_name ILIKE ?", search)
 	}
 
-	// 🔃 Sort (with default)
 	if sort == "" {
 		sort = "id asc"
 	} else {
@@ -108,33 +122,18 @@ func (tr *TicketRepository) GetByBookingID(db *gorm.DB, id uint) ([]*entity.Tick
 	return tickets, result.Error
 }
 
-// func (tr *TicketRepository) GetBySchedulseID(db *gorm.DB, id uint) ([]*entity.Ticket, error) {
-// 	tickets := []*entity.Ticket{}
-// 	result := db.Preload("Class").
-// 		Preload("Schedule").
-// 		Preload("Schedule.Ship").
-// 		Preload("Schedule.Route").
-// 		Preload("Schedule.Route.DepartureHarbor").
-// 		Preload("Schedule.Route.ArrivalHarbor").
-// 		Where("schedule_id = ?", id).Find(&tickets)
-// 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-// 		return nil, nil
-// 	}
-// 	return tickets, result.Error
-// }
-
-func (r *TicketRepository) CountByScheduleClassAndStatuses(db *gorm.DB, scheduleID uint, classID uint, statuses []string) (int64, error) {
+func (r *TicketRepository) CountByScheduleClassAndStatuses(db *gorm.DB, scheduleID uint, classID uint) (int64, error) {
 	var count int64
 	now := time.Now()
-	pendingStatuses := []string{"pending_data_entry", "pending_payment"}
 
 	query := db.Model(&entity.Ticket{}).
 		Joins("LEFT JOIN claim_session ON ticket.claim_session_id = claim_session.id").
 		Where("ticket.schedule_id = ? AND ticket.class_id = ?", scheduleID, classID).
-		Where(
-			db.Where("ticket.status = ?", "confirmed").
-				Or("ticket.status IN ? AND ticket.claim_session_id IS NOT NULL AND claim_session.expires_at > ?", pendingStatuses, now),
-		)
+		Where("ticket.claim_session_id IS NOT NULL").
+		Where(`
+            (claim_session.status IN ?) OR 
+            (claim_session.expires_at > ? AND claim_session.status IN ?)
+        `, enum.GetSuccessClaimSessionStatuses(), now, enum.GetPendingClaimSessionStatuses())
 
 	result := query.Count(&count)
 	if result.Error != nil {

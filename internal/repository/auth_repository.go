@@ -8,12 +8,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type AuthRepository struct {
-	Repository[entity.RefreshToken]
-}
+type AuthRepository struct{}
 
 func NewAuthRepository() *AuthRepository {
 	return &AuthRepository{}
+}
+
+func (aur *AuthRepository) Create(db *gorm.DB, refresh_token *entity.RefreshToken) error {
+	result := db.Create(refresh_token)
+	return result.Error
 }
 
 func (aur *AuthRepository) Count(db *gorm.DB) (int64, error) {

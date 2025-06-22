@@ -9,12 +9,25 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type AllocationRepository struct {
-	Repository[entity.Allocation]
-}
+type AllocationRepository struct{}
 
 func NewAllocationRepository() *AllocationRepository {
 	return &AllocationRepository{}
+}
+
+func (ar *AllocationRepository) Create(db *gorm.DB, allocation *entity.Allocation) error {
+	result := db.Create(allocation)
+	return result.Error
+}
+
+func (ar *AllocationRepository) Update(db *gorm.DB, allocation *entity.Allocation) error {
+	result := db.Save(allocation)
+	return result.Error
+}
+
+func (ar *AllocationRepository) Delete(db *gorm.DB, allocation *entity.Allocation) error {
+	result := db.Select(clause.Associations).Delete(allocation)
+	return result.Error
 }
 
 func (ar *AllocationRepository) Count(db *gorm.DB) (int64, error) {
@@ -65,7 +78,7 @@ func (ar *AllocationRepository) LockByScheduleAndClass(db *gorm.DB, scheduleID u
 	return allocation, result.Error
 }
 
-func (ar *AllocationRepository) GetBySchedlueAndClass(db *gorm.DB, scheduleID uint, classID uint) (*entity.Allocation, error) {
+func (ar *AllocationRepository) GetByScheduleAndClass(db *gorm.DB, scheduleID uint, classID uint) (*entity.Allocation, error) {
 	allocation := new(entity.Allocation)
 	result := db.Where("schedule_id = ? AND class_id = ?", scheduleID, classID).Find(allocation)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {

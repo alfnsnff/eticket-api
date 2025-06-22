@@ -5,8 +5,6 @@ import (
 	"errors"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
-	"eticket-api/internal/model/mapper"
-	"eticket-api/internal/repository"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -14,12 +12,12 @@ import (
 
 type ClassUsecase struct {
 	DB              *gorm.DB
-	ClassRepository *repository.ClassRepository
+	ClassRepository ClassRepository
 }
 
 func NewClassUsecase(
 	db *gorm.DB,
-	class_repository *repository.ClassRepository,
+	class_repository ClassRepository,
 ) *ClassUsecase {
 	return &ClassUsecase{
 		DB:              db,
@@ -42,10 +40,6 @@ func (c *ClassUsecase) CreateClass(ctx context.Context, request *model.WriteClas
 		ClassName:  request.ClassName,
 		Type:       request.Type,
 		ClassAlias: request.ClassAlias,
-	}
-
-	if class.ClassName == "" {
-		return fmt.Errorf("class name cannot be empty")
 	}
 
 	if err := c.ClassRepository.Create(tx, class); err != nil {
@@ -84,7 +78,7 @@ func (c *ClassUsecase) GetAllClasses(ctx context.Context, limit, offset int, sor
 		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.ClassMapper.ToModels(classes), int(total), nil
+	return ToReadClassResponses(classes), int(total), nil
 }
 
 func (c *ClassUsecase) GetClassByID(ctx context.Context, id uint) (*model.ReadClassResponse, error) {
@@ -110,7 +104,7 @@ func (c *ClassUsecase) GetClassByID(ctx context.Context, id uint) (*model.ReadCl
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.ClassMapper.ToModel(class), nil
+	return ToReadClassResponse(class), nil
 }
 
 func (c *ClassUsecase) UpdateClass(ctx context.Context, request *model.UpdateClassRequest) error {
@@ -123,10 +117,6 @@ func (c *ClassUsecase) UpdateClass(ctx context.Context, request *model.UpdateCla
 			tx.Rollback()
 		}
 	}()
-
-	if request.ID == 0 {
-		return fmt.Errorf("class ID cannot be zero")
-	}
 
 	class, err := c.ClassRepository.GetByID(tx, request.ID)
 	if err != nil {

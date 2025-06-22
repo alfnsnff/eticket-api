@@ -1,8 +1,10 @@
 package controller
 
 import (
-	"eticket-api/internal/common/response"
+	"eticket-api/internal/common/logger"
+	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/schedule"
 	"net/http"
@@ -12,28 +14,36 @@ import (
 )
 
 type ScheduleController struct {
+	Validate        validator.Validator
+	Log             logger.Logger
 	ScheduleUsecase *schedule.ScheduleUsecase
 	Authenticate    *middleware.AuthenticateMiddleware
 	Authorized      *middleware.AuthorizeMiddleware
 }
 
 func NewScheduleController(
-	g *gin.Engine, schedule_usecase *schedule.ScheduleUsecase,
+	g *gin.Engine,
+	log logger.Logger,
+	validate validator.Validator,
+	schedule_usecase *schedule.ScheduleUsecase,
 	authtenticate *middleware.AuthenticateMiddleware,
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	scc := &ScheduleController{
 		ScheduleUsecase: schedule_usecase,
 		Authenticate:    authtenticate,
-		Authorized:      authorized}
+		Authorized:      authorized,
+		Validate:        validate,
+		Log:             log,
+	}
 
-	public := g.Group("") // No middleware
+	public := g.Group("/api/v1") // No middleware
 	public.GET("/schedules", scc.GetAllSchedules)
 	public.GET("/schedules/active", scc.GetAllScheduled)
 	public.GET("/schedule/:id", scc.GetScheduleByID)
 	public.GET("/schedule/:id/quota", scc.GetQuotaByScheduleID)
 
-	protected := g.Group("")
+	protected := g.Group("/api/v1")
 	protected.Use(scc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 
@@ -48,6 +58,13 @@ func (scc *ScheduleController) CreateSchedule(ctx *gin.Context) {
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+		return
+	}
+
+	if err := scc.Validate.Struct(request); err != nil {
+		scc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
 
@@ -117,19 +134,26 @@ func (scc *ScheduleController) GetScheduleByID(ctx *gin.Context) {
 }
 
 func (scc *ScheduleController) UpdateSchedule(ctx *gin.Context) {
-	request := new(model.UpdateScheduleRequest)
-	id, _ := strconv.Atoi(ctx.Param("id"))
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil || id == 0 {
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid or missing ship ID", nil))
+		return
+	}
 
+	request := new(model.UpdateScheduleRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	if id == 0 {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Schedule ID is required", nil))
+	request.ID = uint(id)
+	if err := scc.Validate.Struct(request); err != nil {
+		scc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
-	request.ID = uint(id)
+
 	if err := scc.ScheduleUsecase.UpdateSchedule(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update schedule", err.Error()))
 		return
@@ -182,6 +206,13 @@ func (scc *ScheduleController) CreateScheduleWithAllocation(ctx *gin.Context) {
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+		return
+	}
+
+	if err := scc.Validate.Struct(request); err != nil {
+		scc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
 

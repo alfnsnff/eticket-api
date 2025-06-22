@@ -6,14 +6,28 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
-type BookingRepository struct {
-	Repository[entity.Booking]
-}
+type BookingRepository struct{}
 
 func NewBookingRepository() *BookingRepository {
 	return &BookingRepository{}
+}
+
+func (ar *BookingRepository) Create(db *gorm.DB, booking *entity.Booking) error {
+	result := db.Create(booking)
+	return result.Error
+}
+
+func (ar *BookingRepository) Update(db *gorm.DB, booking *entity.Booking) error {
+	result := db.Save(booking)
+	return result.Error
+}
+
+func (ar *BookingRepository) Delete(db *gorm.DB, booking *entity.Booking) error {
+	result := db.Select(clause.Associations).Delete(booking)
+	return result.Error
 }
 
 func (br *BookingRepository) Count(db *gorm.DB) (int64, error) {

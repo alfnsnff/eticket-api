@@ -5,8 +5,6 @@ import (
 	"errors"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
-	"eticket-api/internal/model/mapper"
-	"eticket-api/internal/repository"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -14,12 +12,12 @@ import (
 
 type FareUsecase struct {
 	DB             *gorm.DB
-	FareRepository *repository.FareRepository
+	FareRepository FareRepository
 }
 
 func NewFareUsecase(
 	db *gorm.DB,
-	fareRepository *repository.FareRepository,
+	fareRepository FareRepository,
 ) *FareUsecase {
 	return &FareUsecase{
 		DB:             db,
@@ -42,16 +40,6 @@ func (f *FareUsecase) CreateFare(ctx context.Context, request *model.WriteFareRe
 		RouteID:     request.RouteID,
 		ManifestID:  request.ManifestID,
 		TicketPrice: request.TicketPrice,
-	}
-
-	if fare.RouteID == 0 {
-		return fmt.Errorf("route ID cannot be zero")
-	}
-	if fare.ManifestID == 0 {
-		return fmt.Errorf("ship class ID cannot be zero")
-	}
-	if fare.TicketPrice == 0 {
-		return fmt.Errorf("fare cannot be zero")
 	}
 
 	if err := f.FareRepository.Create(tx, fare); err != nil {
@@ -90,7 +78,7 @@ func (f *FareUsecase) GetAllFares(ctx context.Context, limit, offset int, sort, 
 		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.FareMapper.ToModels(fares), int(total), nil
+	return ToReadFareResponses(fares), int(total), nil
 }
 
 func (f *FareUsecase) GetFareByID(ctx context.Context, id uint) (*model.ReadFareResponse, error) {
@@ -116,7 +104,7 @@ func (f *FareUsecase) GetFareByID(ctx context.Context, id uint) (*model.ReadFare
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.FareMapper.ToModel(fare), nil
+	return ToReadFareResponse(fare), nil
 }
 
 func (f *FareUsecase) UpdateFare(ctx context.Context, request *model.UpdateFareRequest) error {
@@ -129,10 +117,6 @@ func (f *FareUsecase) UpdateFare(ctx context.Context, request *model.UpdateFareR
 			tx.Rollback()
 		}
 	}()
-
-	if request.ID == 0 {
-		return fmt.Errorf("fare ID cannot be zero")
-	}
 
 	// Fetch existing allocation
 	fare, err := f.FareRepository.GetByID(tx, request.ID)

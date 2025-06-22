@@ -1,9 +1,11 @@
 package controller
 
 import (
-	"eticket-api/internal/common/jwt"
-	"eticket-api/internal/common/response"
+	"eticket-api/internal/common/logger"
+	"eticket-api/internal/common/token"
+	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/auth"
 	"net/http"
@@ -12,7 +14,9 @@ import (
 )
 
 type AuthController struct {
-	TokenManager *jwt.TokenUtil
+	Validate     validator.Validator
+	Log          logger.Logger
+	TokenManager *token.JWT
 	AuthUsecase  *auth.AuthUsecase
 	Authenticate *middleware.AuthenticateMiddleware
 	Authorized   *middleware.AuthorizeMiddleware
@@ -21,6 +25,8 @@ type AuthController struct {
 // NewUserRoleController creates a new UserRoleController instance
 func NewAuthController(
 	g *gin.Engine,
+	log logger.Logger,
+	validate validator.Validator,
 	auth_usecase *auth.AuthUsecase,
 	authtenticate *middleware.AuthenticateMiddleware,
 	authorized *middleware.AuthorizeMiddleware,
@@ -29,15 +35,17 @@ func NewAuthController(
 		AuthUsecase:  auth_usecase,
 		Authenticate: authtenticate,
 		Authorized:   authorized,
+		Validate:     validate,
+		Log:          log,
 	}
 
-	public := g.Group("") // No middleware
+	public := g.Group("/api/v1") // No middleware
 	public.GET("/auth/me", ac.Me)
 	public.POST("/auth/login", ac.Login)
 	public.POST("/auth/refresh", ac.RefreshToken)
 	public.POST("/auth/forget-password", ac.ForgetPassword)
 
-	protected := g.Group("")
+	protected := g.Group("/api/v1")
 	protected.Use(ac.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 
@@ -45,9 +53,16 @@ func NewAuthController(
 }
 
 func (auc *AuthController) Login(ctx *gin.Context) {
-	request := new(model.UserLoginRequest)
+	request := new(model.WriteLoginRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+		return
+	}
+
+	if err := auc.Validate.Struct(request); err != nil {
+		auc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
 
@@ -115,8 +130,14 @@ func (auc *AuthController) ForgetPassword(ctx *gin.Context) {
 		return
 	}
 
-	err := auc.AuthUsecase.RequestPasswordReset(ctx, request.Email)
-	if err != nil {
+	if err := auc.Validate.Struct(request); err != nil {
+		auc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
+		return
+	}
+
+	if err := auc.AuthUsecase.RequestPasswordReset(ctx, request.Email); err != nil {
 		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Reset password failed", err.Error()))
 		return
 	}

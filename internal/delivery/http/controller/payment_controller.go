@@ -1,8 +1,10 @@
 package controller
 
 import (
-	"eticket-api/internal/common/response"
+	"eticket-api/internal/common/logger"
+	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/payment"
 	"net/http"
@@ -11,6 +13,8 @@ import (
 )
 
 type PaymentController struct {
+	Validate       validator.Validator
+	Log            logger.Logger
 	PaymentUsecase *payment.PaymentUsecase
 	Authenticate   *middleware.AuthenticateMiddleware
 	Authorized     *middleware.AuthorizeMiddleware
@@ -18,22 +22,28 @@ type PaymentController struct {
 
 // NewPaymentController creates a new PaymentController instance
 func NewPaymentController(
-	g *gin.Engine, payment_usecase *payment.PaymentUsecase,
+	g *gin.Engine,
+	log logger.Logger,
+	validate validator.Validator,
+	payment_usecase *payment.PaymentUsecase,
 	authtenticate *middleware.AuthenticateMiddleware,
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	pc := &PaymentController{
 		PaymentUsecase: payment_usecase,
 		Authenticate:   authtenticate,
-		Authorized:     authorized}
+		Authorized:     authorized,
+		Validate:       validate,
+		Log:            log,
+	}
 
-	public := g.Group("") // No middleware
+	public := g.Group("/api/v1") // No middleware
 	public.GET("/payment-channels", pc.GetPaymentChannels)
 	public.GET("/payment/transaction/detail/:id", pc.GetTransactionDetail)
 	public.POST("/payment/transaction/create", pc.CreatePayment)
 	public.POST("/payment/callback", pc.HandleCallback)
 
-	protected := g.Group("")
+	protected := g.Group("/api/v1")
 	protected.Use(pc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 }
@@ -62,14 +72,26 @@ func (pc *PaymentController) GetTransactionDetail(ctx *gin.Context) {
 }
 
 func (pc *PaymentController) CreatePayment(ctx *gin.Context) {
-	request := new(model.WritePaymentRequest)
+	sessionID, err := ctx.Cookie("session_id")
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Missing session id", err.Error()))
+		return
+	}
 
+	request := new(model.WritePaymentRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	datas, err := pc.PaymentUsecase.CreatePayment(ctx, request)
+	if err := pc.Validate.Struct(request); err != nil {
+		pc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
+		return
+	}
+
+	datas, err := pc.PaymentUsecase.CreatePayment(ctx, request, sessionID)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to initiate transaction", err.Error()))

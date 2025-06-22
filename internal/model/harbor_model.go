@@ -15,19 +15,17 @@ type ReadHarborResponse struct {
 	UpdatedAt     time.Time `json:"updated_at"`
 }
 
-// HarborDTO represents a harbor.
 type WriteHarborRequest struct {
-	HarborName    string  `json:"harbor_name"`
-	Status        string  `json:"status"`
-	YearOperation string  `json:"year_operation"`
-	HarborAlias   *string `json:"harbor_alias,omitempty"`
+	HarborName    string  `json:"harbor_name" validate:"required"`
+	Status        string  `json:"status" validate:"required,oneof=active inactive closed"`
+	YearOperation string  `json:"year_operation" validate:"required,len=4,numeric"`
+	HarborAlias   *string `json:"harbor_alias,omitempty"` // Optional
 }
 
-// HarborDTO represents a harbor.
 type UpdateHarborRequest struct {
-	ID            uint    `json:"id"`
-	HarborName    string  `json:"harbor_name"`
-	Status        string  `json:"status"`
-	YearOperation string  `json:"year_operation"`
-	HarborAlias   *string `json:"harbor_alias,omitempty"`
+	ID            uint    `json:"id" validate:"required"`
+	HarborName    string  `json:"harbor_name" validate:"required"`
+	Status        string  `json:"status" validate:"required,oneof=active inactive closed"`
+	YearOperation string  `json:"year_operation" validate:"required,len=4,numeric"`
+	HarborAlias   *string `json:"harbor_alias,omitempty"` // Optional
 }

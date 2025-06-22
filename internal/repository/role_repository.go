@@ -5,14 +5,28 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
-type RoleRepository struct {
-	Repository[entity.Role]
-}
+type RoleRepository struct{}
 
 func NewRoleRepository() *RoleRepository {
 	return &RoleRepository{}
+}
+
+func (ar *RoleRepository) Create(db *gorm.DB, role *entity.Role) error {
+	result := db.Create(role)
+	return result.Error
+}
+
+func (ar *RoleRepository) Update(db *gorm.DB, role *entity.Role) error {
+	result := db.Save(role)
+	return result.Error
+}
+
+func (ar *RoleRepository) Delete(db *gorm.DB, role *entity.Role) error {
+	result := db.Select(clause.Associations).Delete(role)
+	return result.Error
 }
 
 func (ror *RoleRepository) Count(db *gorm.DB) (int64, error) {

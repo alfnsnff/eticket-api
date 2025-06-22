@@ -1,18 +1,18 @@
 package middleware
 
 import (
-	"eticket-api/internal/common/jwt"
-	"eticket-api/internal/common/response"
+	"eticket-api/internal/common/token"
+	"eticket-api/internal/delivery/response"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 type AuthenticateMiddleware struct {
-	TokenUtil *jwt.TokenUtil
+	TokenUtil token.TokenUtil
 }
 
-func NewAuthenticateMiddleware(token_util *jwt.TokenUtil) *AuthenticateMiddleware {
+func NewAuthenticateMiddleware(token_util token.TokenUtil) *AuthenticateMiddleware {
 	return &AuthenticateMiddleware{
 		TokenUtil: token_util,
 	}

@@ -7,14 +7,13 @@ import (
 	"time"
 )
 
-// GenerateOrderID creates a unique order ID with a shuffled timestamp.
-func GenerateOrderID(routeCode, shipCode string, date time.Time) string {
-	timestamp := date.Format("20060102150405") // e.g. "20250615173542"
-	return fmt.Sprintf("ID-%s-%s%s-%s", routeCode, shipCode, ShuffleString(timestamp), Random(5))
+func GenerateOrderID(departure, arrival, shipCode string, date time.Time) string {
+	fullDate := date.Format("060102") // YYMMDD
+	return fmt.Sprintf("%s%s%s", departure, fullDate, Random(3))
 }
 
 func Random(n int) string {
-	const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ012345678901234567890123456789"
+	const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" // Fixed: removed duplicate numbers
 	b := make([]byte, n)
 	_, _ = crypt.Read(b)
 	for i := range b {

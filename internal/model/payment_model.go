@@ -13,14 +13,30 @@ type Instruction struct {
 	Steps []string `json:"steps"`
 }
 
-type OrderItem struct {
-	SKU        string `json:"sku"`
-	Name       string `json:"name"`
-	Price      int    `json:"price"`
-	Quantity   int    `json:"quantity"`
-	Subtotal   int    `json:"subtotal"`
-	ProductURL string `json:"product_url"`
-	ImageURL   string `json:"image_url"`
+type Fee struct {
+	Flat    float64 `json:"flat"`
+	Percent float64 `json:"percent"`
+}
+
+type FeePercent struct {
+	Flat    float64 `json:"flat"`
+	Percent string  `json:"percent"` // Keep as string since JSON uses quotes
+}
+
+type ReadPaymentChannelResponse struct {
+	Group         string     `json:"group"`
+	Code          string     `json:"code"`
+	Name          string     `json:"name"`
+	Type          string     `json:"type"`
+	FeeMerchant   Fee        `json:"fee_merchant"`
+	FeeCustomer   Fee        `json:"fee_customer"`
+	TotalFee      FeePercent `json:"total_fee"`
+	MinimumFee    float64    `json:"minimum_fee"`
+	MaximumFee    float64    `json:"maximum_fee"`
+	MinimumAmount float64    `json:"minimum_amount"`
+	MaximumAmount float64    `json:"maximum_amount"`
+	IconURL       string     `json:"icon_url"`
+	Active        bool       `json:"active"`
 }
 
 type WritePaymentRequest struct {
@@ -28,33 +44,28 @@ type WritePaymentRequest struct {
 	PaymentMethod string `json:"payment_method"`
 }
 
-// TripayCallbackHandler.go
-type WriteCallbackRequest struct {
-	Reference     string `json:"reference"`
-	MerchantRef   string `json:"merchant_ref"`
-	Status        string `json:"status"`
-	Amount        int    `json:"amount"`
-	PaymentMethod string `json:"payment_method"`
-	Signature     string `json:"signature"`
-}
-
-// TripayCallbackHandler.go
-type ReadCallbackResponse struct {
-	Success bool `json:"success"`
+type OrderItem struct {
+	SKU        string `json:"sku" validate:"omitempty"`
+	Name       string `json:"name" validate:"required"`
+	Price      int    `json:"price" validate:"required,gt=0"`
+	Quantity   int    `json:"quantity" validate:"required,gt=0"`
+	Subtotal   int    `json:"subtotal" validate:"required,gt=0"`
+	ProductURL string `json:"product_url" validate:"omitempty,url"`
+	ImageURL   string `json:"image_url" validate:"omitempty,url"`
 }
 
 type WriteTransactionRequest struct {
-	Method        string      `json:"method"`
-	MerchantRef   string      `json:"merchant_ref"`
-	Amount        int         `json:"amount"`
-	CustomerName  string      `json:"customer_name"`
-	CustomerPhone string      `json:"customer_phone"`
-	CustomerEmail string      `json:"customer_email"`
-	OrderItems    []OrderItem `json:"order_items"`
-	CallbackUrl   string      `json:"callback_url"`
-	ReturnUrl     string      `json:"return_url"`
-	ExpiredTime   int         `json:"expired_time"`
-	Signature     string      `json:"signature"`
+	Method        string      `json:"method" validate:"required"`
+	MerchantRef   string      `json:"merchant_ref" validate:"required"`
+	Amount        int         `json:"amount" validate:"required,gt=0"`
+	CustomerName  string      `json:"customer_name" validate:"required"`
+	CustomerPhone string      `json:"customer_phone" validate:"omitempty,e164"` // Optional but valid if provided
+	CustomerEmail string      `json:"customer_email" validate:"required,email"`
+	OrderItems    []OrderItem `json:"order_items" validate:"required,dive"`
+	CallbackUrl   string      `json:"callback_url" validate:"omitempty,url"`
+	ReturnUrl     string      `json:"return_url" validate:"omitempty,url"`
+	ExpiredTime   int         `json:"expired_time" validate:"omitempty,gt=0"`
+	Signature     string      `json:"signature" validate:"required"`
 }
 
 type ReadTransactionResponse struct {
@@ -84,28 +95,17 @@ type ReadTransactionResponse struct {
 	QrUrl                *string       `json:"qr_url"`
 }
 
-type ReadPaymentChannelResponse struct {
-	Group         string     `json:"group"`
-	Code          string     `json:"code"`
-	Name          string     `json:"name"`
-	Type          string     `json:"type"`
-	FeeMerchant   Fee        `json:"fee_merchant"`
-	FeeCustomer   Fee        `json:"fee_customer"`
-	TotalFee      FeePercent `json:"total_fee"`
-	MinimumFee    float64    `json:"minimum_fee"`
-	MaximumFee    float64    `json:"maximum_fee"`
-	MinimumAmount float64    `json:"minimum_amount"`
-	MaximumAmount float64    `json:"maximum_amount"`
-	IconURL       string     `json:"icon_url"`
-	Active        bool       `json:"active"`
+// TripayCallbackHandler.go
+type WriteCallbackRequest struct {
+	Reference     string `json:"reference"`
+	MerchantRef   string `json:"merchant_ref"`
+	Status        string `json:"status"`
+	Amount        int    `json:"amount"`
+	PaymentMethod string `json:"payment_method"`
+	Signature     string `json:"signature"`
 }
 
-type Fee struct {
-	Flat    float64 `json:"flat"`
-	Percent float64 `json:"percent"`
-}
-
-type FeePercent struct {
-	Flat    float64 `json:"flat"`
-	Percent string  `json:"percent"` // Keep as string since JSON uses quotes
+// TripayCallbackHandler.go
+type ReadCallbackResponse struct {
+	Success bool `json:"success"`
 }

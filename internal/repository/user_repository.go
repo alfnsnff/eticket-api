@@ -5,14 +5,28 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
-type UserRepository struct {
-	Repository[entity.User]
-}
+type UserRepository struct{}
 
 func NewUserRepository() *UserRepository {
 	return &UserRepository{}
+}
+
+func (ar *UserRepository) Create(db *gorm.DB, user *entity.User) error {
+	result := db.Create(user)
+	return result.Error
+}
+
+func (ar *UserRepository) Update(db *gorm.DB, user *entity.User) error {
+	result := db.Save(user)
+	return result.Error
+}
+
+func (ar *UserRepository) Delete(db *gorm.DB, user *entity.User) error {
+	result := db.Select(clause.Associations).Delete(user)
+	return result.Error
 }
 
 func (ur *UserRepository) Count(db *gorm.DB) (int64, error) {

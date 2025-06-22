@@ -5,8 +5,6 @@ import (
 	"errors"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
-	"eticket-api/internal/model/mapper"
-	"eticket-api/internal/repository"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -14,12 +12,12 @@ import (
 
 type ManifestUsecase struct {
 	DB                 *gorm.DB
-	ManifestRepository *repository.ManifestRepository
+	ManifestRepository ManifestRepository
 }
 
 func NewManifestUsecase(
 	db *gorm.DB,
-	manifestRepository *repository.ManifestRepository,
+	manifestRepository ManifestRepository,
 ) *ManifestUsecase {
 	return &ManifestUsecase{
 		DB:                 db,
@@ -42,13 +40,6 @@ func (m *ManifestUsecase) CreateManifest(ctx context.Context, request *model.Wri
 		ShipID:   request.ShipID,
 		ClassID:  request.ClassID,
 		Capacity: request.Capacity,
-	}
-
-	if manifest.ShipID == 0 {
-		return fmt.Errorf("shipClass ship ID cannot be zero")
-	}
-	if manifest.ClassID == 0 {
-		return fmt.Errorf("shipClass class ID cannot be zero")
 	}
 
 	if err := m.ManifestRepository.Create(tx, manifest); err != nil {
@@ -87,7 +78,7 @@ func (m *ManifestUsecase) GetAllManifests(ctx context.Context, limit, offset int
 		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.ManifestMapper.ToModels(manifests), int(total), nil
+	return ToReadManifestResponses(manifests), int(total), nil
 }
 
 func (m *ManifestUsecase) GetManifestByID(ctx context.Context, id uint) (*model.ReadManifestResponse, error) {
@@ -113,7 +104,7 @@ func (m *ManifestUsecase) GetManifestByID(ctx context.Context, id uint) (*model.
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.ManifestMapper.ToModel(manifest), nil
+	return ToReadManifestResponse(manifest), nil
 }
 
 func (m *ManifestUsecase) UpdateManifest(ctx context.Context, request *model.UpdateManifestRequest) error {
@@ -126,10 +117,6 @@ func (m *ManifestUsecase) UpdateManifest(ctx context.Context, request *model.Upd
 			tx.Rollback()
 		}
 	}()
-
-	if request.ID == 0 {
-		return fmt.Errorf("shipClass ID cannot be zero")
-	}
 
 	// Fetch existing allocation
 	manifest, err := m.ManifestRepository.GetByID(tx, request.ID)

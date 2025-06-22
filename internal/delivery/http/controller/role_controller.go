@@ -1,8 +1,10 @@
 package controller
 
 import (
-	"eticket-api/internal/common/response"
+	"eticket-api/internal/common/logger"
+	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/role"
 	"net/http"
@@ -12,6 +14,8 @@ import (
 )
 
 type RoleController struct {
+	Validate     validator.Validator
+	Log          logger.Logger
 	RoleUsecase  *role.RoleUsecase
 	Authenticate *middleware.AuthenticateMiddleware
 	Authorized   *middleware.AuthorizeMiddleware
@@ -19,20 +23,26 @@ type RoleController struct {
 
 // NewRoleController creates a new RoleController instance
 func NewRoleController(
-	g *gin.Engine, role_usecase *role.RoleUsecase,
+	g *gin.Engine,
+	log logger.Logger,
+	validate validator.Validator,
+	role_usecase *role.RoleUsecase,
 	authtenticate *middleware.AuthenticateMiddleware,
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	roc := &RoleController{
 		RoleUsecase:  role_usecase,
 		Authenticate: authtenticate,
-		Authorized:   authorized}
+		Authorized:   authorized,
+		Validate:     validate,
+		Log:          log,
+	}
 
-	public := g.Group("") // No middleware
+	public := g.Group("/api/v1") // No middleware
 	public.GET("/roles", roc.GetAllRoles)
 	public.GET("/role/:id", roc.GetRoleByID)
 
-	protected := g.Group("")
+	protected := g.Group("/api/v1")
 	protected.Use(roc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 
@@ -46,6 +56,13 @@ func (rc *RoleController) CreateRole(ctx *gin.Context) {
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+		return
+	}
+
+	if err := rc.Validate.Struct(request); err != nil {
+		rc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
 
@@ -104,19 +121,26 @@ func (rc *RoleController) GetRoleByID(ctx *gin.Context) {
 }
 
 func (rc *RoleController) UpdateRole(ctx *gin.Context) {
-	request := new(model.UpdateRoleRequest)
-	id, _ := strconv.Atoi(ctx.Param("id"))
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil || id == 0 {
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid or missing ship ID", nil))
+		return
+	}
 
+	request := new(model.UpdateRoleRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	if id == 0 {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Role ID is required", nil))
+	request.ID = uint(id)
+	if err := rc.Validate.Struct(request); err != nil {
+		rc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
-	request.ID = uint(id)
+
 	if err := rc.RoleUsecase.UpdateRole(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update role", err.Error()))
 		return

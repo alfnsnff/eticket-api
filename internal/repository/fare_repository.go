@@ -6,14 +6,28 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
-type FareRepository struct {
-	Repository[entity.Fare]
-}
+type FareRepository struct{}
 
 func NewFareRepository() *FareRepository {
 	return &FareRepository{}
+}
+
+func (ar *FareRepository) Create(db *gorm.DB, fare *entity.Fare) error {
+	result := db.Create(fare)
+	return result.Error
+}
+
+func (ar *FareRepository) Update(db *gorm.DB, fare *entity.Fare) error {
+	result := db.Save(fare)
+	return result.Error
+}
+
+func (ar *FareRepository) Delete(db *gorm.DB, fare *entity.Fare) error {
+	result := db.Select(clause.Associations).Delete(fare)
+	return result.Error
 }
 
 func (fr *FareRepository) Count(db *gorm.DB) (int64, error) {

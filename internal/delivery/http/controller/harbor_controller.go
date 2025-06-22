@@ -1,8 +1,10 @@
 package controller
 
 import (
-	"eticket-api/internal/common/response"
+	"eticket-api/internal/common/logger"
+	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/harbor"
 	"net/http"
@@ -12,26 +14,34 @@ import (
 )
 
 type HarborController struct {
+	Validate      validator.Validator
+	Log           logger.Logger
 	HarborUsecase *harbor.HarborUsecase
 	Authenticate  *middleware.AuthenticateMiddleware
 	Authorized    *middleware.AuthorizeMiddleware
 }
 
 func NewHarborController(
-	g *gin.Engine, harbor_usecase *harbor.HarborUsecase,
+	g *gin.Engine,
+	log logger.Logger,
+	validate validator.Validator,
+	harbor_usecase *harbor.HarborUsecase,
 	authtenticate *middleware.AuthenticateMiddleware,
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	hc := &HarborController{
 		HarborUsecase: harbor_usecase,
 		Authenticate:  authtenticate,
-		Authorized:    authorized}
+		Authorized:    authorized,
+		Validate:      validate,
+		Log:           log,
+	}
 
-	public := g.Group("") // No middleware
+	public := g.Group("/api/v1") // No middleware
 	public.GET("/harbors", hc.GetAllHarbors)
 	public.GET("/harbor/:id", hc.GetHarborByID)
 
-	protected := g.Group("")
+	protected := g.Group("/api/v1")
 	protected.Use(hc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 
@@ -45,6 +55,13 @@ func (hc *HarborController) CreateHarbor(ctx *gin.Context) {
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+		return
+	}
+
+	if err := hc.Validate.Struct(request); err != nil {
+		hc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
 
@@ -103,20 +120,26 @@ func (hc *HarborController) GetHarborByID(ctx *gin.Context) {
 }
 
 func (hc *HarborController) UpdateHarbor(ctx *gin.Context) {
-	request := new(model.UpdateHarborRequest)
-	id, _ := strconv.Atoi(ctx.Param("id"))
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil || id == 0 {
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid or missing ship ID", nil))
+		return
+	}
 
+	request := new(model.UpdateHarborRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	if id == 0 {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Harbor ID is required", nil))
+	request.ID = uint(id)
+	if err := hc.Validate.Struct(request); err != nil {
+		hc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
 
-	request.ID = uint(id)
 	if err := hc.HarborUsecase.UpdateHarbor(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update harbor", err.Error()))
 		return

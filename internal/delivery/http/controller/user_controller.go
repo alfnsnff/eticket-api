@@ -1,8 +1,10 @@
 package controller
 
 import (
-	"eticket-api/internal/common/response"
+	"eticket-api/internal/common/logger"
+	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/user"
 	"net/http"
@@ -12,6 +14,8 @@ import (
 )
 
 type UserController struct {
+	Validate     validator.Validator
+	Log          logger.Logger
 	UserUsecase  *user.UserUsecase
 	Authenticate *middleware.AuthenticateMiddleware
 	Authorized   *middleware.AuthorizeMiddleware
@@ -19,21 +23,27 @@ type UserController struct {
 
 // NewUserController creates a new UserController instance
 func NewUserController(
-	g *gin.Engine, user_usecase *user.UserUsecase,
+	g *gin.Engine,
+	log logger.Logger,
+	validate validator.Validator,
+	user_usecase *user.UserUsecase,
 	authtenticate *middleware.AuthenticateMiddleware,
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	uc := &UserController{
 		UserUsecase:  user_usecase,
 		Authenticate: authtenticate,
-		Authorized:   authorized}
+		Authorized:   authorized,
+		Validate:     validate,
+		Log:          log,
+	}
 
-	public := g.Group("") // No middleware
+	public := g.Group("/api/v1") // No middleware
 	public.GET("/users", uc.GetAllUsers)
 	public.GET("/user/:id", uc.GetUserByID)
 	public.POST("/user/create", uc.CreateUser)
 
-	protected := g.Group("")
+	protected := g.Group("/api/v1")
 	protected.Use(uc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 
@@ -46,6 +56,13 @@ func (uc *UserController) CreateUser(ctx *gin.Context) {
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+		return
+	}
+
+	if err := uc.Validate.Struct(request); err != nil {
+		uc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
 
@@ -104,19 +121,26 @@ func (uc *UserController) GetUserByID(ctx *gin.Context) {
 }
 
 func (uc *UserController) UpdateUser(ctx *gin.Context) {
-	request := new(model.UpdateUserRequest)
-	id, _ := strconv.Atoi(ctx.Param("id"))
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil || id == 0 {
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid or missing ship ID", nil))
+		return
+	}
 
+	request := new(model.UpdateUserRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	if id == 0 {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("User ID is required", nil))
+	request.ID = uint(id)
+	if err := uc.Validate.Struct(request); err != nil {
+		uc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
-	request.ID = uint(id)
+
 	if err := uc.UserUsecase.UpdateUser(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update user", err.Error()))
 		return

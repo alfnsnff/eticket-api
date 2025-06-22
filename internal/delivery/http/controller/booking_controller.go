@@ -2,8 +2,10 @@ package controller
 
 import (
 	"encoding/json"
-	"eticket-api/internal/common/response"
+	"eticket-api/internal/common/logger"
+	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/booking"
 	"fmt"
@@ -14,6 +16,8 @@ import (
 )
 
 type BookingController struct {
+	Validate       validator.Validator
+	Log            logger.Logger
 	BookingUsecase *booking.BookingUsecase
 	Authenticate   *middleware.AuthenticateMiddleware
 	Authorized     *middleware.AuthorizeMiddleware
@@ -21,22 +25,28 @@ type BookingController struct {
 
 // NewBookingController creates a new BookingController instance
 func NewBookingController(
-	g *gin.Engine, booking_usecase *booking.BookingUsecase,
+	g *gin.Engine,
+	log logger.Logger,
+	validate validator.Validator,
+	booking_usecase *booking.BookingUsecase,
 	authtenticate *middleware.AuthenticateMiddleware,
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	bc := &BookingController{
 		BookingUsecase: booking_usecase,
 		Authenticate:   authtenticate,
-		Authorized:     authorized}
+		Authorized:     authorized,
+		Validate:       validate,
+		Log:            log,
+	}
 
-	public := g.Group("") // No middleware
+	public := g.Group("/api/v1") // No middleware
 	public.GET("/bookings", bc.GetAllBookings)
 	public.GET("/booking/:id", bc.GetBookingByID)
 	public.GET("/booking/order/:id", bc.GetBookingByOrderID)
 	public.GET("/booking/payment/callback", bc.GetBookingByID)
 
-	protected := g.Group("")
+	protected := g.Group("/api/v1")
 	protected.Use(bc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 
@@ -50,6 +60,13 @@ func (bc *BookingController) CreateBooking(ctx *gin.Context) {
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+		return
+	}
+
+	if err := bc.Validate.Struct(request); err != nil {
+		bc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
 
@@ -129,23 +146,27 @@ func (bc *BookingController) GetBookingByOrderID(ctx *gin.Context) {
 }
 
 func (bc *BookingController) UpdateBooking(ctx *gin.Context) {
-	request := new(model.UpdateBookingRequest)
-	id, _ := strconv.Atoi(ctx.Param("id"))
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil || id == 0 {
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid or missing ship ID", nil))
+		return
+	}
 
+	request := new(model.UpdateBookingRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	if id == 0 {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Booking ID is required", nil))
+	request.ID = uint(id)
+	if err := bc.Validate.Struct(request); err != nil {
+		bc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
 
-	request.ID = uint(id)
-	err := bc.BookingUsecase.UpdateBooking(ctx, request)
-
-	if err != nil {
+	if err := bc.BookingUsecase.UpdateBooking(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update booking", err.Error()))
 		return
 	}

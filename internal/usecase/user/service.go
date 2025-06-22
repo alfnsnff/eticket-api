@@ -6,8 +6,6 @@ import (
 	"eticket-api/internal/common/utils"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
-	"eticket-api/internal/model/mapper"
-	"eticket-api/internal/repository"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -15,12 +13,12 @@ import (
 
 type UserUsecase struct {
 	DB             *gorm.DB
-	UserRepository *repository.UserRepository
+	UserRepository UserRepository
 }
 
 func NewUserUsecase(
 	db *gorm.DB,
-	user_repository *repository.UserRepository,
+	user_repository UserRepository,
 ) *UserUsecase {
 	return &UserUsecase{
 		DB:             db,
@@ -38,22 +36,6 @@ func (u *UserUsecase) CreateUser(ctx context.Context, request *model.WriteUserRe
 			tx.Rollback()
 		}
 	}()
-
-	if request.Username == "" {
-		return fmt.Errorf("username cannot be empty")
-	}
-
-	if request.Email == "" {
-		return fmt.Errorf("email cannot be empty")
-	}
-
-	if request.Password == "" {
-		return fmt.Errorf("password cannot be empty")
-	}
-
-	if request.FullName == "" {
-		return fmt.Errorf("full name cannot be empty")
-	}
 
 	hashedPassword, err := utils.HashPassword(request.Password)
 	if err != nil {
@@ -105,7 +87,7 @@ func (u *UserUsecase) GetAllUsers(ctx context.Context, limit, offset int, sort, 
 		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.UserMapper.ToModels(users), int(total), nil
+	return ToReadUserResponses(users), int(total), nil
 }
 
 func (u *UserUsecase) GetUserByID(ctx context.Context, id uint) (*model.ReadUserResponse, error) {
@@ -132,7 +114,7 @@ func (u *UserUsecase) GetUserByID(ctx context.Context, id uint) (*model.ReadUser
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.UserMapper.ToModel(user), nil
+	return ToReadUserResponse(user), nil
 }
 
 func (u *UserUsecase) UpdateUser(ctx context.Context, request *model.UpdateUserRequest) error {
@@ -145,11 +127,6 @@ func (u *UserUsecase) UpdateUser(ctx context.Context, request *model.UpdateUserR
 			tx.Rollback()
 		}
 	}()
-
-	// Validate input
-	if request.ID == 0 {
-		return fmt.Errorf("allocation ID cannot be zero")
-	}
 
 	// Fetch existing allocation
 	user, err := u.UserRepository.GetByID(tx, request.ID)

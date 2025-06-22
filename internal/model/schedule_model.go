@@ -37,25 +37,25 @@ type ReadScheduleResponse struct {
 
 // ScheduleDTO represents a Schedule.
 type WriteScheduleRequest struct {
-	RouteID           uint      `json:"route_id"`
-	ShipID            uint      `json:"ship_id"`
-	DepartureDatetime time.Time `json:"departure_datetime"`
-	ArrivalDatetime   time.Time `json:"arrival_datetime"`
-	Status            string    `json:"status"` // e.g., 'active', 'inactive', 'cancelled'
+	RouteID           uint      `json:"route_id" validate:"required"`
+	ShipID            uint      `json:"ship_id" validate:"required"`
+	DepartureDatetime time.Time `json:"departure_datetime" validate:"required"`
+	ArrivalDatetime   time.Time `json:"arrival_datetime" validate:"required,gtfield=DepartureDatetime"`
+	Status            string    `json:"status" validate:"required,oneof=scheduled unscheduled"`
 }
 
 // ScheduleDTO represents a Schedule.
 type UpdateScheduleRequest struct {
-	ID                uint      `json:"id"`
-	RouteID           uint      `json:"route_id"`
-	ShipID            uint      `json:"ship_id"`
-	DepartureDatetime time.Time `json:"departure_datetime"`
-	ArrivalDatetime   time.Time `json:"arrival_datetime"`
-	Status            string    `json:"status"` // e.g., 'active', 'inactive', 'cancelled'
+	ID                uint      `json:"id" validate:"required"`
+	RouteID           uint      `json:"route_id" validate:"required"`
+	ShipID            uint      `json:"ship_id" validate:"required"`
+	DepartureDatetime time.Time `json:"departure_datetime" validate:"required"`
+	ArrivalDatetime   time.Time `json:"arrival_datetime" validate:"required,gtfield=DepartureDatetime"`
+	Status            string    `json:"status" validate:"required,oneof=active inactive cancelled"`
 }
 
 // ScheduleClassAvailability represents the availability and price for a specific class on a schedule
-type ScheduleClassAvailability struct {
+type ReadClassAvailabilityResponse struct {
 	ClassID           uint    `json:"class_id"`
 	ClassName         string  `json:"class_name"`
 	Type              string  `json:"type"`
@@ -66,8 +66,8 @@ type ScheduleClassAvailability struct {
 }
 
 // ReadScheduleDetailsWithAvailabilityResponse represents the response for schedule details with availability
-type ReadScheduleDetailsWithAvailabilityResponse struct {
-	ScheduleID          uint                        `json:"schedule_id"`
-	RouteID             uint                        `json:"route_id"`
-	ClassesAvailability []ScheduleClassAvailability `json:"classes_availability"`
+type ReadScheduleDetailsResponse struct {
+	ScheduleID          uint                            `json:"schedule_id"`
+	RouteID             uint                            `json:"route_id"`
+	ClassesAvailability []ReadClassAvailabilityResponse `json:"classes_availability"`
 }

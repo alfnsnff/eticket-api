@@ -5,8 +5,6 @@ import (
 	"errors"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
-	"eticket-api/internal/model/mapper"
-	"eticket-api/internal/repository"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -14,12 +12,12 @@ import (
 
 type RouteUsecase struct {
 	DB              *gorm.DB
-	RouteRepository *repository.RouteRepository
+	RouteRepository RouteRepository
 }
 
 func NewRouteUsecase(
 	db *gorm.DB,
-	routeRepository *repository.RouteRepository,
+	routeRepository RouteRepository,
 ) *RouteUsecase {
 	return &RouteUsecase{
 		DB:              db,
@@ -41,10 +39,6 @@ func (r *RouteUsecase) CreateRoute(ctx context.Context, request *model.WriteRout
 	route := &entity.Route{
 		DepartureHarborID: request.DepartureHarborID,
 		ArrivalHarborID:   request.ArrivalHarborID,
-	}
-
-	if route.DepartureHarborID == 0 || route.ArrivalHarborID == 0 {
-		return fmt.Errorf("harbor ID cannot be empty")
 	}
 
 	if err := r.RouteRepository.Create(tx, route); err != nil {
@@ -83,7 +77,7 @@ func (r *RouteUsecase) GetAllRoutes(ctx context.Context, limit, offset int, sort
 		return nil, 0, fmt.Errorf("failed to commit: %w", err)
 	}
 
-	return mapper.RouteMapper.ToModels(routes), int(total), nil
+	return ToReadRouteResponses(routes), int(total), nil
 }
 
 func (r *RouteUsecase) GetRouteByID(ctx context.Context, id uint) (*model.ReadRouteResponse, error) {
@@ -109,7 +103,7 @@ func (r *RouteUsecase) GetRouteByID(ctx context.Context, id uint) (*model.ReadRo
 		return nil, fmt.Errorf("failed to commit: %w", err)
 	}
 
-	return mapper.RouteMapper.ToModel(route), nil
+	return ToReadRouteResponse(route), nil
 }
 
 func (r *RouteUsecase) UpdateRoute(ctx context.Context, request *model.UpdateRouteRequest) error {
@@ -122,10 +116,6 @@ func (r *RouteUsecase) UpdateRoute(ctx context.Context, request *model.UpdateRou
 			tx.Rollback()
 		}
 	}()
-
-	if request.ID == 0 {
-		return fmt.Errorf("route ID cannot be zero")
-	}
 
 	// Fetch existing allocation
 	route, err := r.RouteRepository.GetByID(tx, request.ID)

@@ -5,8 +5,6 @@ import (
 	"errors"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
-	"eticket-api/internal/model/mapper"
-	"eticket-api/internal/repository"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -14,12 +12,12 @@ import (
 
 type HarborUsecase struct {
 	DB               *gorm.DB
-	HarborRepository *repository.HarborRepository
+	HarborRepository HarborRepository
 }
 
 func NewHarborUsecase(
 	db *gorm.DB,
-	harborRepository *repository.HarborRepository,
+	harborRepository HarborRepository,
 ) *HarborUsecase {
 	return &HarborUsecase{
 		DB:               db,
@@ -43,10 +41,6 @@ func (h *HarborUsecase) CreateHarbor(ctx context.Context, request *model.WriteHa
 		Status:        request.Status,
 		HarborAlias:   request.HarborAlias,
 		YearOperation: request.YearOperation,
-	}
-
-	if harbor.HarborName == "" {
-		return fmt.Errorf("harbor name cannot be empty")
 	}
 
 	if err := h.HarborRepository.Create(tx, harbor); err != nil {
@@ -85,7 +79,7 @@ func (h *HarborUsecase) GetAllHarbors(ctx context.Context, limit, offset int, so
 		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.HarborMapper.ToModels(harbors), int(total), nil
+	return ToReadHarborResponses(harbors), int(total), nil
 }
 
 func (h *HarborUsecase) GetHarborByID(ctx context.Context, id uint) (*model.ReadHarborResponse, error) {
@@ -111,7 +105,7 @@ func (h *HarborUsecase) GetHarborByID(ctx context.Context, id uint) (*model.Read
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.HarborMapper.ToModel(harbor), nil
+	return ToReadHarborResponse(harbor), nil
 }
 
 func (h *HarborUsecase) UpdateHarbor(ctx context.Context, request *model.UpdateHarborRequest) error {
@@ -124,10 +118,6 @@ func (h *HarborUsecase) UpdateHarbor(ctx context.Context, request *model.UpdateH
 			tx.Rollback()
 		}
 	}()
-
-	if request.ID == 0 {
-		return fmt.Errorf("harbor ID cannot be zero")
-	}
 
 	// Fetch existing allocation
 	harbor, err := h.HarborRepository.GetByID(tx, request.ID)

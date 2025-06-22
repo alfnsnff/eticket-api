@@ -5,8 +5,6 @@ import (
 	"errors"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
-	"eticket-api/internal/model/mapper"
-	"eticket-api/internal/repository"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -14,12 +12,12 @@ import (
 
 type ShipUsecase struct {
 	DB             *gorm.DB
-	ShipRepository *repository.ShipRepository
+	ShipRepository ShipRepository
 }
 
 func NewShipUsecase(
 	db *gorm.DB,
-	ship_repository *repository.ShipRepository,
+	ship_repository ShipRepository,
 ) *ShipUsecase {
 	return &ShipUsecase{
 		DB:             db,
@@ -46,10 +44,6 @@ func (sh *ShipUsecase) CreateShip(ctx context.Context, request *model.WriteShipR
 		YearOperation: request.YearOperation,
 		ImageLink:     request.ImageLink,
 		Description:   request.Description,
-	}
-
-	if ship.ShipName == "" {
-		return fmt.Errorf("ship name cannot be empty")
 	}
 
 	if err := sh.ShipRepository.Create(tx, ship); err != nil {
@@ -88,7 +82,7 @@ func (sh *ShipUsecase) GetAllShips(ctx context.Context, limit, offset int, sort,
 		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.ShipMapper.ToModels(ships), int(total), nil
+	return ToReadShipResponses(ships), int(total), nil
 }
 
 func (sh *ShipUsecase) GetShipByID(ctx context.Context, id uint) (*model.ReadShipResponse, error) {
@@ -114,7 +108,7 @@ func (sh *ShipUsecase) GetShipByID(ctx context.Context, id uint) (*model.ReadShi
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.ShipMapper.ToModel(ship), nil
+	return ToReadShipResponse(ship), nil
 }
 
 func (sh *ShipUsecase) UpdateShip(ctx context.Context, request *model.UpdateShipRequest) error {
@@ -127,10 +121,6 @@ func (sh *ShipUsecase) UpdateShip(ctx context.Context, request *model.UpdateShip
 			tx.Rollback()
 		}
 	}()
-
-	if request.ID == 0 {
-		return fmt.Errorf("ship ID cannot be zero")
-	}
 
 	// Fetch existing allocation
 	ship, err := sh.ShipRepository.GetByID(tx, request.ID)

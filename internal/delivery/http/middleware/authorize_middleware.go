@@ -6,17 +6,17 @@ import (
 	"net/http"
 	"strings"
 
-	"eticket-api/internal/common/response"
+	"eticket-api/internal/common/enforcer"
+	"eticket-api/internal/delivery/response"
 
-	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
 )
 
 type AuthorizeMiddleware struct {
-	Enforcer *casbin.Enforcer
+	Enforcer enforcer.Enforcer
 }
 
-func NewAuthorizeMiddleware(enforcer *casbin.Enforcer) *AuthorizeMiddleware {
+func NewAuthorizeMiddleware(enforcer enforcer.Enforcer) *AuthorizeMiddleware {
 	return &AuthorizeMiddleware{Enforcer: enforcer}
 }
 
@@ -33,7 +33,7 @@ func (i *AuthorizeMiddleware) Set() gin.HandlerFunc {
 		obj := strings.TrimPrefix(c.FullPath(), "/api")
 		act := strings.ToUpper(c.Request.Method)
 
-		allowed, err := i.Enforcer.Enforce(role, obj, act)
+		allowed, err := i.Enforcer.Enforce(fmt.Sprint(role), obj, act)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, response.NewErrorResponse("Authorization error", nil))
 			return

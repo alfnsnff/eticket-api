@@ -5,8 +5,6 @@ import (
 	"errors"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
-	"eticket-api/internal/model/mapper"
-	"eticket-api/internal/repository"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -14,14 +12,14 @@ import (
 
 type AllocationUsecase struct {
 	DB                   *gorm.DB // Assuming you have a DB field for the transaction manager
-	AllocationRepository *repository.AllocationRepository
-	FareRepository       *repository.FareRepository
+	AllocationRepository AllocationRepository
+	FareRepository       FareRepository
 }
 
 func NewAllocationUsecase(
 	db *gorm.DB,
-	allocation_repository *repository.AllocationRepository,
-	fare_repository *repository.FareRepository,
+	allocation_repository AllocationRepository,
+	fare_repository FareRepository,
 ) *AllocationUsecase {
 	return &AllocationUsecase{
 		DB:                   db,
@@ -40,14 +38,6 @@ func (a *AllocationUsecase) CreateAllocation(ctx context.Context, request *model
 			tx.Rollback()
 		}
 	}()
-
-	if request.ScheduleID == 0 {
-		return fmt.Errorf("schedule ID cannot be zero")
-	}
-
-	if request.ClassID == 0 {
-		return fmt.Errorf("class ID cannot be zero")
-	}
 
 	allocation := &entity.Allocation{
 		ScheduleID: request.ScheduleID,
@@ -91,7 +81,7 @@ func (a *AllocationUsecase) GetAllAllocations(ctx context.Context, limit, offset
 		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.AllocationMapper.ToModels(allocations), int(total), nil
+	return ToReadAllocationResponses(allocations), int(total), nil
 }
 
 func (a *AllocationUsecase) GetAllocationByID(ctx context.Context, id uint) (*model.ReadAllocationResponse, error) {
@@ -118,7 +108,7 @@ func (a *AllocationUsecase) GetAllocationByID(ctx context.Context, id uint) (*mo
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.AllocationMapper.ToModel(allocation), nil
+	return ToReadAllocationResponse(allocation), nil
 }
 
 func (a *AllocationUsecase) UpdateAllocation(ctx context.Context, request *model.UpdateAllocationRequest) error {
@@ -131,11 +121,6 @@ func (a *AllocationUsecase) UpdateAllocation(ctx context.Context, request *model
 			tx.Rollback()
 		}
 	}()
-
-	// Validate input
-	if request.ID == 0 {
-		return fmt.Errorf("allocation ID cannot be zero")
-	}
 
 	// Fetch existing allocation
 	allocation, err := a.AllocationRepository.GetByID(tx, request.ID)

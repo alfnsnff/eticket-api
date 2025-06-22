@@ -5,8 +5,6 @@ import (
 	"errors"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
-	"eticket-api/internal/model/mapper"
-	"eticket-api/internal/repository"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -14,12 +12,12 @@ import (
 
 type RoleUsecase struct {
 	DB             *gorm.DB
-	RoleRepository *repository.RoleRepository
+	RoleRepository RoleRepository
 }
 
 func NewRoleUsecase(
 	db *gorm.DB,
-	roleRepository *repository.RoleRepository,
+	roleRepository RoleRepository,
 ) *RoleUsecase {
 	return &RoleUsecase{
 		DB:             db,
@@ -41,13 +39,6 @@ func (r *RoleUsecase) CreateRole(ctx context.Context, request *model.WriteRoleRe
 	role := &entity.Role{
 		RoleName:    request.RoleName,
 		Description: request.Description,
-	}
-
-	if role.RoleName == "" {
-		return fmt.Errorf("role name cannot be empty")
-	}
-	if role.Description == "" {
-		return fmt.Errorf("description cannot be empty")
 	}
 
 	if err := r.RoleRepository.Create(tx, role); err != nil {
@@ -86,7 +77,7 @@ func (r *RoleUsecase) GetAllRoles(ctx context.Context, limit, offset int, sort, 
 		return nil, 0, fmt.Errorf("failed to commit: %w", err)
 	}
 
-	return mapper.RoleMapper.ToModels(roles), int(total), nil
+	return ToReadRoleResponses(roles), int(total), nil
 }
 
 func (r *RoleUsecase) GetRoleByID(ctx context.Context, id uint) (*model.ReadRoleResponse, error) {
@@ -112,7 +103,7 @@ func (r *RoleUsecase) GetRoleByID(ctx context.Context, id uint) (*model.ReadRole
 		return nil, fmt.Errorf("failed to commit: %w", err)
 	}
 
-	return mapper.RoleMapper.ToModel(role), nil
+	return ToReadRoleResponse(role), nil
 }
 
 func (r *RoleUsecase) UpdateRole(ctx context.Context, request *model.UpdateRoleRequest) error {
@@ -125,10 +116,6 @@ func (r *RoleUsecase) UpdateRole(ctx context.Context, request *model.UpdateRoleR
 			tx.Rollback()
 		}
 	}()
-
-	if request.ID == 0 {
-		return fmt.Errorf("role ID cannot be zero")
-	}
 
 	// Fetch existing allocation
 	role, err := r.RoleRepository.GetByID(tx, request.ID)

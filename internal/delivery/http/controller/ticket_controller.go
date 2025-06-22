@@ -1,8 +1,10 @@
 package controller
 
 import (
-	"eticket-api/internal/common/response"
+	"eticket-api/internal/common/logger"
+	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/middleware"
+	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/ticket"
 	"net/http"
@@ -12,26 +14,34 @@ import (
 )
 
 type TicketController struct {
+	Validate      validator.Validator
+	Log           logger.Logger
 	TicketUsecase *ticket.TicketUsecase
 	Authenticate  *middleware.AuthenticateMiddleware
 	Authorized    *middleware.AuthorizeMiddleware
 }
 
 func NewTicketController(
-	g *gin.Engine, ticket_usecase *ticket.TicketUsecase,
+	g *gin.Engine,
+	log logger.Logger,
+	validate validator.Validator,
+	ticket_usecase *ticket.TicketUsecase,
 	authtenticate *middleware.AuthenticateMiddleware,
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	tc := &TicketController{
 		TicketUsecase: ticket_usecase,
 		Authenticate:  authtenticate,
-		Authorized:    authorized}
+		Authorized:    authorized,
+		Validate:      validate,
+		Log:           log,
+	}
 
-	public := g.Group("") // No middleware
+	public := g.Group("/api/v1") // No middleware
 	public.GET("/tickets", tc.GetAllTickets)
 	public.GET("/ticket/:id", tc.GetTicketByID)
 
-	protected := g.Group("")
+	protected := g.Group("/api/v1")
 	protected.Use(tc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 
@@ -47,6 +57,13 @@ func (tc *TicketController) CreateTicket(ctx *gin.Context) {
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error())) // Use response.
+		return
+	}
+
+	if err := tc.Validate.Struct(request); err != nil {
+		tc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
 
@@ -136,19 +153,26 @@ func (tc *TicketController) GetTicketByID(ctx *gin.Context) {
 }
 
 func (tc *TicketController) UpdateTicket(ctx *gin.Context) {
-	request := new(model.UpdateTicketRequest)
-	id, _ := strconv.Atoi(ctx.Param("id"))
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil || id == 0 {
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid or missing ship ID", nil))
+		return
+	}
 
+	request := new(model.UpdateTicketRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error())) // Use response.
 		return
 	}
 
-	if id == 0 {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Ticket ID is required", nil)) // Use response.
+	request.ID = uint(id)
+	if err := tc.Validate.Struct(request); err != nil {
+		tc.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
-	request.ID = uint(id)
+
 	if err := tc.TicketUsecase.UpdateTicket(ctx, request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update ticket", err.Error())) // Use response.
 		return

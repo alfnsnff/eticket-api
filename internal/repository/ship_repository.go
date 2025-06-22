@@ -6,14 +6,28 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
-type ShipRepository struct {
-	Repository[entity.Ship]
-}
+type ShipRepository struct{}
 
 func NewShipRepository() *ShipRepository {
 	return &ShipRepository{}
+}
+
+func (ar *ShipRepository) Create(db *gorm.DB, ship *entity.Ship) error {
+	result := db.Create(ship)
+	return result.Error
+}
+
+func (ar *ShipRepository) Update(db *gorm.DB, ship *entity.Ship) error {
+	result := db.Save(ship)
+	return result.Error
+}
+
+func (ar *ShipRepository) Delete(db *gorm.DB, ship *entity.Ship) error {
+	result := db.Select(clause.Associations).Delete(ship)
+	return result.Error
 }
 
 func (shr *ShipRepository) Count(db *gorm.DB) (int64, error) {

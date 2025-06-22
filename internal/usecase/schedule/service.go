@@ -5,34 +5,33 @@ import (
 	"errors"
 	"eticket-api/internal/entity"
 	"eticket-api/internal/model"
-	"eticket-api/internal/model/mapper"
-	"eticket-api/internal/repository"
 	"fmt"
 	"log"
+	"strings"
 
 	"gorm.io/gorm"
 )
 
 type ScheduleUsecase struct {
 	DB                   *gorm.DB // Assuming you have a DB field for the transaction manager
-	AllocationRepository *repository.AllocationRepository
-	ClassRepository      *repository.ClassRepository
-	FareRepository       *repository.FareRepository
-	ManifestRepository   *repository.ManifestRepository
-	ShipRepository       *repository.ShipRepository
-	ScheduleRepository   *repository.ScheduleRepository
-	TicketRepository     *repository.TicketRepository
+	AllocationRepository AllocationRepository
+	ClassRepository      ClassRepository
+	FareRepository       FareRepository
+	ManifestRepository   ManifestRepository
+	ShipRepository       ShipRepository
+	ScheduleRepository   ScheduleRepository
+	TicketRepository     TicketRepository
 }
 
 func NewScheduleUsecase(
 	db *gorm.DB,
-	allocation_repository *repository.AllocationRepository,
-	class_repository *repository.ClassRepository,
-	fare_repository *repository.FareRepository,
-	manifest_repository *repository.ManifestRepository,
-	ship_repository *repository.ShipRepository,
-	schedule_repository *repository.ScheduleRepository,
-	ticket_repository *repository.TicketRepository,
+	allocation_repository AllocationRepository,
+	class_repository ClassRepository,
+	fare_repository FareRepository,
+	manifest_repository ManifestRepository,
+	ship_repository ShipRepository,
+	schedule_repository ScheduleRepository,
+	ticket_repository TicketRepository,
 ) *ScheduleUsecase {
 	return &ScheduleUsecase{
 		DB:                   db,
@@ -56,16 +55,6 @@ func (sc *ScheduleUsecase) CreateSchedule(ctx context.Context, request *model.Wr
 			tx.Rollback()
 		}
 	}()
-
-	if request.DepartureDatetime.IsZero() {
-		return errors.New("schedule datetime cannot be empty")
-	}
-	if request.ArrivalDatetime.IsZero() {
-		return errors.New("schedule datetime cannot be empty")
-	}
-	if request.DepartureDatetime == request.ArrivalDatetime {
-		return errors.New("schedule datetime cannot be same")
-	}
 
 	schedule := &entity.Schedule{
 		RouteID:           request.RouteID,
@@ -111,7 +100,7 @@ func (sc *ScheduleUsecase) GetAllSchedules(ctx context.Context, limit, offset in
 		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.ScheduleMapper.ToModels(schedules), int(total), nil
+	return ToReadScheduleResponses(schedules), int(total), nil
 }
 
 func (sc *ScheduleUsecase) GetScheduleByID(ctx context.Context, id uint) (*model.ReadScheduleResponse, error) {
@@ -138,7 +127,7 @@ func (sc *ScheduleUsecase) GetScheduleByID(ctx context.Context, id uint) (*model
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.ScheduleMapper.ToModel(schedule), nil
+	return ToReadScheduleResponse(schedule), nil
 }
 
 func (sc *ScheduleUsecase) UpdateSchedule(ctx context.Context, request *model.UpdateScheduleRequest) error {
@@ -151,11 +140,6 @@ func (sc *ScheduleUsecase) UpdateSchedule(ctx context.Context, request *model.Up
 			tx.Rollback()
 		}
 	}()
-
-	// Validate input
-	if request.ID == 0 {
-		return fmt.Errorf("allocation ID cannot be zero")
-	}
 
 	// Fetch existing allocation
 	schedule, err := sc.ScheduleRepository.GetByID(tx, request.ID)
@@ -233,9 +217,9 @@ func (sc *ScheduleUsecase) GetAllScheduled(ctx context.Context) ([]*model.ReadSc
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return mapper.ScheduleMapper.ToModels(schedules), nil
+	return ToReadScheduleResponses(schedules), nil
 }
-func (sc *ScheduleUsecase) GetScheduleAvailability(ctx context.Context, scheduleID uint) (*model.ReadScheduleDetailsWithAvailabilityResponse, error) {
+func (sc *ScheduleUsecase) GetScheduleAvailability(ctx context.Context, scheduleID uint) (*model.ReadScheduleDetailsResponse, error) {
 	tx := sc.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -259,7 +243,7 @@ func (sc *ScheduleUsecase) GetScheduleAvailability(ctx context.Context, schedule
 		return nil, fmt.Errorf("failed to get schedule capacities: %w", err)
 	}
 
-	classAvailabilities := make([]model.ScheduleClassAvailability, 0, len(scheduleCapacities))
+	classAvailabilities := make([]model.ReadClassAvailabilityResponse, 0, len(scheduleCapacities))
 
 	for _, cap := range scheduleCapacities {
 		class, err := sc.ClassRepository.GetByID(tx, cap.ClassID)
@@ -267,7 +251,7 @@ func (sc *ScheduleUsecase) GetScheduleAvailability(ctx context.Context, schedule
 			return nil, fmt.Errorf("class not found for ID %d: %w", cap.ClassID, err)
 		}
 
-		occupied, err := sc.TicketRepository.CountByScheduleClassAndStatuses(tx, schedule.ID, cap.ClassID, []string{"pending_data_entry", "pending_payment", "confirmed"})
+		occupied, err := sc.TicketRepository.CountByScheduleClassAndStatuses(tx, schedule.ID, cap.ClassID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to count occupied tickets: %w", err)
 		}
@@ -290,7 +274,7 @@ func (sc *ScheduleUsecase) GetScheduleAvailability(ctx context.Context, schedule
 			continue
 		}
 
-		classAvailabilities = append(classAvailabilities, model.ScheduleClassAvailability{
+		classAvailabilities = append(classAvailabilities, model.ReadClassAvailabilityResponse{
 			ClassID:           cap.ClassID,
 			ClassName:         class.ClassName,
 			Type:              class.Type,
@@ -301,25 +285,14 @@ func (sc *ScheduleUsecase) GetScheduleAvailability(ctx context.Context, schedule
 		})
 	}
 
-	return &model.ReadScheduleDetailsWithAvailabilityResponse{
+	return &model.ReadScheduleDetailsResponse{
 		ScheduleID:          schedule.ID,
 		RouteID:             schedule.RouteID,
 		ClassesAvailability: classAvailabilities,
 	}, nil
 }
+
 func (sc *ScheduleUsecase) CreateScheduleWithAllocation(ctx context.Context, request *model.WriteScheduleRequest) error {
-	if request.DepartureDatetime.IsZero() {
-		return errors.New("departure datetime cannot be empty")
-	}
-	if request.ArrivalDatetime.IsZero() {
-		return errors.New("arrival datetime cannot be empty")
-	}
-	if request.ShipID == 0 {
-		return errors.New("schedule ship ID cannot be zero")
-	}
-
-	schedule := mapper.ScheduleMapper.FromWrite(request)
-
 	tx := sc.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -329,6 +302,14 @@ func (sc *ScheduleUsecase) CreateScheduleWithAllocation(ctx context.Context, req
 			tx.Rollback()
 		}
 	}()
+
+	schedule := &entity.Schedule{
+		RouteID:           request.RouteID,
+		ShipID:            request.ShipID,
+		DepartureDatetime: &request.DepartureDatetime,
+		ArrivalDatetime:   &request.ArrivalDatetime,
+		Status:            &request.Status,
+	}
 
 	if err := sc.ScheduleRepository.Create(tx, schedule); err != nil {
 		tx.Rollback()
@@ -348,19 +329,22 @@ func (sc *ScheduleUsecase) CreateScheduleWithAllocation(ctx context.Context, req
 	}
 
 	allocations := []*entity.Allocation{}
+	var invalidManifests []string
+	var missingFares []string
+
 	for _, manifest := range manifests {
 		if manifest.ClassID == 0 || manifest.Capacity <= 0 {
-			log.Printf("Skipping invalid manifest %d for ship %d", manifest.ID, manifest.ShipID)
+			invalidManifests = append(invalidManifests, fmt.Sprintf("ManifestID=%d, ShipID=%d", manifest.ID, manifest.ShipID))
 			continue
 		}
 
 		fare, err := sc.FareRepository.GetByManifestAndRoute(tx, manifest.ID, schedule.RouteID)
 		if err != nil {
 			tx.Rollback()
-			return fmt.Errorf("error retrieving fare for manifest %d, route %d: %w", manifest.ID, schedule.RouteID, err)
+			return fmt.Errorf("error retrieving fare for manifest %d: %w", manifest.ID, err)
 		}
 		if fare == nil {
-			log.Printf("Skipping missing fare for manifest %d and route %d", manifest.ID, schedule.RouteID)
+			missingFares = append(missingFares, fmt.Sprintf("ManifestID=%d", manifest.ID))
 			continue
 		}
 
@@ -374,7 +358,19 @@ func (sc *ScheduleUsecase) CreateScheduleWithAllocation(ctx context.Context, req
 
 	if len(allocations) == 0 {
 		tx.Rollback()
-		return fmt.Errorf("no valid manifest entries found for ship %d", ship.ID)
+		var details []string
+		if len(invalidManifests) > 0 {
+			details = append(details, fmt.Sprintf("invalid manifests: [%s]", strings.Join(invalidManifests, ", ")))
+		}
+		if len(missingFares) > 0 {
+			details = append(details, fmt.Sprintf("missing fares: [%s]", strings.Join(missingFares, ", ")))
+		}
+		return fmt.Errorf(
+			"failed to create schedule for RouteID=%d, ShipID=%d. Details: %s",
+			schedule.RouteID,
+			schedule.ShipID,
+			strings.Join(details, "; "),
+		)
 	}
 
 	if err := sc.AllocationRepository.CreateBulk(tx, allocations); err != nil {

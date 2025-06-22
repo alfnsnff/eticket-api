@@ -10,15 +10,13 @@ type ReadRoleResponse struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-// AllocationDTO represents a Allocation.
 type WriteRoleRequest struct {
-	RoleName    string `json:"role_name"` // e.g., "admin", "editor"
-	Description string `json:"description"`
+	RoleName    string `json:"role_name" validate:"required"`
+	Description string `json:"description" validate:"required"`
 }
 
-// AllocationDTO represents a Allocation.
 type UpdateRoleRequest struct {
-	ID          uint   `json:"id"`
-	RoleName    string `json:"role_name"` // e.g., "admin", "editor"
-	Description string `json:"description"`
+	ID          uint   `json:"id" validate:"required"`
+	RoleName    string `json:"role_name" validate:"required"`
+	Description string `json:"description" validate:"required"`
 }
