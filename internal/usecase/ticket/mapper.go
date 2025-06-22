@@ -40,7 +40,6 @@ func ToReadTicketResponse(ticket *entity.Ticket) *model.ReadTicketResponse {
 			ClassName: ticket.Class.ClassName,
 			Type:      ticket.Class.Type,
 		},
-		Status:        "active", // Example status
 		BookingID:     *ticket.BookingID,
 		Type:          ticket.Type,
 		PassengerName: *ticket.PassengerName,

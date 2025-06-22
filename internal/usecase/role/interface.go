@@ -5,4 +5,6 @@ import (
 )
 
 // Use type alias to point to the shared contract
-type RoleRepository = contracts.RoleRepository
+type (
+	RoleRepository = contracts.RoleRepository
+)

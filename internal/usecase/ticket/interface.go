@@ -5,4 +5,6 @@ import (
 )
 
 // Use type alias to point to the shared contract
-type TicketRepository = contracts.TicketRepository
+type (
+	TicketRepository = contracts.TicketRepository
+)

@@ -58,9 +58,7 @@ func ToReadBookingResponse(booking *entity.Booking) *model.ReadBookingResponse {
 		IDNumber:        booking.IDNumber,
 		PhoneNumber:     booking.PhoneNumber,
 		Email:           booking.Email,
-		Status:          "completed", // Example status
 		ReferenceNumber: booking.ReferenceNumber,
-		BookedAt:        booking.CreatedAt,
 		CreatedAt:       booking.CreatedAt,
 		UpdatedAt:       booking.UpdatedAt,
 		Tickets:         tickets,

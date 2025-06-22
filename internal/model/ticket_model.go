@@ -45,7 +45,6 @@ type ReadTicketResponse struct {
 	ClaimSessionID uint            `json:"claim_session_id"`
 	Schedule       TicketSchedule  `json:"schedule"`
 	Class          TicketClassItem `json:"class"`
-	Status         string          `json:"status"`
 	BookingID      uint            `json:"booking_id"`
 	Type           string          `json:"type" binding:"required,oneof=passenger vehicle"`
 	PassengerName  string          `json:"passenger_name"`
@@ -67,7 +66,6 @@ type WriteTicketRequest struct {
 	BookingID       *uint   `json:"booking_id"`
 	ScheduleID      uint    `json:"schedule_id" validate:"required"`
 	ClassID         uint    `json:"class_id" validate:"required"`
-	Status          string  `json:"status" validate:"required,oneof=active cancelled refunded"`
 	Type            string  `json:"type" validate:"required,oneof=passenger vehicle"`
 	PassengerName   *string `json:"passenger_name"`
 	PassengerAge    *int    `json:"passenger_age"`
@@ -85,7 +83,6 @@ type UpdateTicketRequest struct {
 	ClaimSessionID  uint    `json:"claim_session_id" validate:"required"`
 	ScheduleID      uint    `json:"schedule_id" validate:"required"`
 	ClassID         uint    `json:"class_id" validate:"required"`
-	Status          string  `json:"status" validate:"required,oneof=active cancelled refunded"`
 	BookingID       uint    `json:"booking_id" validate:"required"`
 	Type            string  `json:"type" validate:"required,oneof=passenger vehicle"`
 	PassengerName   string  `json:"passenger_name" validate:"required"`

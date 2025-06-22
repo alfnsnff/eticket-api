@@ -59,14 +59,10 @@ type ReadBookingResponse struct {
 	IDNumber        string          `json:"id_number"`
 	PhoneNumber     string          `json:"phone_number"` // Changed to string to support leading zeros
 	Email           string          `json:"email_address"`
-	Status          string          `json:"status"`           // e.g., 'completed', 'cancelled', 'refunded'
 	ReferenceNumber *string         `json:"reference_number"` // Optional reference number for payment or external tracking
-
-	BookedAt  time.Time `json:"booked_at"` // Timestamp when the booking was confirmed
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-
-	Tickets []BookingTicket `json:"tickets"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+	Tickets         []BookingTicket `json:"tickets"`
 }
 
 type WriteBookingRequest struct {
