@@ -11,17 +11,26 @@ import (
 )
 
 type TicketUsecase struct {
-	DB               *gorm.DB
-	TicketRepository TicketRepository
+	DB                 *gorm.DB
+	TicketRepository   TicketRepository
+	ScheduleRepository ScheduleRepository
+	ManifestRepository ManifestRepository // Assuming ManifestRepository is defined elsewhere
+	FareRepository     FareRepository     // Assuming FareRepository is defined elsewhere
 }
 
 func NewTicketUsecase(
 	db *gorm.DB,
 	ticket_repository TicketRepository,
+	schedule_repository ScheduleRepository,
+	manifest_repository ManifestRepository,
+	fare_repository FareRepository,
 ) *TicketUsecase {
 	return &TicketUsecase{
-		DB:               db,
-		TicketRepository: ticket_repository,
+		DB:                 db,
+		ScheduleRepository: schedule_repository,
+		TicketRepository:   ticket_repository,
+		ManifestRepository: nil, // Initialize if needed
+		FareRepository:     nil, // Initialize if needed
 	}
 }
 
@@ -35,6 +44,24 @@ func (t *TicketUsecase) CreateTicket(ctx context.Context, request *model.WriteTi
 			tx.Rollback()
 		}
 	}()
+
+	schedule, err := t.ScheduleRepository.GetByID(tx, request.ScheduleID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve schedule: %w", err)
+	}
+	if schedule == nil {
+		return fmt.Errorf("schedule not found")
+	}
+
+	manifest, err := t.ManifestRepository.GetByShipAndClass(tx, schedule.ShipID, request.ClassID)
+	if err != nil || manifest == nil {
+		return fmt.Errorf("manifest missing for ship %d, class %d", schedule.ShipID, request.ClassID)
+	}
+
+	fare, err := t.FareRepository.GetByManifestAndRoute(tx, manifest.ID, schedule.RouteID)
+	if err != nil || fare == nil {
+		return fmt.Errorf("fare missing for manifest %d, route %d", manifest.ID, schedule.RouteID)
+	}
 
 	ticket := &entity.Ticket{
 		ScheduleID:      request.ScheduleID,
@@ -170,12 +197,30 @@ func (t *TicketUsecase) UpdateTicket(ctx context.Context, request *model.UpdateT
 		return errors.New("ticket not found")
 	}
 
+	schedule, err := t.ScheduleRepository.GetByID(tx, request.ScheduleID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve schedule: %w", err)
+	}
+	if schedule == nil {
+		return fmt.Errorf("schedule not found")
+	}
+
+	manifest, err := t.ManifestRepository.GetByShipAndClass(tx, schedule.ShipID, request.ClassID)
+	if err != nil || manifest == nil {
+		return fmt.Errorf("manifest missing for ship %d, class %d", schedule.ShipID, request.ClassID)
+	}
+
+	fare, err := t.FareRepository.GetByManifestAndRoute(tx, manifest.ID, schedule.RouteID)
+	if err != nil || fare == nil {
+		return fmt.Errorf("fare missing for manifest %d, route %d", manifest.ID, schedule.RouteID)
+	}
+
 	ticket.ScheduleID = request.ScheduleID
 	ticket.ClassID = request.ClassID
 	ticket.BookingID = &request.BookingID
 	ticket.ClaimSessionID = &request.ClaimSessionID
 	ticket.Type = request.Type
-	ticket.Price = request.Price
+	ticket.Price = fare.TicketPrice
 	ticket.PassengerName = &request.PassengerName
 	ticket.PassengerAge = &request.PassengerAge
 	ticket.PassengerGender = &request.PassengerGender

@@ -102,12 +102,11 @@ func NewBootstrap(cf *Bootstrap) error {
 	controller.NewAllocationController(cf.App, cf.Log, cf.Validate, AllocationUsecase, Authenticate, Authorize)
 
 	// === Ticket Domain ===
-	TicketRepository := repository.NewTicketRepository()
-	TicketUsecase := ticket.NewTicketUsecase(cf.DB, TicketRepository)
-	controller.NewTicketController(cf.App, cf.Log, cf.Validate, TicketUsecase, Authenticate, Authorize)
-
-	// === Schedule Domain ===
 	ScheduleRepository := repository.NewScheduleRepository()
+	TicketRepository := repository.NewTicketRepository()
+	TicketUsecase := ticket.NewTicketUsecase(cf.DB, TicketRepository, ScheduleRepository, ManifestRepository, FareRepository)
+	controller.NewTicketController(cf.App, cf.Log, cf.Validate, TicketUsecase, Authenticate, Authorize)
+	// === Schedule Domain ===
 	ScheduleUsecase := schedule.NewScheduleUsecase(
 		cf.DB,
 		AllocationRepository,
