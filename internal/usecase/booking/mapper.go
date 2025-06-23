@@ -4,23 +4,20 @@ import (
 	"eticket-api/internal/common/utils"
 	"eticket-api/internal/domain"
 	"eticket-api/internal/model"
-	"fmt"
 )
 
 // Map Booking domain to ReadBookingResponse model
 func BookingToResponse(booking *domain.Booking) *model.ReadBookingResponse {
-
-	// Print tickets to terminal
-	for _, ticket := range booking.Tickets {
-		fmt.Printf("Ticket: %+v\n", ticket)
-	}
-
 	// Map tickets
 	tickets := make([]model.BookingTicket, len(booking.Tickets))
 	for i, ticket := range booking.Tickets {
 		tickets[i] = model.BookingTicket{
-			ID:            ticket.ID,
-			Type:          ticket.Type,
+			ID:   ticket.ID,
+			Type: ticket.Type,
+			Class: model.BookingTicketClass{
+				ID:        ticket.Class.ID,
+				ClassName: ticket.Class.ClassName,
+				Type:      ticket.Class.Type},
 			PassengerName: ticket.PassengerName,
 			PassengerAge:  ticket.PassengerAge,
 			Address:       ticket.Address,

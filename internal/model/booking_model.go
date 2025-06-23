@@ -32,19 +32,26 @@ type BookingSchedule struct {
 	ArrivalDatetime   time.Time            `json:"arrival_datetime"`
 }
 
+// ShipDTO represents a ship.
+type BookingTicketClass struct {
+	ID        uint   `json:"id"`
+	ClassName string `json:"class_name"`
+	Type      string `json:"type"`
+}
+
 // TicketDTO represents a ticket.
 type BookingTicket struct {
-	ID            uint            `json:"id"`
-	Class         TicketClassItem `json:"class"`
-	Type          string          `json:"type" binding:"required,oneof=passenger vehicle"`
-	PassengerName *string         `json:"passenger_name"`
-	PassengerAge  *int            `json:"passenger_age"`
-	Address       *string         `json:"address"`
-	IDType        *string         `json:"id_type"`
-	IDNumber      *string         `json:"id_number"`
-	SeatNumber    *string         `json:"seat_number"`
-	LicensePlate  *string         `json:"license_plate"`
-	Price         float32         `json:"price"`
+	ID            uint               `json:"id"`
+	Class         BookingTicketClass `json:"class"`
+	Type          string             `json:"type" binding:"required,oneof=passenger vehicle"`
+	PassengerName *string            `json:"passenger_name"`
+	PassengerAge  *int               `json:"passenger_age"`
+	Address       *string            `json:"address"`
+	IDType        *string            `json:"id_type"`
+	IDNumber      *string            `json:"id_number"`
+	SeatNumber    *string            `json:"seat_number"`
+	LicensePlate  *string            `json:"license_plate"`
+	Price         float32            `json:"price"`
 }
 
 // BookingDTO represents the person who booked the ticket.
