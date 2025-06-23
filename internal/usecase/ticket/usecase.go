@@ -70,6 +70,7 @@ func (t *TicketUsecase) CreateTicket(ctx context.Context, request *model.WriteTi
 		ClaimSessionID:  request.ClaimSessionID,
 		Type:            request.Type,
 		Price:           request.Price,
+		Address:         request.Address,
 		PassengerName:   request.PassengerName,
 		PassengerAge:    request.PassengerAge,
 		PassengerGender: request.PassengerGender,
@@ -231,6 +232,7 @@ func (t *TicketUsecase) UpdateTicket(ctx context.Context, request *model.UpdateT
 	ticket.ClaimSessionID = request.ClaimSessionID
 	ticket.Type = request.Type
 	ticket.Price = fare.TicketPrice
+	ticket.Address = request.Address
 	ticket.PassengerName = request.PassengerName
 	ticket.PassengerAge = request.PassengerAge
 	ticket.PassengerGender = request.PassengerGender

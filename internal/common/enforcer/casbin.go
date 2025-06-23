@@ -8,12 +8,8 @@ import (
 	fileadapter "github.com/casbin/casbin/v2/persist/file-adapter"
 )
 
-type Enforcer interface {
-	Enforce(sub, obj, act string) (bool, error)
-}
-
 type CasbinEnforcer struct {
-	enf *casbin.Enforcer
+	enforce *casbin.Enforcer
 }
 
 func NewCasbinEnforcer(cfg *config.Config) Enforcer {
@@ -28,9 +24,9 @@ func NewCasbinEnforcer(cfg *config.Config) Enforcer {
 		log.Fatalf("failed to load policy: %v", err)
 	}
 
-	return &CasbinEnforcer{enf: enforcer}
+	return &CasbinEnforcer{enforce: enforcer}
 }
 
 func (c *CasbinEnforcer) Enforce(sub, obj, act string) (bool, error) {
-	return c.enf.Enforce(sub, obj, act)
+	return c.enforce.Enforce(sub, obj, act)
 }

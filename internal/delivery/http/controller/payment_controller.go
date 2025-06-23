@@ -22,7 +22,7 @@ type PaymentController struct {
 
 // NewPaymentController creates a new PaymentController instance
 func NewPaymentController(
-	g *gin.Engine,
+	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	payment_usecase *payment.PaymentUsecase,
@@ -30,20 +30,20 @@ func NewPaymentController(
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	pc := &PaymentController{
+		Log:            log,
+		Validate:       validate,
 		PaymentUsecase: payment_usecase,
 		Authenticate:   authtenticate,
 		Authorized:     authorized,
-		Validate:       validate,
-		Log:            log,
 	}
 
-	public := g.Group("/api/v1") // No middleware
+	public := router.Group("/api/v1") // No middleware
 	public.GET("/payment-channels", pc.GetPaymentChannels)
 	public.GET("/payment/transaction/detail/:id", pc.GetTransactionDetail)
 	public.POST("/payment/transaction/create", pc.CreatePayment)
 	public.POST("/payment/callback", pc.HandleCallback)
 
-	protected := g.Group("/api/v1")
+	protected := router.Group("/api/v1")
 	protected.Use(pc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 }

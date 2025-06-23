@@ -22,7 +22,7 @@ type ClaimSessionController struct {
 }
 
 func NewClaimSessionController(
-	g *gin.Engine,
+	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	claim_session_usecase *claim_session.ClaimSessionUsecase,
@@ -30,14 +30,14 @@ func NewClaimSessionController(
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	sc := &ClaimSessionController{
+		Log:                 log,
+		Validate:            validate,
 		ClaimSessionUsecase: claim_session_usecase,
 		Authenticate:        authtenticate,
 		Authorized:          authorized,
-		Validate:            validate,
-		Log:                 log,
 	}
 
-	public := g.Group("/api/v1") // No middleware
+	public := router.Group("/api/v1") // No middleware
 	public.POST("/session/ticket/lock", sc.CreateClaimSession)
 	public.GET("/sessions", sc.GetAllClaimSessions)
 	public.GET("/session/:id", sc.GetSessionByID)
@@ -45,7 +45,7 @@ func NewClaimSessionController(
 	public.GET("/session/uuid/:sessionuuid", sc.GetClaimSessionByUUID)
 	public.DELETE("/session/:id", sc.DeleteClaimSession)
 
-	protected := g.Group("/api/v1") // No middleware
+	protected := router.Group("/api/v1") // No middleware
 	protected.Use(sc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 }

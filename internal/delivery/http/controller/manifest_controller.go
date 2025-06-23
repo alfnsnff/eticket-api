@@ -22,7 +22,7 @@ type ManifestController struct {
 }
 
 func NewManifestController(
-	g *gin.Engine,
+	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	manifest_usecase *manifest.ManifestUsecase,
@@ -30,18 +30,18 @@ func NewManifestController(
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	mc := &ManifestController{
+		Log:             log,
+		Validate:        validate,
 		ManifestUsecase: manifest_usecase,
 		Authenticate:    authtenticate,
 		Authorized:      authorized,
-		Validate:        validate,
-		Log:             log,
 	}
 
-	public := g.Group("/api/v1") // No middleware
+	public := router.Group("/api/v1") // No middleware
 	public.GET("/manifests", mc.GetAllManifests)
 	public.GET("/manifest/:id", mc.GetManifestByID)
 
-	protected := g.Group("/api/v1")
+	protected := router.Group("/api/v1")
 	protected.Use(mc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 

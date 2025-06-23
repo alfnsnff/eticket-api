@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"eticket-api/config"
+	"eticket-api/internal/common/httpclient"
 	"eticket-api/internal/domain"
 	"eticket-api/internal/model"
 	"fmt"
@@ -20,11 +21,11 @@ const (
 )
 
 type TripayClient struct {
-	HTTPClient *http.Client
+	HTTPClient *httpclient.HTTP
 	Tripay     *config.Tripay
 }
 
-func NewTripayClient(httpClient *http.Client, tripay *config.Tripay) *TripayClient {
+func NewTripayClient(httpClient *httpclient.HTTP, tripay *config.Tripay) *TripayClient {
 	return &TripayClient{
 		HTTPClient: httpClient,
 		Tripay:     tripay,

@@ -8,10 +8,6 @@ import (
 	"strings"
 )
 
-type Mailer interface {
-	Send(toEmail, subject, body string) error
-}
-
 type SMTP struct {
 	Host     string
 	Port     int

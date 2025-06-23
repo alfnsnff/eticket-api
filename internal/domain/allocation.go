@@ -33,3 +33,6 @@ type AllocationRepository interface {
 	FindByScheduleID(db *gorm.DB, scheduleID uint) ([]*Allocation, error)
 	CreateBulk(db *gorm.DB, allocations []*Allocation) error
 }
+
+type AllocationUsecase interface {
+}

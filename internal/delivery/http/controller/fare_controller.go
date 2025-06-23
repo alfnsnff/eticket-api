@@ -22,7 +22,7 @@ type FareController struct {
 }
 
 func NewFareController(
-	g *gin.Engine,
+	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	Fare_usecase *fare.FareUsecase,
@@ -30,18 +30,18 @@ func NewFareController(
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	fc := &FareController{
+		Log:          log,
+		Validate:     validate,
 		FareUsecase:  Fare_usecase,
 		Authenticate: authtenticate,
 		Authorized:   authorized,
-		Validate:     validate,
-		Log:          log,
 	}
 
-	public := g.Group("/api/v1") // No middleware
+	public := router.Group("/api/v1") // No middleware
 	public.GET("/fares", fc.GetAllFares)
 	public.GET("/fare/:id", fc.GetFareByID)
 
-	protected := g.Group("/api/v1")
+	protected := router.Group("/api/v1")
 	protected.Use(fc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 

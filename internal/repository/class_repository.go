@@ -11,7 +11,7 @@ import (
 
 type ClassRepository struct{}
 
-func NewClassRepository(db *gorm.DB) *ClassRepository {
+func NewClassRepository() *ClassRepository {
 	return &ClassRepository{}
 }
 

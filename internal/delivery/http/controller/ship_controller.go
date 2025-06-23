@@ -22,7 +22,7 @@ type ShipController struct {
 }
 
 func NewShipController(
-	g *gin.Engine,
+	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	ship_usecase *ship.ShipUsecase,
@@ -30,18 +30,18 @@ func NewShipController(
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	shc := &ShipController{
+		Log:          log,
+		Validate:     validate,
 		ShipUsecase:  ship_usecase,
 		Authenticate: authtenticate,
 		Authorized:   authorized,
-		Validate:     validate,
-		Log:          log,
 	}
 
-	public := g.Group("/api/v1") // No middleware
+	public := router.Group("/api/v1") // No middleware
 	public.GET("/ships", shc.GetAllShips)
 	public.GET("/ship/:id", shc.GetShipByID)
 
-	protected := g.Group("/api/v1")
+	protected := router.Group("/api/v1")
 	protected.Use(shc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 

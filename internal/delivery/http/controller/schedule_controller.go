@@ -22,7 +22,7 @@ type ScheduleController struct {
 }
 
 func NewScheduleController(
-	g *gin.Engine,
+	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	schedule_usecase *schedule.ScheduleUsecase,
@@ -30,20 +30,20 @@ func NewScheduleController(
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	scc := &ScheduleController{
+		Log:             log,
+		Validate:        validate,
 		ScheduleUsecase: schedule_usecase,
 		Authenticate:    authtenticate,
 		Authorized:      authorized,
-		Validate:        validate,
-		Log:             log,
 	}
 
-	public := g.Group("/api/v1") // No middleware
+	public := router.Group("/api/v1") // No middleware
 	public.GET("/schedules", scc.GetAllSchedules)
 	public.GET("/schedules/active", scc.GetAllScheduled)
 	public.GET("/schedule/:id", scc.GetScheduleByID)
 	public.GET("/schedule/:id/quota", scc.GetQuotaByScheduleID)
 
-	protected := g.Group("/api/v1")
+	protected := router.Group("/api/v1")
 	protected.Use(scc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 

@@ -22,7 +22,7 @@ type TicketController struct {
 }
 
 func NewTicketController(
-	g *gin.Engine,
+	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	ticket_usecase *ticket.TicketUsecase,
@@ -30,18 +30,18 @@ func NewTicketController(
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	tc := &TicketController{
+		Log:           log,
+		Validate:      validate,
 		TicketUsecase: ticket_usecase,
 		Authenticate:  authtenticate,
 		Authorized:    authorized,
-		Validate:      validate,
-		Log:           log,
 	}
 
-	public := g.Group("/api/v1") // No middleware
+	public := router.Group("/api/v1") // No middleware
 	public.GET("/tickets", tc.GetAllTickets)
 	public.GET("/ticket/:id", tc.GetTicketByID)
 
-	protected := g.Group("/api/v1")
+	protected := router.Group("/api/v1")
 	protected.Use(tc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 

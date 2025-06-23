@@ -25,7 +25,7 @@ type BookingController struct {
 
 // NewBookingController creates a new BookingController instance
 func NewBookingController(
-	g *gin.Engine,
+	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	booking_usecase *booking.BookingUsecase,
@@ -33,20 +33,20 @@ func NewBookingController(
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	bc := &BookingController{
+		Log:            log,
+		Validate:       validate,
 		BookingUsecase: booking_usecase,
 		Authenticate:   authtenticate,
 		Authorized:     authorized,
-		Validate:       validate,
-		Log:            log,
 	}
 
-	public := g.Group("/api/v1") // No middleware
+	public := router.Group("/api/v1") // No middleware
 	public.GET("/bookings", bc.GetAllBookings)
 	public.GET("/booking/:id", bc.GetBookingByID)
 	public.GET("/booking/order/:id", bc.GetBookingByOrderID)
 	public.GET("/booking/payment/callback", bc.GetBookingByID)
 
-	protected := g.Group("/api/v1")
+	protected := router.Group("/api/v1")
 	protected.Use(bc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 

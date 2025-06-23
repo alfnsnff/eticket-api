@@ -35,11 +35,10 @@ func (r *CleanupRunner) Start() {
 		log.Fatalf("Failed to schedule CleanupJob: %v", err)
 	}
 
-	log.Println("✅ CleanupJob scheduled every hour")
+	log.Println("CleanupJob scheduled every hour")
 
-	// 👉 Run immediately once at startup
 	go func() {
-		log.Println("🔄 Running initial CleanupJob now")
+		log.Println("Running initial CleanupJob now")
 		ctx := context.Background()
 		if err := r.Job.Run(ctx); err != nil {
 			log.Printf("Initial Cleanup failed: %v", err)

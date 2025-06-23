@@ -37,3 +37,6 @@ type AuthRepository interface {
 	MarkAsUsed(db *gorm.DB, token string) error
 	DeleteExpired(db *gorm.DB) error
 }
+
+type AuthUsecase interface {
+}

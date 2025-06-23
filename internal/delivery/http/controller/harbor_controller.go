@@ -22,7 +22,7 @@ type HarborController struct {
 }
 
 func NewHarborController(
-	g *gin.Engine,
+	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	harbor_usecase *harbor.HarborUsecase,
@@ -30,18 +30,18 @@ func NewHarborController(
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	hc := &HarborController{
+		Log:           log,
+		Validate:      validate,
 		HarborUsecase: harbor_usecase,
 		Authenticate:  authtenticate,
 		Authorized:    authorized,
-		Validate:      validate,
-		Log:           log,
 	}
 
-	public := g.Group("/api/v1") // No middleware
+	public := router.Group("/api/v1") // No middleware
 	public.GET("/harbors", hc.GetAllHarbors)
 	public.GET("/harbor/:id", hc.GetHarborByID)
 
-	protected := g.Group("/api/v1")
+	protected := router.Group("/api/v1")
 	protected.Use(hc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 

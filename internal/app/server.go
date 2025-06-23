@@ -2,9 +2,9 @@ package app
 
 import (
 	"eticket-api/config"
-	"eticket-api/internal/common/client"
 	"eticket-api/internal/common/db"
 	"eticket-api/internal/common/enforcer"
+	"eticket-api/internal/common/httpclient"
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/mailer"
 	"eticket-api/internal/common/token"
@@ -58,7 +58,7 @@ func NewApp(cfg *config.Config) (*Server, error) {
 		Config:   cfg,
 		App:      app,
 		DB:       db,
-		Client:   client.NewHttp(cfg),
+		Client:   httpclient.NewHTTPClient(cfg),
 		Enforcer: enforcer.NewCasbinEnforcer(cfg),
 		Token:    token.NewJWT(cfg),
 		Mailer:   mailer.NewSMTP(cfg),

@@ -24,7 +24,7 @@ type AuthController struct {
 
 // NewUserRoleController creates a new UserRoleController instance
 func NewAuthController(
-	g *gin.Engine,
+	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	auth_usecase *auth.AuthUsecase,
@@ -32,20 +32,20 @@ func NewAuthController(
 	authorized *middleware.AuthorizeMiddleware,
 ) {
 	ac := &AuthController{
+		Log:          log,
+		Validate:     validate,
 		AuthUsecase:  auth_usecase,
 		Authenticate: authtenticate,
 		Authorized:   authorized,
-		Validate:     validate,
-		Log:          log,
 	}
 
-	public := g.Group("/api/v1") // No middleware
+	public := router.Group("/api/v1") // No middleware
 	public.GET("/auth/me", ac.Me)
 	public.POST("/auth/login", ac.Login)
 	public.POST("/auth/refresh", ac.RefreshToken)
 	public.POST("/auth/forget-password", ac.ForgetPassword)
 
-	protected := g.Group("/api/v1")
+	protected := router.Group("/api/v1")
 	protected.Use(ac.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
 
