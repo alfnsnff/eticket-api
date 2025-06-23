@@ -171,7 +171,7 @@ func (csc *ClaimSessionController) DeleteClaimSession(ctx *gin.Context) {
 }
 
 func (csc *ClaimSessionController) GetClaimSessionByUUID(ctx *gin.Context) {
-	id := ctx.Param("sessionid")
+	id := ctx.Param("session_id")
 
 	if id == "" {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid claim session ID", "sessionid is empty"))
