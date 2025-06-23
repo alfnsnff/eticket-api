@@ -19,6 +19,6 @@ func (ss ShipStatus) String() string {
 		return "INACTIVE"
 
 	default:
-		return "unknown"
+		return "UNKNOWN"
 	}
 }
