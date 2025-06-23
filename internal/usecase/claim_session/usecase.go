@@ -132,6 +132,7 @@ func (cs *ClaimSessionUsecase) CreateClaimSession(ctx context.Context, request *
 				Price:          fare.TicketPrice,
 				Type:           manifest.Class.Type,
 				ClaimSessionID: &claimSession.ID,
+				IsCheckedIn:    false, // Default value
 			})
 		}
 	}
@@ -183,17 +184,6 @@ func (cs *ClaimSessionUsecase) GetAllClaimSessions(ctx context.Context, limit, o
 	for i, claimSession := range claimSessions {
 		responses[i] = ClaimSessionToResponse(claimSession)
 	}
-
-	// // Map claim sessions to response models
-	// var responses []*model.ReadClaimSessionResponse
-	// for _, session := range claimSessions {
-	// 	tickets, err := cs.TicketRepository.FindManyBySessionID(tx, session.ID)
-	// 	if err != nil {
-	// 		return nil, 0, fmt.Errorf("failed to retrieve tickets for session %d: %w", session.ID, err)
-	// 	}
-
-	// 	responses = append(responses, ToReadClaimSessionResponse(session, tickets))
-	// }
 
 	if err := tx.Commit().Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
@@ -334,10 +324,6 @@ func (cs *ClaimSessionUsecase) UpdateClaimSession(ctx context.Context, request *
 		ticket, ok := ticketsIds[id]
 		if !ok {
 			return nil, fmt.Errorf("ticket %d not found in session", id)
-		}
-
-		if data.PassengerName == "" || data.PassengerAge == 0 || data.Address == "" {
-			return nil, fmt.Errorf("missing passenger data for ticket %d", id)
 		}
 
 		ticket.PassengerName = &data.PassengerName

@@ -46,8 +46,6 @@ func TicketToResponse(ticket *domain.Ticket) *model.ReadTicketResponse {
 		LicensePlate:  ticket.LicensePlate,
 		Type:          ticket.Type,
 		Price:         ticket.Price,
-		ExpiresAt:     ticket.CreatedAt, // Example expiration logic
-		ClaimedAt:     ticket.UpdatedAt, // Example claimed logic
 		CreatedAt:     ticket.CreatedAt,
 		UpdatedAt:     ticket.UpdatedAt,
 	}

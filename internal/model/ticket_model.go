@@ -55,8 +55,7 @@ type ReadTicketResponse struct {
 	LicensePlate   *string         `json:"license_plate"`
 	Type           string          `json:"type" binding:"required,oneof=passenger vehicle"`
 	Price          float32         `json:"price"`
-	ExpiresAt      time.Time       `json:"expires_at"`
-	ClaimedAt      time.Time       `json:"claimed_at"`
+	IsCheckedIn    bool            `json:"is_checked_in"`
 	CreatedAt      time.Time       `json:"created_at"`
 	UpdatedAt      time.Time       `json:"updated_at"`
 }
@@ -76,6 +75,7 @@ type WriteTicketRequest struct {
 	LicensePlate    *string `json:"license_plate"`
 	Type            string  `json:"type" validate:"required,oneof=passenger vehicle"`
 	Price           float32 `json:"price" validate:"required,gte=0"`
+	IsCheckedIn     bool    `json:"is_checked_in"`
 }
 
 type UpdateTicketRequest struct {
@@ -94,4 +94,5 @@ type UpdateTicketRequest struct {
 	LicensePlate    *string `json:"license_plate"`
 	Type            string  `json:"type" validate:"required,oneof=passenger vehicle"`
 	Price           float32 `json:"price" validate:"required,gte=0"`
+	IsCheckedIn     bool    `json:"is_checked_in"`
 }

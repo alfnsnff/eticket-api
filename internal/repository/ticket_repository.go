@@ -205,16 +205,9 @@ func (r *TicketRepository) CancelManyBySessionID(db *gorm.DB, sessionID uint) er
 	return nil
 }
 
-func (r *TicketRepository) Paid(db *gorm.DB, id uint) error {
-	return db.Model(&domain.Ticket{}).
-		Where("id = ?", id).
-		Update("status", "paid").
-		Error
-}
-
 func (r *TicketRepository) CheckIn(db *gorm.DB, id uint) error {
 	return db.Model(&domain.Ticket{}).
 		Where("id = ?", id).
-		Update("status", "checkin").
+		Update("is_checked_in", true).
 		Error
 }

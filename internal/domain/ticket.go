@@ -22,6 +22,7 @@ type Ticket struct {
 	SeatNumber      *string   `gorm:"column:seat_number;type:varchar(24)"`
 	LicensePlate    *string   `gorm:"column:license_plate;type:varchar(24)"`
 	Price           float32   `gorm:"column:price;not null"`
+	IsCheckedIn     bool      `gorm:"column:is_checked_in;not null;default:false"`
 	CreatedAt       time.Time `gorm:"column:created_at;not null"`
 	UpdatedAt       time.Time `gorm:"column:updated_at;not null"`
 
@@ -49,6 +50,5 @@ type TicketRepository interface {
 	FindManyByIDs(db *gorm.DB, ids []uint) ([]*Ticket, error)
 	FindManyBySessionID(db *gorm.DB, sessionID uint) ([]*Ticket, error)
 	CancelManyBySessionID(db *gorm.DB, sessionID uint) error
-	Paid(db *gorm.DB, id uint) error
 	CheckIn(db *gorm.DB, id uint) error
 }

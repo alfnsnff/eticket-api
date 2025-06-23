@@ -69,7 +69,7 @@ func (t *TicketUsecase) CreateTicket(ctx context.Context, request *model.WriteTi
 		BookingID:       request.BookingID,
 		ClaimSessionID:  request.ClaimSessionID,
 		Type:            request.Type,
-		Price:           request.Price,
+		Price:           fare.TicketPrice,
 		Address:         request.Address,
 		PassengerName:   request.PassengerName,
 		PassengerAge:    request.PassengerAge,
@@ -78,6 +78,7 @@ func (t *TicketUsecase) CreateTicket(ctx context.Context, request *model.WriteTi
 		IDNumber:        request.IDNumber,
 		SeatNumber:      request.SeatNumber,
 		LicensePlate:    request.LicensePlate,
+		IsCheckedIn:     request.IsCheckedIn, // Default value
 	}
 
 	if err := t.TicketRepository.Create(tx, ticket); err != nil {
@@ -240,6 +241,7 @@ func (t *TicketUsecase) UpdateTicket(ctx context.Context, request *model.UpdateT
 	ticket.IDNumber = request.IDNumber
 	ticket.SeatNumber = request.SeatNumber
 	ticket.LicensePlate = request.LicensePlate
+	ticket.IsCheckedIn = request.IsCheckedIn // Default value
 
 	if err := t.TicketRepository.Update(tx, ticket); err != nil {
 		return fmt.Errorf("failed to update ticket: %w", err)
