@@ -15,19 +15,19 @@ const (
 func (css ClaimSessionStatus) String() string {
 	switch css {
 	case ClaimSessionFailed:
-		return "failed"
+		return "FAILED"
 	case ClaimSessionPendingData:
-		return "data"
+		return "DATA_PENDING"
 	case ClaimSessionPendingPayment:
-		return "payment"
+		return "PAYMENT_PENDING"
 	case ClaimSessionPendingTransaction:
-		return "transaction"
+		return "TRANSACTION_PENDING"
 	case ClaimSessionSuccess:
-		return "success"
+		return "SCUCCESS"
 	case ClaimSessionCancelled:
-		return "cancelled"
+		return "CANCELLED"
 	default:
-		return "unknown"
+		return "UNKNOWN"
 	}
 }
 

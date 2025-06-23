@@ -41,7 +41,7 @@ type WriteScheduleRequest struct {
 	ShipID            uint      `json:"ship_id" validate:"required"`
 	DepartureDatetime time.Time `json:"departure_datetime" validate:"required"`
 	ArrivalDatetime   time.Time `json:"arrival_datetime" validate:"required,gtfield=DepartureDatetime"`
-	Status            string    `json:"status" validate:"required,oneof=scheduled unscheduled"`
+	Status            string    `json:"status" validate:"required,oneof=SCHEDULE FINISHED CANCELLED"` // e.g., 'SCHEDULE', 'FINISHED', 'CANCELLED'
 }
 
 // ScheduleDTO represents a Schedule.
@@ -51,7 +51,7 @@ type UpdateScheduleRequest struct {
 	ShipID            uint      `json:"ship_id" validate:"required"`
 	DepartureDatetime time.Time `json:"departure_datetime" validate:"required"`
 	ArrivalDatetime   time.Time `json:"arrival_datetime" validate:"required,gtfield=DepartureDatetime"`
-	Status            string    `json:"status" validate:"required,oneof=active inactive cancelled"`
+	Status            string    `json:"status" validate:"required,oneof=SCHEDULE FINISHED CANCELLED"`
 }
 
 // ScheduleClassAvailability represents the availability and price for a specific class on a schedule
