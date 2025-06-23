@@ -3,12 +3,15 @@ package claim_session
 import (
 	"eticket-api/internal/domain"
 	"eticket-api/internal/model"
+	"fmt"
 )
 
 // Map ClaimSession domain to ReadClaimSessionResponse model
 func ClaimSessionToResponse(session *domain.ClaimSession) *model.ReadClaimSessionResponse {
 	prices, total := BuildPriceBreakdown(session.Tickets)
 	details := BuildTicketBreakdown(session.Tickets)
+	fmt.Println("Raw response:", details, prices, total)
+
 	return &model.ReadClaimSessionResponse{
 		ID:        session.ID,
 		SessionID: session.SessionID,

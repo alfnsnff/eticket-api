@@ -51,7 +51,9 @@ func (csr *SessionRepository) GetAll(db *gorm.DB, limit, offset int, sort, searc
 		Preload("Schedule.Route").
 		Preload("Schedule.Route.DepartureHarbor").
 		Preload("Schedule.Route.ArrivalHarbor").
-		Preload("Schedule.Ship")
+		Preload("Schedule.Ship").
+		Preload("Tickets").
+		Preload("Tickets.Class")
 
 	if search != "" {
 		search = "%" + search + "%"
@@ -73,7 +75,11 @@ func (csr *SessionRepository) GetByID(db *gorm.DB, id uint) (*domain.ClaimSessio
 	session := new(domain.ClaimSession)
 	result := db.Preload("Schedule").Preload("Schedule.Route").
 		Preload("Schedule.Route.DepartureHarbor").
-		Preload("Schedule.Route.ArrivalHarbor").Preload("Schedule.Ship").First(&session, id)
+		Preload("Schedule.Route.ArrivalHarbor").
+		Preload("Schedule.Ship").
+		Preload("Tickets").
+		Preload("Tickets.Class").
+		First(&session, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
@@ -86,7 +92,11 @@ func (csr *SessionRepository) GetByUUID(db *gorm.DB, uuid string) (*domain.Claim
 	// Use the provided db instance (txDB from the use case)
 	result := db.Preload("Schedule").Preload("Schedule.Route").
 		Preload("Schedule.Route.DepartureHarbor").
-		Preload("Schedule.Route.ArrivalHarbor").Preload("Schedule.Ship").Where("session_id = ?", uuid).First(&session)
+		Preload("Schedule.Route.ArrivalHarbor").
+		Preload("Schedule.Ship").
+		Preload("Tickets").
+		Preload("Tickets.Class").
+		Where("session_id = ?", uuid).First(&session)
 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
