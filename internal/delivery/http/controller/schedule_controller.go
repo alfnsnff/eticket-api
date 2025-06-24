@@ -3,7 +3,6 @@ package controller
 import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
-	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/schedule"
@@ -14,43 +13,22 @@ import (
 )
 
 type ScheduleController struct {
-	Validate        validator.Validator
 	Log             logger.Logger
+	Validate        validator.Validator
 	ScheduleUsecase *schedule.ScheduleUsecase
-	Authenticate    *middleware.AuthenticateMiddleware
-	Authorized      *middleware.AuthorizeMiddleware
 }
 
 func NewScheduleController(
-	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	schedule_usecase *schedule.ScheduleUsecase,
-	authtenticate *middleware.AuthenticateMiddleware,
-	authorized *middleware.AuthorizeMiddleware,
-) {
-	scc := &ScheduleController{
+) *ScheduleController {
+	return &ScheduleController{
 		Log:             log,
 		Validate:        validate,
 		ScheduleUsecase: schedule_usecase,
-		Authenticate:    authtenticate,
-		Authorized:      authorized,
 	}
 
-	public := router.Group("/api/v1") // No middleware
-	public.GET("/schedules", scc.GetAllSchedules)
-	public.GET("/schedules/active", scc.GetAllScheduled)
-	public.GET("/schedule/:id", scc.GetScheduleByID)
-	public.GET("/schedule/:id/quota", scc.GetQuotaByScheduleID)
-
-	protected := router.Group("/api/v1")
-	protected.Use(scc.Authenticate.Set())
-	// protected.Use(ac.Authorized.Set())
-
-	protected.POST("/schedule/create", scc.CreateSchedule)
-	protected.POST("/schedule/allocation/create", scc.CreateScheduleWithAllocation)
-	protected.PUT("/schedule/update/:id", scc.UpdateSchedule)
-	protected.DELETE("/schedule/:id", scc.DeleteSchedule)
 }
 
 func (scc *ScheduleController) CreateSchedule(ctx *gin.Context) {

@@ -3,7 +3,6 @@ package controller
 import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
-	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/harbor"
@@ -14,40 +13,22 @@ import (
 )
 
 type HarborController struct {
-	Validate      validator.Validator
 	Log           logger.Logger
+	Validate      validator.Validator
 	HarborUsecase *harbor.HarborUsecase
-	Authenticate  *middleware.AuthenticateMiddleware
-	Authorized    *middleware.AuthorizeMiddleware
 }
 
 func NewHarborController(
-	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	harbor_usecase *harbor.HarborUsecase,
-	authtenticate *middleware.AuthenticateMiddleware,
-	authorized *middleware.AuthorizeMiddleware,
-) {
-	hc := &HarborController{
+) *HarborController {
+	return &HarborController{
 		Log:           log,
 		Validate:      validate,
 		HarborUsecase: harbor_usecase,
-		Authenticate:  authtenticate,
-		Authorized:    authorized,
 	}
 
-	public := router.Group("/api/v1") // No middleware
-	public.GET("/harbors", hc.GetAllHarbors)
-	public.GET("/harbor/:id", hc.GetHarborByID)
-
-	protected := router.Group("/api/v1")
-	protected.Use(hc.Authenticate.Set())
-	// protected.Use(ac.Authorized.Set())
-
-	protected.POST("/harbor/create", hc.CreateHarbor)
-	protected.PUT("/harbor/update/:id", hc.UpdateHarbor)
-	protected.DELETE("/harbor/:id", hc.DeleteHarbor)
 }
 
 func (hc *HarborController) CreateHarbor(ctx *gin.Context) {

@@ -10,6 +10,7 @@ import (
 	"eticket-api/internal/common/token"
 	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http"
+	"eticket-api/internal/delivery/http/controller"
 	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/job"
 	"eticket-api/internal/repository"
@@ -52,7 +53,6 @@ func NewBootstrap(cf *Bootstrap) error {
 	UserRepository := repository.NewUserRepository()
 	RoleRepository := repository.NewRoleRepository()
 	AuthRepository := repository.NewAuthRepository()
-
 	ShipRepository := repository.NewShipRepository()
 	RouteRepository := repository.NewRouteRepository()
 	HarborRepository := repository.NewHarborRepository()
@@ -81,27 +81,59 @@ func NewBootstrap(cf *Bootstrap) error {
 	ClaimSessionUsecase := claim_session.NewClaimSessionUsecase(cf.DB, SessionRepository, TicketRepository, ScheduleRepository, AllocationRepository, ManifestRepository, FareRepository, BookingRepository)
 	PaymentUsecase := payment.NewPaymentUsecase(cf.DB, TripayClient, SessionRepository, BookingRepository, TicketRepository, cf.Mailer)
 
-	Logger := middleware.NewLoggerMiddleware(cf.Log)
-	Recovery := middleware.NewRecoveryMiddleware(cf.Log)
-	Authenticate := middleware.NewAuthenticateMiddleware(cf.Token)
-	Authorize := middleware.NewAuthorizeMiddleware(cf.Enforcer)
+	// Initialize the enforcer
+	AllcationController := controller.NewAllocationController(cf.Log, cf.Validate, AllocationUsecase)
+	AuthController := controller.NewAuthController(cf.Log, cf.Validate, AuthUsecase)
+	BookingController := controller.NewBookingController(cf.Log, cf.Validate, BookingUsecase)
+	ClaimSessionController := controller.NewClaimSessionController(cf.Log, cf.Validate, ClaimSessionUsecase)
+	ClassController := controller.NewClassController(cf.Log, cf.Validate, ClassUsecase)
+	FareController := controller.NewFareController(cf.Log, cf.Validate, FareUsecase)
+	HarborController := controller.NewHarborController(cf.Log, cf.Validate, HarborUsecase)
+	ManifestController := controller.NewManifestController(cf.Log, cf.Validate, ManifestUsecase)
+	PaymentController := controller.NewPaymentController(cf.Log, cf.Validate, PaymentUsecase)
+	ScheduleController := controller.NewScheduleController(cf.Log, cf.Validate, ScheduleUsecase)
+	RoleController := controller.NewRoleController(cf.Log, cf.Validate, RoleUsecase)
+	RouteController := controller.NewRouteController(cf.Log, cf.Validate, RouteUsecase)
+	ShipController := controller.NewShipController(cf.Log, cf.Validate, ShipUsecase)
+	TicketController := controller.NewTicketController(cf.Log, cf.Validate, TicketUsecase)
+	UserController := controller.NewUserController(cf.Log, cf.Validate, UserUsecase)
 
-	middlewares := http.NewMiddlewareDependencies(Authenticate, Logger, Recovery, Authorize)
-	usecases := http.NewUsecaseDependencies(
-		AllocationUsecase, AuthUsecase, BookingUsecase, RoleUsecase,
-		ClaimSessionUsecase, ClassUsecase, FareUsecase, HarborUsecase,
-		ManifestUsecase, PaymentUsecase, RouteUsecase, ScheduleUsecase,
-		ShipUsecase, TicketUsecase, UserUsecase,
-	)
+	AuthenticateMiddleware := middleware.NewAuthenticateMiddleware(cf.Token)
+	AuthorizeMiddleware := middleware.NewAuthorizeMiddleware(cf.Enforcer)
+	LoggerMiddleware := middleware.NewLoggerMiddleware(cf.Log)
+	// RecoveryMiddleware := middleware.RecoveryMiddleware(cf.Log)
 
-	dependencies := http.NewDependencies(cf.Log, cf.Validate, middlewares, usecases)
+	router := http.NewRouter(cf.App, &http.Controllers{
+		Allocation:   AllcationController,
+		Auth:         AuthController,
+		Booking:      BookingController,
+		ClaimSession: ClaimSessionController,
+		Class:        ClassController,
+		Fare:         FareController,
+		Harbor:       HarborController,
+		Manifest:     ManifestController,
+		Payment:      PaymentController,
+		Schedule:     ScheduleController,
+		Role:         RoleController,
+		Route:        RouteController,
+		Ship:         ShipController,
+		Ticket:       TicketController,
+		User:         UserController,
+	}, &http.Middlewares{
+		Authenticate: AuthenticateMiddleware,
+		Authorize:    AuthorizeMiddleware,
+		Log:          LoggerMiddleware,
+	})
+
+	router.Setup()
+
 	cleanupJob := job.NewCleanupJob(cf.DB, TicketRepository, SessionRepository)
 	cleanupRunner := runner.NewCleanupRunner(cleanupJob)
 	cleanupRunner.Start()
 
-	// Create and setup router
-	router := http.NewRouter(cf.App, dependencies)
-	router.Setup() // This was missing!
+	// // Create and setup router
+	// router := http.NewRouter(cf.App, dependencies)
+	// router.Setup() // This was missing!
 
 	return nil
 }

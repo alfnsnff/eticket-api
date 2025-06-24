@@ -3,7 +3,6 @@ package controller
 import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
-	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/manifest" // Import the response package
@@ -14,40 +13,21 @@ import (
 )
 
 type ManifestController struct {
-	Validate        validator.Validator
 	Log             logger.Logger
+	Validate        validator.Validator
 	ManifestUsecase *manifest.ManifestUsecase
-	Authenticate    *middleware.AuthenticateMiddleware
-	Authorized      *middleware.AuthorizeMiddleware
 }
 
 func NewManifestController(
-	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	manifest_usecase *manifest.ManifestUsecase,
-	authtenticate *middleware.AuthenticateMiddleware,
-	authorized *middleware.AuthorizeMiddleware,
-) {
-	mc := &ManifestController{
+) *ManifestController {
+	return &ManifestController{
 		Log:             log,
 		Validate:        validate,
 		ManifestUsecase: manifest_usecase,
-		Authenticate:    authtenticate,
-		Authorized:      authorized,
 	}
-
-	public := router.Group("/api/v1") // No middleware
-	public.GET("/manifests", mc.GetAllManifests)
-	public.GET("/manifest/:id", mc.GetManifestByID)
-
-	protected := router.Group("/api/v1")
-	protected.Use(mc.Authenticate.Set())
-	// protected.Use(ac.Authorized.Set())
-
-	protected.POST("/manifest/create", mc.CreateManifest)
-	protected.PUT("/manifest/update/:id", mc.UpdateManifest)
-	protected.DELETE("/manifest/:id", mc.DeleteManifest)
 }
 
 func (mc *ManifestController) CreateManifest(ctx *gin.Context) {

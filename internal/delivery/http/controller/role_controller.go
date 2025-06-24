@@ -3,7 +3,6 @@ package controller
 import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
-	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/role"
@@ -14,41 +13,23 @@ import (
 )
 
 type RoleController struct {
-	Validate     validator.Validator
-	Log          logger.Logger
-	RoleUsecase  *role.RoleUsecase
-	Authenticate *middleware.AuthenticateMiddleware
-	Authorized   *middleware.AuthorizeMiddleware
+	Log         logger.Logger
+	Validate    validator.Validator
+	RoleUsecase *role.RoleUsecase
 }
 
 // NewRoleController creates a new RoleController instance
 func NewRoleController(
-	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	role_usecase *role.RoleUsecase,
-	authtenticate *middleware.AuthenticateMiddleware,
-	authorized *middleware.AuthorizeMiddleware,
-) {
-	roc := &RoleController{
-		Log:          log,
-		Validate:     validate,
-		RoleUsecase:  role_usecase,
-		Authenticate: authtenticate,
-		Authorized:   authorized,
+) *RoleController {
+	return &RoleController{
+		Log:         log,
+		Validate:    validate,
+		RoleUsecase: role_usecase,
 	}
 
-	public := router.Group("/api/v1") // No middleware
-	public.GET("/roles", roc.GetAllRoles)
-	public.GET("/role/:id", roc.GetRoleByID)
-
-	protected := router.Group("/api/v1")
-	protected.Use(roc.Authenticate.Set())
-	// protected.Use(ac.Authorized.Set())
-
-	protected.POST("/role/create", roc.CreateRole)
-	protected.PUT("/role/update/:id", roc.UpdateRole)
-	protected.DELETE("/role/:id", roc.DeleteRole)
 }
 
 func (rc *RoleController) CreateRole(ctx *gin.Context) {

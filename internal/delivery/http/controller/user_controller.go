@@ -3,7 +3,6 @@ package controller
 import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
-	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/user"
@@ -14,41 +13,23 @@ import (
 )
 
 type UserController struct {
-	Validate     validator.Validator
-	Log          logger.Logger
-	UserUsecase  *user.UserUsecase
-	Authenticate *middleware.AuthenticateMiddleware
-	Authorized   *middleware.AuthorizeMiddleware
+	Log         logger.Logger
+	Validate    validator.Validator
+	UserUsecase *user.UserUsecase
 }
 
 // NewUserController creates a new UserController instance
 func NewUserController(
-	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	user_usecase *user.UserUsecase,
-	authtenticate *middleware.AuthenticateMiddleware,
-	authorized *middleware.AuthorizeMiddleware,
-) {
-	uc := &UserController{
-		Log:          log,
-		Validate:     validate,
-		UserUsecase:  user_usecase,
-		Authenticate: authtenticate,
-		Authorized:   authorized,
+) *UserController {
+	return &UserController{
+		Log:         log,
+		Validate:    validate,
+		UserUsecase: user_usecase,
 	}
 
-	public := router.Group("/api/v1") // No middleware
-	public.GET("/users", uc.GetAllUsers)
-	public.GET("/user/:id", uc.GetUserByID)
-	public.POST("/user/create", uc.CreateUser)
-
-	protected := router.Group("/api/v1")
-	protected.Use(uc.Authenticate.Set())
-	// protected.Use(ac.Authorized.Set())
-
-	protected.PUT("/user/update/:id", uc.UpdateUser)
-	protected.DELETE("/user/:id", uc.DeleteUser)
 }
 
 func (uc *UserController) CreateUser(ctx *gin.Context) {

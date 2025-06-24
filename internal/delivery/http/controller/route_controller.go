@@ -3,7 +3,6 @@ package controller
 import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
-	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/route"
@@ -14,39 +13,22 @@ import (
 )
 
 type RouteController struct {
-	Validate     validator.Validator
 	Log          logger.Logger
+	Validate     validator.Validator
 	RouteUsecase *route.RouteUsecase
-	Authenticate *middleware.AuthenticateMiddleware
-	Authorized   *middleware.AuthorizeMiddleware
 }
 
 func NewRouteController(
-	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	route_usecase *route.RouteUsecase,
-	authtenticate *middleware.AuthenticateMiddleware,
-	authorized *middleware.AuthorizeMiddleware,
-) {
-	rc := &RouteController{
+) *RouteController {
+	return &RouteController{
 		Log:          log,
 		Validate:     validate,
 		RouteUsecase: route_usecase,
-		Authenticate: authtenticate,
-		Authorized:   authorized,
 	}
 
-	public := router.Group("/api/v1") // No middleware
-	public.GET("/routes", rc.GetAllRoutes)
-	public.GET("/route/:id", rc.GetRouteByID)
-
-	protected := router.Group("/api/v1")
-	protected.Use(rc.Authenticate.Set())
-	// protected.Use(ac.Authorized.Set())
-	protected.POST("/route/create", rc.CreateRoute)
-	protected.PUT("/route/update/:id", rc.UpdateRoute)
-	protected.DELETE("/route/:id", rc.DeleteRoute)
 }
 
 func (rc *RouteController) CreateRoute(ctx *gin.Context) {

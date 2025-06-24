@@ -3,7 +3,6 @@ package controller
 import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
-	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/ship" // Import the response package
@@ -14,40 +13,22 @@ import (
 )
 
 type ShipController struct {
-	Validate     validator.Validator
-	Log          logger.Logger
-	ShipUsecase  *ship.ShipUsecase
-	Authenticate *middleware.AuthenticateMiddleware
-	Authorized   *middleware.AuthorizeMiddleware
+	Log         logger.Logger
+	Validate    validator.Validator
+	ShipUsecase *ship.ShipUsecase
 }
 
 func NewShipController(
-	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	ship_usecase *ship.ShipUsecase,
-	authtenticate *middleware.AuthenticateMiddleware,
-	authorized *middleware.AuthorizeMiddleware,
-) {
-	shc := &ShipController{
-		Log:          log,
-		Validate:     validate,
-		ShipUsecase:  ship_usecase,
-		Authenticate: authtenticate,
-		Authorized:   authorized,
+) *ShipController {
+	return &ShipController{
+		Log:         log,
+		Validate:    validate,
+		ShipUsecase: ship_usecase,
 	}
 
-	public := router.Group("/api/v1") // No middleware
-	public.GET("/ships", shc.GetAllShips)
-	public.GET("/ship/:id", shc.GetShipByID)
-
-	protected := router.Group("/api/v1")
-	protected.Use(shc.Authenticate.Set())
-	// protected.Use(ac.Authorized.Set())
-
-	protected.POST("/ship/create", shc.CreateShip)
-	protected.PUT("/ship/update/:id", shc.UpdateShip)
-	protected.DELETE("/ship/:id", shc.DeleteShip)
 }
 
 func (shc *ShipController) CreateShip(ctx *gin.Context) {

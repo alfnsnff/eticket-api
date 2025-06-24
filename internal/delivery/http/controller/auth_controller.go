@@ -2,9 +2,7 @@ package controller
 
 import (
 	"eticket-api/internal/common/logger"
-	"eticket-api/internal/common/token"
 	"eticket-api/internal/common/validator"
-	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/auth"
@@ -14,42 +12,22 @@ import (
 )
 
 type AuthController struct {
-	Validate     validator.Validator
-	Log          logger.Logger
-	TokenManager *token.JWT
-	AuthUsecase  *auth.AuthUsecase
-	Authenticate *middleware.AuthenticateMiddleware
-	Authorized   *middleware.AuthorizeMiddleware
+	Log         logger.Logger
+	Validate    validator.Validator
+	AuthUsecase *auth.AuthUsecase
 }
 
 // NewUserRoleController creates a new UserRoleController instance
 func NewAuthController(
-	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	auth_usecase *auth.AuthUsecase,
-	authtenticate *middleware.AuthenticateMiddleware,
-	authorized *middleware.AuthorizeMiddleware,
-) {
-	ac := &AuthController{
-		Log:          log,
-		Validate:     validate,
-		AuthUsecase:  auth_usecase,
-		Authenticate: authtenticate,
-		Authorized:   authorized,
+) *AuthController {
+	return &AuthController{
+		Log:         log,
+		Validate:    validate,
+		AuthUsecase: auth_usecase,
 	}
-
-	public := router.Group("/api/v1") // No middleware
-	public.GET("/auth/me", ac.Me)
-	public.POST("/auth/login", ac.Login)
-	public.POST("/auth/refresh", ac.RefreshToken)
-	public.POST("/auth/forget-password", ac.ForgetPassword)
-
-	protected := router.Group("/api/v1")
-	protected.Use(ac.Authenticate.Set())
-	// protected.Use(ac.Authorized.Set())
-
-	protected.POST("/auth/logout", ac.Logout)
 }
 
 func (auc *AuthController) Login(ctx *gin.Context) {

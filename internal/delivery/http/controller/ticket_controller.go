@@ -3,7 +3,6 @@ package controller
 import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
-	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/ticket"
@@ -14,42 +13,22 @@ import (
 )
 
 type TicketController struct {
-	Validate      validator.Validator
 	Log           logger.Logger
+	Validate      validator.Validator
 	TicketUsecase *ticket.TicketUsecase
-	Authenticate  *middleware.AuthenticateMiddleware
-	Authorized    *middleware.AuthorizeMiddleware
 }
 
 func NewTicketController(
-	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	ticket_usecase *ticket.TicketUsecase,
-	authtenticate *middleware.AuthenticateMiddleware,
-	authorized *middleware.AuthorizeMiddleware,
-) {
-	tc := &TicketController{
+) *TicketController {
+	return &TicketController{
 		Log:           log,
 		Validate:      validate,
 		TicketUsecase: ticket_usecase,
-		Authenticate:  authtenticate,
-		Authorized:    authorized,
 	}
 
-	public := router.Group("/api/v1") // No middleware
-	public.GET("/tickets", tc.GetAllTickets)
-	public.GET("/ticket/:id", tc.GetTicketByID)
-
-	protected := router.Group("/api/v1")
-	protected.Use(tc.Authenticate.Set())
-	// protected.Use(ac.Authorized.Set())
-
-	public.GET("/ticket/schedule/:id", tc.GetAllTicketsByScheduleID)
-	protected.PATCH("/ticket/check-in/:id", tc.CheckIn)
-	protected.POST("/ticket/create", tc.CreateTicket)
-	protected.PUT("/ticket/update/:id", tc.UpdateTicket)
-	protected.DELETE("/ticket/:id", tc.DeleteTicket)
 }
 
 func (tc *TicketController) CreateTicket(ctx *gin.Context) {

@@ -3,7 +3,6 @@ package controller
 import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
-	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model" // Import the response package
 	"eticket-api/internal/usecase/claim_session"
@@ -14,40 +13,21 @@ import (
 )
 
 type ClaimSessionController struct {
-	Validate            validator.Validator
 	Log                 logger.Logger
+	Validate            validator.Validator
 	ClaimSessionUsecase *claim_session.ClaimSessionUsecase
-	Authenticate        *middleware.AuthenticateMiddleware
-	Authorized          *middleware.AuthorizeMiddleware
 }
 
 func NewClaimSessionController(
-	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	claim_session_usecase *claim_session.ClaimSessionUsecase,
-	authtenticate *middleware.AuthenticateMiddleware,
-	authorized *middleware.AuthorizeMiddleware,
-) {
-	sc := &ClaimSessionController{
+) *ClaimSessionController {
+	return &ClaimSessionController{
 		Log:                 log,
 		Validate:            validate,
 		ClaimSessionUsecase: claim_session_usecase,
-		Authenticate:        authtenticate,
-		Authorized:          authorized,
 	}
-
-	public := router.Group("/api/v1") // No middleware
-	public.POST("/session/ticket/lock", sc.CreateClaimSession)
-	public.GET("/sessions", sc.GetAllClaimSessions)
-	public.GET("/session/:id", sc.GetSessionByID)
-	public.POST("/session/ticket/data/entry", sc.UpdateClaimSession)
-	public.GET("/session/uuid/:sessionuuid", sc.GetClaimSessionByUUID)
-	public.DELETE("/session/:id", sc.DeleteClaimSession)
-
-	protected := router.Group("/api/v1") // No middleware
-	protected.Use(sc.Authenticate.Set())
-	// protected.Use(ac.Authorized.Set())
 }
 
 func (csc *ClaimSessionController) CreateClaimSession(ctx *gin.Context) {

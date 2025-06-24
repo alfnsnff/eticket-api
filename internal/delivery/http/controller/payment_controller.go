@@ -3,7 +3,6 @@ package controller
 import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
-	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/payment"
@@ -13,39 +12,23 @@ import (
 )
 
 type PaymentController struct {
-	Validate       validator.Validator
 	Log            logger.Logger
+	Validate       validator.Validator
 	PaymentUsecase *payment.PaymentUsecase
-	Authenticate   *middleware.AuthenticateMiddleware
-	Authorized     *middleware.AuthorizeMiddleware
 }
 
 // NewPaymentController creates a new PaymentController instance
 func NewPaymentController(
-	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	payment_usecase *payment.PaymentUsecase,
-	authtenticate *middleware.AuthenticateMiddleware,
-	authorized *middleware.AuthorizeMiddleware,
-) {
-	pc := &PaymentController{
+) *PaymentController {
+	return &PaymentController{
 		Log:            log,
 		Validate:       validate,
 		PaymentUsecase: payment_usecase,
-		Authenticate:   authtenticate,
-		Authorized:     authorized,
 	}
 
-	public := router.Group("/api/v1") // No middleware
-	public.GET("/payment-channels", pc.GetPaymentChannels)
-	public.GET("/payment/transaction/detail/:id", pc.GetTransactionDetail)
-	public.POST("/payment/transaction/create", pc.CreatePayment)
-	public.POST("/payment/callback", pc.HandleCallback)
-
-	protected := router.Group("/api/v1")
-	protected.Use(pc.Authenticate.Set())
-	// protected.Use(ac.Authorized.Set())
 }
 
 func (pc *PaymentController) GetPaymentChannels(ctx *gin.Context) {

@@ -3,7 +3,6 @@ package controller
 import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
-	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model" // Import the response package
 	"eticket-api/internal/usecase/fare"
@@ -14,40 +13,22 @@ import (
 )
 
 type FareController struct {
-	Validate     validator.Validator
-	Log          logger.Logger
-	FareUsecase  *fare.FareUsecase
-	Authenticate *middleware.AuthenticateMiddleware
-	Authorized   *middleware.AuthorizeMiddleware
+	Log         logger.Logger
+	Validate    validator.Validator
+	FareUsecase *fare.FareUsecase
 }
 
 func NewFareController(
-	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	Fare_usecase *fare.FareUsecase,
-	authtenticate *middleware.AuthenticateMiddleware,
-	authorized *middleware.AuthorizeMiddleware,
-) {
-	fc := &FareController{
-		Log:          log,
-		Validate:     validate,
-		FareUsecase:  Fare_usecase,
-		Authenticate: authtenticate,
-		Authorized:   authorized,
+) *FareController {
+	return &FareController{
+		Log:         log,
+		Validate:    validate,
+		FareUsecase: Fare_usecase,
 	}
 
-	public := router.Group("/api/v1") // No middleware
-	public.GET("/fares", fc.GetAllFares)
-	public.GET("/fare/:id", fc.GetFareByID)
-
-	protected := router.Group("/api/v1")
-	protected.Use(fc.Authenticate.Set())
-	// protected.Use(ac.Authorized.Set())
-
-	protected.POST("/fare/create", fc.CreateFare)
-	protected.PUT("/fare/update/:id", fc.UpdateFare)
-	protected.DELETE("/fare/:id", fc.DeleteFare)
 }
 
 func (fc *FareController) CreateFare(ctx *gin.Context) {

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
-	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/delivery/response"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/booking"
@@ -19,40 +18,19 @@ type BookingController struct {
 	Validate       validator.Validator
 	Log            logger.Logger
 	BookingUsecase *booking.BookingUsecase
-	Authenticate   *middleware.AuthenticateMiddleware
-	Authorized     *middleware.AuthorizeMiddleware
 }
 
 // NewBookingController creates a new BookingController instance
 func NewBookingController(
-	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	booking_usecase *booking.BookingUsecase,
-	authtenticate *middleware.AuthenticateMiddleware,
-	authorized *middleware.AuthorizeMiddleware,
-) {
-	bc := &BookingController{
+) *BookingController {
+	return &BookingController{
 		Log:            log,
 		Validate:       validate,
 		BookingUsecase: booking_usecase,
-		Authenticate:   authtenticate,
-		Authorized:     authorized,
 	}
-
-	public := router.Group("/api/v1") // No middleware
-	public.GET("/bookings", bc.GetAllBookings)
-	public.GET("/booking/:id", bc.GetBookingByID)
-	public.GET("/booking/order/:id", bc.GetBookingByOrderID)
-	public.GET("/booking/payment/callback", bc.GetBookingByID)
-
-	protected := router.Group("/api/v1")
-	protected.Use(bc.Authenticate.Set())
-	// protected.Use(ac.Authorized.Set())
-
-	protected.POST("/booking/create", bc.CreateBooking)
-	protected.PUT("/booking/update/:id", bc.UpdateBooking)
-	protected.DELETE("/booking/:id", bc.DeleteBooking)
 }
 
 func (bc *BookingController) CreateBooking(ctx *gin.Context) {

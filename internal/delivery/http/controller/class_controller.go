@@ -3,7 +3,6 @@ package controller
 import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
-	"eticket-api/internal/delivery/http/middleware"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase/class"
 	"fmt"
@@ -16,40 +15,21 @@ import (
 )
 
 type ClassController struct {
-	Validate     validator.Validator
 	Log          logger.Logger
+	Validate     validator.Validator
 	ClassUsecase *class.ClassUsecase
-	Authenticate *middleware.AuthenticateMiddleware
-	Authorized   *middleware.AuthorizeMiddleware
 }
 
 func NewClassController(
-	router *gin.Engine,
 	log logger.Logger,
 	validate validator.Validator,
 	class_usecase *class.ClassUsecase,
-	authtenticate *middleware.AuthenticateMiddleware,
-	authorized *middleware.AuthorizeMiddleware,
-) {
-	cc := &ClassController{
+) *ClassController {
+	return &ClassController{
 		Log:          log,
 		Validate:     validate,
 		ClassUsecase: class_usecase,
-		Authenticate: authtenticate,
-		Authorized:   authorized,
 	}
-
-	public := router.Group("/api/v1") // No middleware
-	public.GET("/classes", cc.GetAllClasses)
-	public.GET("/class/:id", cc.GetClassByID)
-
-	protected := router.Group("/api/v1")
-	protected.Use(cc.Authenticate.Set())
-	// protected.Use(ac.Authorized.Set())
-
-	protected.POST("/class/create", cc.CreateClass)
-	protected.PUT("/class/update/:id", cc.UpdateClass)
-	protected.DELETE("/class/:id", cc.DeleteClass)
 }
 
 func (cc *ClassController) CreateClass(ctx *gin.Context) {
