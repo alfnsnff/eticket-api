@@ -25,7 +25,7 @@ type Server struct {
 
 func NewApp(cfg *config.Config) (*Server, error) {
 	fmt.Println(">>> NewServer CALLED")
-	gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.DebugMode)
 	app := gin.Default()
 
 	db, err := db.NewPostgres(cfg)

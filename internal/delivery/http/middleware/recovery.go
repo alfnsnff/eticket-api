@@ -10,12 +10,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Recovery(log logger.Logger) gin.HandlerFunc {
+type RecoveryMiddleware struct {
+	Log logger.Logger
+}
+
+func NewRecoveryMiddleware(log logger.Logger) *RecoveryMiddleware {
+	return &RecoveryMiddleware{
+		Log: log,
+	}
+}
+
+func (rm *RecoveryMiddleware) Set() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if rec := recover(); rec != nil {
 				// Log panic with stack trace
-				log.WithFields(map[string]interface{}{
+				rm.Log.WithFields(map[string]interface{}{
 					"panic":   fmt.Sprintf("%v", rec),
 					"stack":   string(debug.Stack()),
 					"path":    c.Request.URL.Path,
@@ -33,4 +43,10 @@ func Recovery(log logger.Logger) gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+// Legacy function for backward compatibility
+func Recovery(log logger.Logger) gin.HandlerFunc {
+	middleware := NewRecoveryMiddleware(log)
+	return middleware.Set()
 }

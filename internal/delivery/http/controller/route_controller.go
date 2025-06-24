@@ -44,9 +44,8 @@ func NewRouteController(
 	protected := router.Group("/api/v1")
 	protected.Use(rc.Authenticate.Set())
 	// protected.Use(ac.Authorized.Set())
-
 	protected.POST("/route/create", rc.CreateRoute)
-	protected.PUT("/route//update:id", rc.UpdateRoute)
+	protected.PUT("/route/update/:id", rc.UpdateRoute)
 	protected.DELETE("/route/:id", rc.DeleteRoute)
 }
 

@@ -81,35 +81,27 @@ func NewBootstrap(cf *Bootstrap) error {
 	ClaimSessionUsecase := claim_session.NewClaimSessionUsecase(cf.DB, SessionRepository, TicketRepository, ScheduleRepository, AllocationRepository, ManifestRepository, FareRepository, BookingRepository)
 	PaymentUsecase := payment.NewPaymentUsecase(cf.DB, TripayClient, SessionRepository, BookingRepository, TicketRepository, cf.Mailer)
 
+	Logger := middleware.NewLoggerMiddleware(cf.Log)
+	Recovery := middleware.NewRecoveryMiddleware(cf.Log)
 	Authenticate := middleware.NewAuthenticateMiddleware(cf.Token)
 	Authorize := middleware.NewAuthorizeMiddleware(cf.Enforcer)
 
+	middlewares := http.NewMiddlewareDependencies(Authenticate, Logger, Recovery, Authorize)
+	usecases := http.NewUsecaseDependencies(
+		AllocationUsecase, AuthUsecase, BookingUsecase, RoleUsecase,
+		ClaimSessionUsecase, ClassUsecase, FareUsecase, HarborUsecase,
+		ManifestUsecase, PaymentUsecase, RouteUsecase, ScheduleUsecase,
+		ShipUsecase, TicketUsecase, UserUsecase,
+	)
+
+	dependencies := http.NewDependencies(cf.Log, cf.Validate, middlewares, usecases)
 	cleanupJob := job.NewCleanupJob(cf.DB, TicketRepository, SessionRepository)
 	cleanupRunner := runner.NewCleanupRunner(cleanupJob)
 	cleanupRunner.Start()
 
-	http.NewRouter(
-		cf.App,
-		cf.Log,
-		cf.Validate,
-		AllocationUsecase,
-		AuthUsecase,
-		BookingUsecase,
-		RoleUsecase,
-		ClaimSessionUsecase,
-		ClassUsecase,
-		FareUsecase,
-		HarborUsecase,
-		ManifestUsecase,
-		PaymentUsecase,
-		RouteUsecase,
-		ScheduleUsecase,
-		ShipUsecase,
-		TicketUsecase,
-		UserUsecase,
-		Authenticate,
-		Authorize,
-	)
+	// Create and setup router
+	router := http.NewRouter(cf.App, dependencies)
+	router.Setup() // This was missing!
 
 	return nil
 }

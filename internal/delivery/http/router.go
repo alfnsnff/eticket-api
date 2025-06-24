@@ -1,80 +1,160 @@
 package http
 
 import (
-	"eticket-api/internal/common/logger"
-	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/controller"
-	"eticket-api/internal/delivery/http/middleware"
-	"eticket-api/internal/usecase/allocation"
-	"eticket-api/internal/usecase/auth"
-	"eticket-api/internal/usecase/booking"
-	"eticket-api/internal/usecase/claim_session"
-	"eticket-api/internal/usecase/class"
-	"eticket-api/internal/usecase/fare"
-	"eticket-api/internal/usecase/harbor"
-	"eticket-api/internal/usecase/manifest"
-	"eticket-api/internal/usecase/payment"
-	"eticket-api/internal/usecase/role"
-	"eticket-api/internal/usecase/route"
-	"eticket-api/internal/usecase/schedule"
-	"eticket-api/internal/usecase/ship"
-	"eticket-api/internal/usecase/ticket"
-	"eticket-api/internal/usecase/user"
 	"net/http"
+	"reflect"
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func NewRouter(
-	router *gin.Engine,
-	log logger.Logger,
-	validate validator.Validator,
-	allocation_usecase *allocation.AllocationUsecase,
-	auth_usecase *auth.AuthUsecase,
-	booking_usecase *booking.BookingUsecase,
-	role_usecase *role.RoleUsecase,
-	claimSession_usecase *claim_session.ClaimSessionUsecase,
-	class_usecase *class.ClassUsecase,
-	fare_usecase *fare.FareUsecase,
-	harbor_usecase *harbor.HarborUsecase,
-	manifest_usecase *manifest.ManifestUsecase,
-	payment_usecase *payment.PaymentUsecase,
-	route_usecase *route.RouteUsecase,
-	schedule_usecase *schedule.ScheduleUsecase,
-	ship_usecase *ship.ShipUsecase,
-	ticket_usecase *ticket.TicketUsecase,
-	user_usecase *user.UserUsecase,
-	authenticate *middleware.AuthenticateMiddleware,
-	authorize *middleware.AuthorizeMiddleware,
-) {
+// AdvancedRouter uses reflection for ultimate clean architecture
+type Router struct {
+	Engine       *gin.Engine
+	Dependencies *Dependencies
+}
 
-	router.Use(middleware.Logger(log))
-	router.Use(middleware.Recovery(log))
+// ControllerRegistry defines controller configuration
+type ControllerRegistry struct {
+	Name        string
+	Constructor interface{} // Controller constructor function
+	Usecase     interface{} // Associated usecase
+}
 
-	router.GET("/metrics", func(c *gin.Context) {
+// NewAdvancedRouter creates router with reflection-based registration
+func NewRouter(engine *gin.Engine, dependencies *Dependencies) *Router {
+	return &Router{
+		Engine:       engine,
+		Dependencies: dependencies,
+	}
+}
+
+// Setup configures routes with auto-discovery pattern
+func (router *Router) Setup() {
+	router.SetupGlobalMiddleware()
+	router.SetupSystemRoutes()
+	router.SetupControllers()
+}
+
+// setupGlobalMiddleware registers global middleware
+func (router *Router) SetupGlobalMiddleware() {
+	router.Engine.Use(router.Dependencies.Middlewares.Logger.Set())
+	router.Engine.Use(router.Dependencies.Middlewares.Recovery.Set())
+}
+
+// setupSystemRoutes registers system routes
+func (router *Router) SetupSystemRoutes() {
+	router.Engine.GET("/metrics", func(c *gin.Context) {
 		promhttp.Handler().ServeHTTP(c.Writer, c.Request)
 	})
 
-	// Health check
-	router.GET("/health", func(c *gin.Context) {
+	router.Engine.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
+}
 
-	controller.NewAllocationController(router, log, validate, allocation_usecase, authenticate, authorize)
-	controller.NewAuthController(router, log, validate, auth_usecase, authenticate, authorize)
-	controller.NewBookingController(router, log, validate, booking_usecase, authenticate, authorize)
-	controller.NewClaimSessionController(router, log, validate, claimSession_usecase, authenticate, authorize)
-	controller.NewClassController(router, log, validate, class_usecase, authenticate, authorize)
-	controller.NewFareController(router, log, validate, fare_usecase, authenticate, authorize)
-	controller.NewHarborController(router, log, validate, harbor_usecase, authenticate, authorize)
-	controller.NewManifestController(router, log, validate, manifest_usecase, authenticate, authorize)
-	controller.NewPaymentController(router, log, validate, payment_usecase, authenticate, authorize)
-	controller.NewRoleController(router, log, validate, role_usecase, authenticate, authorize)
-	controller.NewRouteController(router, log, validate, route_usecase, authenticate, authorize)
-	controller.NewScheduleController(router, log, validate, schedule_usecase, authenticate, authorize)
-	controller.NewShipController(router, log, validate, ship_usecase, authenticate, authorize)
-	controller.NewTicketController(router, log, validate, ticket_usecase, authenticate, authorize)
-	controller.NewUserController(router, log, validate, user_usecase, authenticate, authorize)
+// setupControllersWithReflection automatically registers controllers
+func (router *Router) SetupControllers() {
+	// Controller registry - auto-discovery pattern
+	registry := []ControllerRegistry{
+		{
+			Name:        "Allocation",
+			Constructor: controller.NewAllocationController,
+			Usecase:     router.Dependencies.Usecases.Allocation,
+		},
+		{
+			Name:        "Auth",
+			Constructor: controller.NewAuthController,
+			Usecase:     router.Dependencies.Usecases.Auth,
+		},
+		{
+			Name:        "Booking",
+			Constructor: controller.NewBookingController,
+			Usecase:     router.Dependencies.Usecases.Booking,
+		},
+		{
+			Name:        "ClaimSession",
+			Constructor: controller.NewClaimSessionController,
+			Usecase:     router.Dependencies.Usecases.ClaimSession,
+		},
+		{
+			Name:        "Class",
+			Constructor: controller.NewClassController,
+			Usecase:     router.Dependencies.Usecases.Class,
+		},
+		{
+			Name:        "Fare",
+			Constructor: controller.NewFareController,
+			Usecase:     router.Dependencies.Usecases.Fare,
+		},
+		{
+			Name:        "Harbor",
+			Constructor: controller.NewHarborController,
+			Usecase:     router.Dependencies.Usecases.Harbor,
+		},
+		{
+			Name:        "Manifest",
+			Constructor: controller.NewManifestController,
+			Usecase:     router.Dependencies.Usecases.Manifest,
+		},
+		{
+			Name:        "Payment",
+			Constructor: controller.NewPaymentController,
+			Usecase:     router.Dependencies.Usecases.Payment,
+		},
+		{
+			Name:        "Role",
+			Constructor: controller.NewRoleController,
+			Usecase:     router.Dependencies.Usecases.Role,
+		},
+		{
+			Name:        "Route",
+			Constructor: controller.NewRouteController,
+			Usecase:     router.Dependencies.Usecases.Route,
+		},
+		{
+			Name:        "Schedule",
+			Constructor: controller.NewScheduleController,
+			Usecase:     router.Dependencies.Usecases.Schedule,
+		},
+		{
+			Name:        "Ship",
+			Constructor: controller.NewShipController,
+			Usecase:     router.Dependencies.Usecases.Ship,
+		},
+		{
+			Name:        "Ticket",
+			Constructor: controller.NewTicketController,
+			Usecase:     router.Dependencies.Usecases.Ticket,
+		},
+		{
+			Name:        "User",
+			Constructor: controller.NewUserController,
+			Usecase:     router.Dependencies.Usecases.User,
+		},
+	}
 
+	// Auto-register controllers using reflection
+	for _, ctrl := range registry {
+		router.RegisterController(ctrl)
+	}
+}
+
+// registerController uses reflection to call controller constructors
+func (router *Router) RegisterController(ctrl ControllerRegistry) {
+	constructorValue := reflect.ValueOf(ctrl.Constructor)
+
+	// Prepare constructor arguments
+	args := []reflect.Value{
+		reflect.ValueOf(router.Engine),                                // router
+		reflect.ValueOf(router.Dependencies.Logger),                   // logger
+		reflect.ValueOf(router.Dependencies.Validator),                // validator
+		reflect.ValueOf(ctrl.Usecase),                                 // usecase
+		reflect.ValueOf(router.Dependencies.Middlewares.Authenticate), // authenticate
+		reflect.ValueOf(router.Dependencies.Middlewares.Authorize),    // authorize
+	}
+
+	// Call constructor with reflection
+	constructorValue.Call(args)
 }

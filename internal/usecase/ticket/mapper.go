@@ -44,6 +44,7 @@ func TicketToResponse(ticket *domain.Ticket) *model.ReadTicketResponse {
 		IDNumber:      ticket.IDNumber,
 		SeatNumber:    ticket.SeatNumber,
 		LicensePlate:  ticket.LicensePlate,
+		IsCheckedIn:   ticket.IsCheckedIn,
 		Type:          ticket.Type,
 		Price:         ticket.Price,
 		CreatedAt:     ticket.CreatedAt,

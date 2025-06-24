@@ -48,7 +48,7 @@ func NewTicketController(
 	public.GET("/ticket/schedule/:id", tc.GetAllTicketsByScheduleID)
 	protected.PATCH("/ticket/check-in/:id", tc.CheckIn)
 	protected.POST("/ticket/create", tc.CreateTicket)
-	protected.PUT("/ticket//update:id", tc.UpdateTicket)
+	protected.PUT("/ticket/update/:id", tc.UpdateTicket)
 	protected.DELETE("/ticket/:id", tc.DeleteTicket)
 }
 
@@ -206,9 +206,9 @@ func (tc *TicketController) CheckIn(ctx *gin.Context) {
 	}
 
 	if err := tc.TicketUsecase.CheckIn(ctx, uint(id)); err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete ticket", err.Error())) // Use response.
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to patch ticket", err.Error())) // Use response.
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ticket deleted successfully", nil)) // Use response.
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ticket patched successfully", nil)) // Use response.
 }
