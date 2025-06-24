@@ -8,8 +8,8 @@ import (
 
 type Route struct {
 	ID                uint      `gorm:"column:id;primaryKey" json:"id"`
-	DepartureHarborID uint      `gorm:"column:departure_harbor_id;not null;index;"`
-	ArrivalHarborID   uint      `gorm:"column:arrival_harbor_id;not null;index;"`
+	DepartureHarborID uint      `gorm:"column:departure_harbor_id;not null;index;uniqueIndex:idx_route_harbors"`
+	ArrivalHarborID   uint      `gorm:"column:arrival_harbor_id;not null;index;uniqueIndex:idx_route_harbors"`
 	CreatedAt         time.Time `gorm:"column:created_at;not null"`
 	UpdatedAt         time.Time `gorm:"column:updated_at;not null"`
 

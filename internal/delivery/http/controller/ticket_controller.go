@@ -46,7 +46,7 @@ func NewTicketController(
 	// protected.Use(ac.Authorized.Set())
 
 	public.GET("/ticket/schedule/:id", tc.GetAllTicketsByScheduleID)
-	protected.POST("/ticket/check-in/:id", tc.CheckIn)
+	protected.PATCH("/ticket/check-in/:id", tc.CheckIn)
 	protected.POST("/ticket/create", tc.CreateTicket)
 	protected.PUT("/ticket//update:id", tc.UpdateTicket)
 	protected.DELETE("/ticket/:id", tc.DeleteTicket)

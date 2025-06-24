@@ -8,8 +8,8 @@ import (
 
 type Allocation struct {
 	ID         uint      `gorm:"column:id;primaryKey"`
-	ScheduleID uint      `gorm:"column:schedule_id;not null"`
-	ClassID    uint      `gorm:"column:class_id;not null"`
+	ScheduleID uint      `gorm:"column:schedule_id;not null;uniqueIndex:idx_schedule_class"`
+	ClassID    uint      `gorm:"column:class_id;not null;uniqueIndex:idx_schedule_class"`
 	Quota      int       `gorm:"column:quota;not null"`
 	CreatedAt  time.Time `gorm:"column:created_at;not null"`
 	UpdatedAt  time.Time `gorm:"column:updated_at;not null"`

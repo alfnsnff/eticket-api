@@ -48,6 +48,10 @@ func NewRouter(
 	authenticate *middleware.AuthenticateMiddleware,
 	authorize *middleware.AuthorizeMiddleware,
 ) {
+
+	router.Use(middleware.Logger(log))
+	router.Use(middleware.Recovery(log))
+
 	router.GET("/metrics", func(c *gin.Context) {
 		promhttp.Handler().ServeHTTP(c.Writer, c.Request)
 	})
