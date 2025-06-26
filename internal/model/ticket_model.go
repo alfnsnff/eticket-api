@@ -10,13 +10,6 @@ type TicketScheduleHarbor struct {
 	HarborName string `json:"harbor_name"`
 }
 
-// RouteDTO represents a travel route.
-type TicketScheduleRoute struct {
-	ID              uint                 `json:"id"`
-	DepartureHarbor TicketScheduleHarbor `json:"departure_harbor"`
-	ArrivalHarbor   TicketScheduleHarbor `json:"arrival_harbor"`
-}
-
 // ShipDTO represents a ship.
 type TicketScheduleShip struct {
 	ID       uint   `json:"id"`
@@ -25,11 +18,12 @@ type TicketScheduleShip struct {
 
 // ScheduleDTO represents a Schedule.
 type TicketSchedule struct {
-	ID                uint                `json:"id"`
-	Ship              TicketScheduleShip  `json:"ship"`
-	Route             TicketScheduleRoute `json:"route"`
-	DepartureDatetime time.Time           `json:"departure_datetime"`
-	ArrivalDatetime   time.Time           `json:"arrival_datetime"`
+	ID                uint                 `json:"id"`
+	Ship              TicketScheduleShip   `json:"ship"`
+	DepartureHarbor   TicketScheduleHarbor `json:"departure_harbor"`
+	ArrivalHarbor     TicketScheduleHarbor `json:"arrival_harbor"`
+	DepartureDatetime time.Time            `json:"departure_datetime"`
+	ArrivalDatetime   time.Time            `json:"arrival_datetime"`
 }
 
 // ShipDTO represents a ship.
@@ -54,7 +48,7 @@ type ReadTicketResponse struct {
 	SeatNumber     *string         `json:"seat_number"`
 	LicensePlate   *string         `json:"license_plate"`
 	Type           string          `json:"type" binding:"required,oneof=passenger vehicle"`
-	Price          float32         `json:"price"`
+	Price          float64         `json:"price"`
 	IsCheckedIn    bool            `json:"is_checked_in"`
 	CreatedAt      time.Time       `json:"created_at"`
 	UpdatedAt      time.Time       `json:"updated_at"`
@@ -73,8 +67,8 @@ type WriteTicketRequest struct {
 	IDNumber        *string `json:"id_number"`
 	SeatNumber      *string `json:"seat_number"`
 	LicensePlate    *string `json:"license_plate"`
-	Type            string  `json:"type" validate:"required,oneof=passenger vehicle"`
-	Price           float32 `json:"price" validate:"required,gte=0"`
+	Type            string  `json:"type" validate:"required"`
+	Price           float64 `json:"price" validate:"required,gte=0"`
 	IsCheckedIn     bool    `json:"is_checked_in"`
 }
 
@@ -92,7 +86,7 @@ type UpdateTicketRequest struct {
 	IDNumber        *string `json:"id_number"`
 	SeatNumber      *string `json:"seat_number"`
 	LicensePlate    *string `json:"license_plate"`
-	Type            string  `json:"type" validate:"required,oneof=passenger vehicle"`
-	Price           float32 `json:"price" validate:"required,gte=0"`
+	Type            string  `json:"type" validate:"required"`
+	Price           float64 `json:"price" validate:"required,gte=0"`
 	IsCheckedIn     bool    `json:"is_checked_in"`
 }

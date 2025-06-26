@@ -1,8 +1,9 @@
 package repository
 
 import (
+	"errors"
 	"eticket-api/internal/domain"
-	"time"
+	"strings"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -14,37 +15,70 @@ func NewAuthRepository() *AuthRepository {
 	return &AuthRepository{}
 }
 
-func (aur *AuthRepository) Create(db *gorm.DB, refresh_token *domain.RefreshToken) error {
-	result := db.Create(refresh_token)
+// Standard CRUD operations for RefreshToken
+func (ar *AuthRepository) CountRefreshToken(db *gorm.DB) (int64, error) {
+	var total int64
+	result := db.Model(&domain.RefreshToken{}).Count(&total)
+	return total, result.Error
+}
+
+func (ar *AuthRepository) InsertRefreshToken(db *gorm.DB, refreshToken *domain.RefreshToken) error {
+	result := db.Create(refreshToken)
 	return result.Error
 }
 
-func (aur *AuthRepository) Count(db *gorm.DB) (int64, error) {
-	refreshTokens := []*domain.RefreshToken{}
-	var total int64
-	result := db.Find(&refreshTokens).Count(&total)
-	if result.Error != nil {
-		return 0, result.Error
-	}
-	return total, nil
+func (ar *AuthRepository) InsertRefreshTokenBulk(db *gorm.DB, refreshToken []*domain.RefreshToken) error {
+	result := db.Create(refreshToken)
+	return result.Error
 }
 
-func (aur *AuthRepository) GetAllRefreshToken(db *gorm.DB) ([]*domain.RefreshToken, error) {
-	tokens := []*domain.RefreshToken{}
-	result := db.Find(&tokens)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	return tokens, nil
+func (ar *AuthRepository) UpdateRefreshToken(db *gorm.DB, refreshToken *domain.RefreshToken) error {
+	result := db.Save(refreshToken)
+	return result.Error
 }
 
-func (aur *AuthRepository) GetRefreshToken(db *gorm.DB, id string) (*domain.RefreshToken, error) {
-	token := new(domain.RefreshToken)
-	result := db.First(&token, "id = ?", id)
-	if result.Error != nil {
-		return nil, result.Error
+func (ar *AuthRepository) UpdateRefreshTokenBulk(db *gorm.DB, refreshToken []*domain.RefreshToken) error {
+	result := db.Save(refreshToken)
+	return result.Error
+}
+
+func (ar *AuthRepository) DeleteRefreshToken(db *gorm.DB, id string) error {
+	result := db.Delete(&domain.RefreshToken{}, "token = ?", id)
+	return result.Error
+}
+
+func (ar *AuthRepository) FindAllRefreshToken(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.RefreshToken, error) {
+	refreshToken := []*domain.RefreshToken{}
+	query := db
+	if search != "" {
+		search = "%" + search + "%"
+		query = query.Where("user_id ILIKE ?", search)
 	}
-	return token, nil
+	if sort == "" {
+		sort = "id asc"
+	} else {
+		sort = strings.Replace(sort, ":", " ", 1)
+	}
+	err := query.Order(sort).Limit(limit).Offset(offset).Find(&refreshToken).Error
+	return refreshToken, err
+}
+
+func (ar *AuthRepository) FindRefreshTokenByID(db *gorm.DB, id string) (*domain.RefreshToken, error) {
+	refreshToken := new(domain.RefreshToken)
+	result := db.First(&refreshToken, id)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return refreshToken, result.Error
+}
+
+func (ar *AuthRepository) FindRefreshTokenByIDAndStatus(db *gorm.DB, id string, status bool) (*domain.RefreshToken, error) {
+	refreshToken := new(domain.RefreshToken)
+	result := db.First(&refreshToken, "id = ? AND revoked = ?", id, status)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return refreshToken, result.Error
 }
 
 func (aur *AuthRepository) RevokeRefreshTokenByID(db *gorm.DB, id uuid.UUID) error {
@@ -53,30 +87,76 @@ func (aur *AuthRepository) RevokeRefreshTokenByID(db *gorm.DB, id uuid.UUID) err
 		Update("revoked", true).Error
 }
 
-// Create a password reset token
-func (aur *AuthRepository) CreatePasswordReset(db *gorm.DB, pr *domain.PasswordReset) error {
-	return db.Create(pr).Error
+func (ar *AuthRepository) CountPasswordResets(db *gorm.DB) (int64, error) {
+	var total int64
+	result := db.Model(&domain.RefreshToken{}).Count(&total)
+	return total, result.Error
 }
 
-// Get by token
-func (aur *AuthRepository) GetByToken(db *gorm.DB, token string) (*domain.PasswordReset, error) {
-	var pr domain.PasswordReset
-	err := db.First(&pr, "token = ? AND used = false", token).Error
-	if err != nil {
-		return nil, err
+// Password Reset operations
+func (ar *AuthRepository) InsertPasswordReset(db *gorm.DB, passwordReset *domain.PasswordReset) error {
+	result := db.Create(passwordReset)
+	return result.Error
+}
+
+func (ar *AuthRepository) InsertPasswordResetBulk(db *gorm.DB, passwordResets []*domain.PasswordReset) error {
+	result := db.Create(passwordResets)
+	return result.Error
+}
+
+func (ar *AuthRepository) UpdatePasswordReset(db *gorm.DB, passwordReset *domain.PasswordReset) error {
+	result := db.Save(passwordReset)
+	return result.Error
+}
+
+func (ar *AuthRepository) UpdatePasswordResetBulk(db *gorm.DB, passwordResets []*domain.PasswordReset) error {
+	result := db.Save(passwordResets)
+	return result.Error
+}
+
+func (ar *AuthRepository) DeletePasswordReset(db *gorm.DB, id string) error {
+	result := db.Delete(&domain.PasswordReset{}, "id = ?", id)
+	return result.Error
+}
+
+func (ar *AuthRepository) FindAllPasswordResets(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.PasswordReset, error) {
+	passwordResets := []*domain.PasswordReset{}
+	query := db
+	if search != "" {
+		search = "%" + search + "%"
+		query = query.Where("user_id ILIKE ?", search)
 	}
-	return &pr, nil
+	if sort == "" {
+		sort = "id asc"
+	} else {
+		sort = strings.Replace(sort, ":", " ", 1)
+	}
+	err := query.Order(sort).Limit(limit).Offset(offset).Find(&passwordResets).Error
+	return passwordResets, err
 }
 
-// Mark token as used
-func (aur *AuthRepository) MarkAsUsed(db *gorm.DB, token string) error {
-	return db.Model(&domain.PasswordReset{}).
-		Where("token = ?", token).
-		Update("used", true).Error
+func (ar *AuthRepository) FindPasswordResetByID(db *gorm.DB, id string) (*domain.PasswordReset, error) {
+	passwordReset := new(domain.PasswordReset)
+	result := db.First(&passwordReset, id)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return passwordReset, result.Error
 }
 
-// Delete expired tokens
-func (aur *AuthRepository) DeleteExpired(db *gorm.DB) error {
-	return db.Where("expires_at < ?", time.Now()).
-		Delete(&domain.PasswordReset{}).Error
+func (ar *AuthRepository) FindPasswordResetByTokenAndStatus(db *gorm.DB, token string, status bool) (*domain.PasswordReset, error) {
+	passwordReset := new(domain.PasswordReset)
+	result := db.First(&passwordReset, "token = ? AND used = ?", token, status)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return passwordReset, result.Error
+}
+
+func (ar *AuthRepository) RevokePasswordResetByToken(db *gorm.DB, token string) error {
+	passwordReset := new(domain.PasswordReset)
+	result := db.Where("token = ?", token).
+		First(passwordReset).
+		Update("used", true)
+	return result.Error
 }

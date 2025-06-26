@@ -3,9 +3,9 @@ package controller
 import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
-	"eticket-api/internal/delivery/response"
+	"eticket-api/internal/delivery/http/response"
 	"eticket-api/internal/model"
-	"eticket-api/internal/usecase/user"
+	"eticket-api/internal/usecase"
 	"net/http"
 	"strconv"
 
@@ -15,27 +15,38 @@ import (
 type UserController struct {
 	Log         logger.Logger
 	Validate    validator.Validator
-	UserUsecase *user.UserUsecase
+	UserUsecase *usecase.UserUsecase
 }
 
 // NewUserController creates a new UserController instance
 func NewUserController(
+	router *gin.RouterGroup,
+	protected *gin.RouterGroup,
 	log logger.Logger,
 	validate validator.Validator,
-	user_usecase *user.UserUsecase,
-) *UserController {
-	return &UserController{
+	user_usecase *usecase.UserUsecase,
+
+) {
+	uc := &UserController{
 		Log:         log,
 		Validate:    validate,
 		UserUsecase: user_usecase,
 	}
 
+	router.GET("/users", uc.GetAllUsers)
+	router.GET("/user/:id", uc.GetUserByID)
+	router.POST("/user/create", uc.CreateUser)
+
+	protected.PUT("/user/update/:id", uc.UpdateUser)
+	protected.DELETE("/user/:id", uc.DeleteUser)
 }
 
 func (uc *UserController) CreateUser(ctx *gin.Context) {
+
 	request := new(model.WriteUserRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
+		uc.Log.WithError(err).Error("failed to bind JSON request body")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
@@ -48,6 +59,7 @@ func (uc *UserController) CreateUser(ctx *gin.Context) {
 	}
 
 	if err := uc.UserUsecase.CreateUser(ctx, request); err != nil {
+		uc.Log.WithError(err).Error("failed to create user")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create user", err.Error()))
 		return
 	}
@@ -56,17 +68,20 @@ func (uc *UserController) CreateUser(ctx *gin.Context) {
 }
 
 func (uc *UserController) GetAllUsers(ctx *gin.Context) {
+
 	params := response.GetParams(ctx)
-	datas, total, err := uc.UserUsecase.GetAllUsers(ctx, params.Limit, params.Offset, params.Sort, params.Search)
+	datas, total, err := uc.UserUsecase.ListUsers(ctx, params.Limit, params.Offset, params.Sort, params.Search)
 
 	if err != nil {
+		uc.Log.WithError(err).Error("failed to retrieve users")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve users", err.Error()))
 		return
 	}
 
+	uc.Log.WithField("count", total).Info("Users retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewMetaResponse(
 		datas,
-		"Fares retrieved successfully",
+		"Users retrieved successfully",
 		total,
 		params.Limit,
 		params.Page,
@@ -74,14 +89,14 @@ func (uc *UserController) GetAllUsers(ctx *gin.Context) {
 		params.Search,
 		params.Path,
 	))
-
-	// ctx.JSON(http.StatusOK, response.NewMetaResponse(datas, "User roles retrieved successfully", total, params.Limit, params.Page))
 }
 
 func (uc *UserController) GetUserByID(ctx *gin.Context) {
+
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
+		uc.Log.WithError(err).WithField("id", ctx.Param("id")).Error("invalid user ID")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid user ID", err.Error()))
 		return
 	}
@@ -89,27 +104,33 @@ func (uc *UserController) GetUserByID(ctx *gin.Context) {
 	data, err := uc.UserUsecase.GetUserByID(ctx, uint(id))
 
 	if err != nil {
+		uc.Log.WithError(err).WithField("id", id).Error("failed to retrieve user")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve user", err.Error()))
 		return
 	}
 
 	if data == nil {
+		uc.Log.WithField("id", id).Warn("user not found")
 		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("User not found", nil))
 		return
 	}
 
+	uc.Log.WithField("id", id).Info("User retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "User retrieved successfully", nil))
 }
 
 func (uc *UserController) UpdateUser(ctx *gin.Context) {
+
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil || id == 0 {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid or missing ship ID", nil))
+		uc.Log.WithError(err).WithField("id", ctx.Param("id")).Error("invalid or missing user ID")
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid or missing user ID", nil))
 		return
 	}
 
 	request := new(model.UpdateUserRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
+		uc.Log.WithError(err).Error("failed to bind JSON request body")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
@@ -123,25 +144,31 @@ func (uc *UserController) UpdateUser(ctx *gin.Context) {
 	}
 
 	if err := uc.UserUsecase.UpdateUser(ctx, request); err != nil {
+		uc.Log.WithError(err).WithField("id", id).Error("failed to update user")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update user", err.Error()))
 		return
 	}
 
+	uc.Log.WithField("id", id).Info("User updated successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "User updated successfully", nil))
 }
 
 func (uc *UserController) DeleteUser(ctx *gin.Context) {
+
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
+		uc.Log.WithError(err).WithField("id", ctx.Param("id")).Error("invalid user ID")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid user ID", err.Error()))
 		return
 	}
 
 	if err := uc.UserUsecase.DeleteUser(ctx, uint(id)); err != nil {
+		uc.Log.WithError(err).WithField("id", id).Error("failed to delete user")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete user", err.Error()))
 		return
 	}
 
+	uc.Log.WithField("id", id).Info("User deleted successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "User deleted successfully", nil))
 }

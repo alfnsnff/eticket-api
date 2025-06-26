@@ -19,10 +19,12 @@ func (r *Role) TableName() string {
 }
 
 type RoleRepository interface {
-	Create(db *gorm.DB, entity *Role) error
-	Update(db *gorm.DB, entity *Role) error
-	Delete(db *gorm.DB, entity *Role) error
 	Count(db *gorm.DB) (int64, error)
-	GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*Role, error)
-	GetByID(db *gorm.DB, id uint) (*Role, error)
+	Insert(db *gorm.DB, entity *Role) error
+	InsertBulk(db *gorm.DB, roles []*Role) error
+	Update(db *gorm.DB, entity *Role) error
+	UpdateBulk(db *gorm.DB, roles []*Role) error
+	Delete(db *gorm.DB, entity *Role) error
+	FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*Role, error)
+	FindByID(db *gorm.DB, id uint) (*Role, error)
 }

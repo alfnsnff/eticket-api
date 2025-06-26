@@ -5,16 +5,9 @@ import (
 )
 
 // HarborDTO represents a harbor.
-type BookingScheduleHarbor struct {
+type BookingHarbor struct {
 	ID         uint   `json:"id"`
 	HarborName string `json:"harbor_name"`
-}
-
-// RouteDTO represents a travel route.
-type BookingScheduleRoute struct {
-	ID              uint                  `json:"id"`
-	DepartureHarbor BookingScheduleHarbor `json:"departure_harbor"`
-	ArrivalHarbor   BookingScheduleHarbor `json:"arrival_harbor"`
 }
 
 // ShipDTO represents a ship.
@@ -25,11 +18,12 @@ type BookingScheduleShip struct {
 
 // ScheduleDTO represents a Schedule.
 type BookingSchedule struct {
-	ID                uint                 `json:"id"`
-	Ship              BookingScheduleShip  `json:"ship"`
-	Route             BookingScheduleRoute `json:"route"`
-	DepartureDatetime time.Time            `json:"departure_datetime"`
-	ArrivalDatetime   time.Time            `json:"arrival_datetime"`
+	ID                uint                `json:"id"`
+	Ship              BookingScheduleShip `json:"ship"`
+	DepartureHarbor   BookingHarbor       `json:"departure_harbor"`
+	ArrivalHarbor     BookingHarbor       `json:"arrival_harbor"`
+	DepartureDatetime time.Time           `json:"departure_datetime"`
+	ArrivalDatetime   time.Time           `json:"arrival_datetime"`
 }
 
 // ShipDTO represents a ship.
@@ -51,7 +45,7 @@ type BookingTicket struct {
 	IDNumber      *string            `json:"id_number"`
 	SeatNumber    *string            `json:"seat_number"`
 	LicensePlate  *string            `json:"license_plate"`
-	Price         float32            `json:"price"`
+	Price         float64            `json:"price"`
 }
 
 // BookingDTO represents the person who booked the ticket.

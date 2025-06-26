@@ -9,6 +9,7 @@ import (
 type Booking struct {
 	ID              uint      `gorm:"column:id;primaryKey"`
 	OrderID         *string   `gorm:"column:order_id;type:varchar(64);;uniqueIndex"`
+	ReferenceNumber *string   `gorm:"column:reference_number;"`
 	ScheduleID      uint      `gorm:"column:schedule_id;not null;index;"`
 	IDType          string    `gorm:"column:id_type;type:varchar(24);not null"`
 	IDNumber        string    `gorm:"column:id_number;type:varchar(24);not null"`
@@ -17,7 +18,6 @@ type Booking struct {
 	CustomerGender  string    `gorm:"column:customer_gender;type:varchar(24);not null"`
 	PhoneNumber     string    `gorm:"column:phone_number;type:varchar(14);not null"`
 	Email           string    `gorm:"column:email;not null"`
-	ReferenceNumber *string   `gorm:"column:reference_number;"`
 	CreatedAt       time.Time `gorm:"column:created_at;not null"`
 	UpdatedAt       time.Time `gorm:"column:updated_at;not null"`
 
@@ -30,13 +30,13 @@ func (b *Booking) TableName() string {
 }
 
 type BookingRepository interface {
-	Create(db *gorm.DB, entity *Booking) error
-	Update(db *gorm.DB, entity *Booking) error
-	Delete(db *gorm.DB, entity *Booking) error
 	Count(db *gorm.DB) (int64, error)
-	GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*Booking, error)
-	GetByID(db *gorm.DB, id uint) (*Booking, error)
-	GetByOrderID(db *gorm.DB, id string) (*Booking, error)
-	PaidConfirm(db *gorm.DB, id uint) error
-	UpdateReferenceNumber(tx *gorm.DB, bookingID uint, reference *string) error
+	Insert(db *gorm.DB, entity *Booking) error
+	InsertBulk(db *gorm.DB, bookings []*Booking) error
+	Update(db *gorm.DB, entity *Booking) error
+	UpdateBulk(db *gorm.DB, bookings []*Booking) error
+	Delete(db *gorm.DB, entity *Booking) error
+	FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*Booking, error)
+	FindByID(db *gorm.DB, id uint) (*Booking, error)
+	FindByOrderID(db *gorm.DB, id string) (*Booking, error)
 }

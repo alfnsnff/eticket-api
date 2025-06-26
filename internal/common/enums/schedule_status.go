@@ -22,3 +22,16 @@ func (ss ScheduleStatus) String() string {
 		return "UNKNOWN"
 	}
 }
+
+// Get statuses that are confirmed and always occupy seats (ignore expiration)
+func GetFinisihedScheduleStatuses() []string {
+	return []string{
+		ClaimSessionSuccess.String(),
+	}
+}
+
+func GetActiveScheduleStatuses() []string {
+	return []string{
+		ClaimSessionSuccess.String(),
+	}
+}

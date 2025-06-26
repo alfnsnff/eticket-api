@@ -12,21 +12,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type TokenUtil interface {
-	GenerateAccessToken(user *domain.User) (string, error)
-	GenerateRefreshToken(user *domain.User) (string, error)
-	ValidateToken(token string) (*Claims, error)
-}
-
 type JWT struct {
 	secretKey []byte
 }
 
 type Claims struct {
-	UserID   uint   `json:"user_id"`
-	RoleID   uint   `json:"role_id"`
-	Rolename string `json:"rolename,omitempty"` // optional for refresh
-	Username string `json:"username,omitempty"` // optional for refresh
+	User     *domain.User `json:"user,omitempty"`
+	Rolename string       `json:"rolename,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -41,10 +33,8 @@ func (tm *JWT) GenerateAccessToken(user *domain.User) (string, error) {
 	expirationTime := time.Now().Add(constant.AccessTokenExpiry)
 
 	claims := &Claims{
-		UserID:   user.ID,
-		RoleID:   user.Role.ID,
+		User:     user,
 		Rolename: user.Role.RoleName,
-		Username: user.Username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -62,7 +52,8 @@ func (tm *JWT) GenerateRefreshToken(user *domain.User) (string, error) {
 	expirationTime := time.Now().Add(constant.RefreshTokenExpiry)
 
 	claims := &Claims{
-		UserID: user.ID,
+		User:     user,
+		Rolename: user.Role.RoleName,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

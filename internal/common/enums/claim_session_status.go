@@ -23,7 +23,7 @@ func (css ClaimSessionStatus) String() string {
 	case ClaimSessionPendingTransaction:
 		return "TRANSACTION_PENDING"
 	case ClaimSessionSuccess:
-		return "SCUCCESS"
+		return "SUCCESS"
 	case ClaimSessionCancelled:
 		return "CANCELLED"
 	default:

@@ -35,24 +35,38 @@ func NewApp(cfg *config.Config) (*Server, error) {
 
 	// Automatically migrate your models (creating tables, etc.)
 	if err := db.AutoMigrate(
-		&domain.Route{},
 		&domain.Class{},
 		&domain.Schedule{},
 		&domain.Ship{},
 		&domain.Harbor{},
 		&domain.Booking{},
+		&domain.ClaimItem{},
 		&domain.ClaimSession{},
 		&domain.Ticket{},
-		&domain.Manifest{},
-		&domain.Fare{},
-		&domain.Allocation{},
 		&domain.Role{},
 		&domain.User{},
+		&domain.Quota{},
 		&domain.RefreshToken{},
 		&domain.PasswordReset{},
 	); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
+
+	app.Use(cors.New(cors.Config{
+		AllowOriginFunc: func(origin string) bool {
+			allowed := map[string]bool{
+				"http://localhost:3000":          true,
+				"https://tiket-hebat.vercel.app": true,
+				"https://www.tikethebat.live":    true,
+				"https://tripay.co.id/":          true,
+			}
+			return allowed[origin]
+		},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	bootstrap := &Bootstrap{
 		Config:   cfg,
@@ -69,22 +83,6 @@ func NewApp(cfg *config.Config) (*Server, error) {
 	if err := NewBootstrap(bootstrap); err != nil {
 		log.Fatalf("Failed to bootstrap application: %v", err)
 	}
-
-	app.Use(cors.New(cors.Config{
-		AllowOriginFunc: func(origin string) bool {
-			allowed := map[string]bool{
-				"http://localhost:3000":          true,
-				"https://tiket-hebat.vercel.app": true,
-				"https://www.tikethebat.live":    true,
-				"https://tripay.co.id/":          true,
-			}
-			return allowed[origin]
-		},
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
 
 	return &Server{
 		app: app}, nil

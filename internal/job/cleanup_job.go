@@ -6,22 +6,22 @@ import (
 	"log"
 	"time"
 
-	"eticket-api/internal/repository"
+	"eticket-api/internal/domain"
 
 	"gorm.io/gorm"
 )
 
 type CleanupJob struct {
-	DB                *gorm.DB // Assuming you have a DB field for the transaction manager
-	TicketRepository  *repository.TicketRepository
-	SessionRepository *repository.SessionRepository
+	DB                     *gorm.DB // Assuming you have a DB field for the transaction manager
+	TicketRepository       domain.TicketRepository
+	ClaimSessionRepository domain.ClaimSessionRepository
 }
 
-func NewCleanupJob(db *gorm.DB, ticket_repository *repository.TicketRepository, session_repository *repository.SessionRepository) *CleanupJob {
+func NewCleanupJob(db *gorm.DB, ticket_repository domain.TicketRepository, claim_session_repository domain.ClaimSessionRepository) *CleanupJob {
 	return &CleanupJob{
-		DB:                db,
-		TicketRepository:  ticket_repository,
-		SessionRepository: session_repository,
+		DB:                     db,
+		TicketRepository:       ticket_repository,
+		ClaimSessionRepository: claim_session_repository,
 	}
 }
 
@@ -38,7 +38,7 @@ func (j *CleanupJob) Run(ctx context.Context) error {
 
 	log.Println("Running expired session cleanup job...")
 
-	expiredSessions, err := j.SessionRepository.FindExpired(tx, time.Now(), 100)
+	expiredSessions, err := j.ClaimSessionRepository.FindExpired(tx, time.Now(), 100)
 	if err != nil {
 		log.Printf("Error finding expired sessions: %v", err)
 		return fmt.Errorf("failed to find expired sessions: %w", err)
@@ -52,7 +52,7 @@ func (j *CleanupJob) Run(ctx context.Context) error {
 	log.Printf("Found %d expired sessions to process.", len(expiredSessions))
 
 	for _, session := range expiredSessions {
-		if err := j.SessionRepository.Delete(tx, session); err != nil {
+		if err := j.ClaimSessionRepository.Delete(tx, session); err != nil {
 			return fmt.Errorf("failed to delete expired session %d within transaction: %w", session.ID, err)
 		}
 		log.Printf("Deleted expired session %d.", session.ID)

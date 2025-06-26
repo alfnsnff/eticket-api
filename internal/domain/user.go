@@ -24,13 +24,14 @@ func (u *User) TableName() string {
 }
 
 type UserRepository interface {
-	Create(db *gorm.DB, entity *User) error
-	Update(db *gorm.DB, entity *User) error
-	Delete(db *gorm.DB, entity *User) error
 	Count(db *gorm.DB) (int64, error)
-	GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*User, error)
-	GetByID(db *gorm.DB, id uint) (*User, error)
-	GetByUsername(db *gorm.DB, username string) (*User, error)
-	GetByEmail(db *gorm.DB, email string) (*User, error)
-	UpdatePassword(db *gorm.DB, userID uint, password string) error
+	Insert(db *gorm.DB, entity *User) error
+	InsertBulk(db *gorm.DB, users []*User) error
+	Update(db *gorm.DB, entity *User) error
+	UpdateBulk(db *gorm.DB, users []*User) error
+	Delete(db *gorm.DB, entity *User) error
+	FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*User, error)
+	FindByID(db *gorm.DB, id uint) (*User, error)
+	FindByEmail(db *gorm.DB, email string) (*User, error)
+	FindByUsername(db *gorm.DB, username string) (*User, error)
 }

@@ -3,6 +3,8 @@ package repository
 import (
 	"errors"
 	"eticket-api/internal/domain"
+	"eticket-api/pkg/gotann"
+	"fmt"
 	"strings"
 	"time"
 
@@ -12,86 +14,117 @@ import (
 
 type ScheduleRepository struct{}
 
+// FindAllScheduled implements domain.ScheduleRepository.
+func (sr *ScheduleRepository) FindAllScheduled(db *gorm.DB) ([]*domain.Schedule, error) {
+	panic("unimplemented")
+}
+
 func NewScheduleRepository() *ScheduleRepository {
 	return &ScheduleRepository{}
 }
 
-func (ar *ScheduleRepository) Create(db *gorm.DB, schedule *domain.Schedule) error {
+func (sr *ScheduleRepository) Count(db *gorm.DB) (int64, error) {
+	var total int64
+	result := db.Model(&domain.Schedule{}).Count(&total)
+	return total, result.Error
+}
+
+func (sr *ScheduleRepository) Insert(db *gorm.DB, schedule *domain.Schedule) error {
 	result := db.Create(schedule)
 	return result.Error
 }
 
-func (ar *ScheduleRepository) Update(db *gorm.DB, schedule *domain.Schedule) error {
+func (sr *ScheduleRepository) Inserts(conn *gotann.Connection, schedule *domain.Schedule) error {
+	db, err := gotann.GetGormDB(conn)
+	if err != nil {
+		return fmt.Errorf("failed to get GORM DB: %w", err)
+	}
+	result := db.Create(schedule)
+	return result.Error
+}
+
+// Add bulk operations for consistency
+func (sr *ScheduleRepository) InsertBulk(db *gorm.DB, schedules []*domain.Schedule) error {
+	result := db.Create(&schedules)
+	return result.Error
+}
+
+func (sr *ScheduleRepository) Update(db *gorm.DB, schedule *domain.Schedule) error {
 	result := db.Save(schedule)
 	return result.Error
 }
 
-func (ar *ScheduleRepository) Delete(db *gorm.DB, schedule *domain.Schedule) error {
+func (sr *ScheduleRepository) UpdateBulk(db *gorm.DB, schedules []*domain.Schedule) error {
+	result := db.Save(&schedules)
+	return result.Error
+}
+
+func (sr *ScheduleRepository) Delete(db *gorm.DB, schedule *domain.Schedule) error {
 	result := db.Select(clause.Associations).Delete(schedule)
 	return result.Error
 }
 
-func (scr *ScheduleRepository) Count(db *gorm.DB) (int64, error) {
+func (sr *ScheduleRepository) FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.Schedule, error) {
 	schedules := []*domain.Schedule{}
-	var total int64
-	result := db.Find(&schedules).Count(&total)
-	if result.Error != nil {
-		return 0, result.Error
-	}
-	return total, nil
-}
-
-func (scr *ScheduleRepository) GetAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.Schedule, error) {
-	schedules := []*domain.Schedule{}
-
-	query := db.Preload("Route").
-		Preload("Route.DepartureHarbor").
-		Preload("Route.ArrivalHarbor").
-		Preload("Ship")
-
+	query := db.Preload("DepartureHarbor").
+		Preload("ArrivalHarbor").
+		Preload("Ship").
+		Preload("Quotas").
+		Preload("Quotas.Class")
 	if search != "" {
 		search = "%" + search + "%"
 		query = query.Where("schedule_id ILIKE ?", search)
 	}
-
-	// 🔃 Sort (with default)
 	if sort == "" {
 		sort = "id asc"
 	} else {
 		sort = strings.Replace(sort, ":", " ", 1)
 	}
-
 	err := query.Order(sort).Limit(limit).Offset(offset).Find(&schedules).Error
 	return schedules, err
 }
 
-func (scr *ScheduleRepository) GetByID(db *gorm.DB, id uint) (*domain.Schedule, error) {
+func (sr *ScheduleRepository) FindByID(db *gorm.DB, id uint) (*domain.Schedule, error) {
 	schedule := new(domain.Schedule)
-	result := db.Preload("Route").Preload("Route.DepartureHarbor").Preload("Route.ArrivalHarbor").Preload("Ship").First(&schedule, id)
+	result := db.
+		Preload("DepartureHarbor").
+		Preload("ArrivalHarbor").
+		Preload("Ship").
+		Preload("Quotas").
+		Preload("Quotas.Class").
+		First(&schedule, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	return schedule, result.Error
 }
 
-func (scr *ScheduleRepository) GetAllScheduled(db *gorm.DB) ([]*domain.Schedule, error) {
+func (sr *ScheduleRepository) FindByStatus(db *gorm.DB, status string) ([]*domain.Schedule, error) {
 	schedules := []*domain.Schedule{}
-
-	// Corrected line: Use "?" as a placeholder and pass the string value as a parameter
-	result := db.Preload("Route").Preload("Route.DepartureHarbor").Preload("Route.ArrivalHarbor").Preload("Ship").Where("status = ?", "scheduled").Find(&schedules)
-
+	result := db.
+		Preload("DepartureHarbor").
+		Preload("ArrivalHarbor").
+		Preload("Ship").
+		Preload("Quotas").
+		Preload("Quotas.Class").
+		Where("status = ?", status).
+		Find(&schedules)
 	if result.Error != nil {
 		return nil, result.Error
 	}
-
 	return schedules, nil
 }
 
-func (scr *ScheduleRepository) GetActiveSchedule(db *gorm.DB) ([]*domain.Schedule, error) {
+func (sr *ScheduleRepository) FindActiveSchedule(db *gorm.DB) ([]*domain.Schedule, error) {
 	schedules := []*domain.Schedule{}
-
-	// Corrected line: Use "?" as a placeholder and pass the string value as a parameter
-	result := db.Preload("Route").Preload("Route.DepartureHarbor").Preload("Route.ArrivalHarbor").Preload("Ship").Where("departure_datetime > ?", time.Now()).Find(&schedules)
+	result := db.
+		Preload("DepartureHarbor").
+		Preload("ArrivalHarbor").
+		Preload("Ship").
+		Preload("Quotas").
+		Preload("Quotas.Class").
+		Where("departure_datetime > ?", time.Now()).
+		Find(&schedules)
 
 	if result.Error != nil {
 		return nil, result.Error

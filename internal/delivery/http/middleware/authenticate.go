@@ -2,24 +2,14 @@ package middleware
 
 import (
 	"eticket-api/internal/common/token"
-	"eticket-api/internal/delivery/response"
+	"eticket-api/internal/delivery/http/response"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-type AuthenticateMiddleware struct {
-	TokenUtil token.TokenUtil
-}
-
-func NewAuthenticateMiddleware(token_util token.TokenUtil) *AuthenticateMiddleware {
-	return &AuthenticateMiddleware{
-		TokenUtil: token_util,
-	}
-}
-
 // Middleware method to authenticate access token via cookie
-func (am *AuthenticateMiddleware) Set() gin.HandlerFunc {
+func Authenticate(token_util token.TokenUtil) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get access token from cookie
 		tokenStr, err := c.Cookie("access_token")
@@ -29,17 +19,13 @@ func (am *AuthenticateMiddleware) Set() gin.HandlerFunc {
 		}
 
 		// Validate token
-		claims, err := am.TokenUtil.ValidateToken(tokenStr)
+		claims, err := token_util.ValidateToken(tokenStr)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, response.NewErrorResponse("Invalid or expired token", err.Error()))
 			return
 		}
 
-		// Inject user info into Gin context
-		c.Set("userID", claims.UserID)
-		c.Set("username", claims.Username)
-		c.Set("roleID", claims.RoleID)
-		c.Set("rolename", claims.Rolename)
+		c.Set("rolename", claims.User.Role.RoleName)
 		c.Set("token", tokenStr)
 
 		c.Next()

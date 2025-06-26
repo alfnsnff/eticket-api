@@ -7,21 +7,13 @@ import (
 	"strings"
 
 	"eticket-api/internal/common/enforcer"
-	"eticket-api/internal/delivery/response"
+	"eticket-api/internal/delivery/http/response"
 
 	"github.com/gin-gonic/gin"
 )
 
-type AuthorizeMiddleware struct {
-	Enforcer enforcer.Enforcer
-}
-
-func NewAuthorizeMiddleware(enforcer enforcer.Enforcer) *AuthorizeMiddleware {
-	return &AuthorizeMiddleware{Enforcer: enforcer}
-}
-
 // Gin middleware to enforce RBAC
-func (i *AuthorizeMiddleware) Set() gin.HandlerFunc {
+func Authorize(enforcer enforcer.Enforcer) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Extract user role from context (set during auth middleware)
 		role, exists := c.Get("rolename")
@@ -33,7 +25,7 @@ func (i *AuthorizeMiddleware) Set() gin.HandlerFunc {
 		obj := strings.TrimPrefix(c.FullPath(), "/api")
 		act := strings.ToUpper(c.Request.Method)
 
-		allowed, err := i.Enforcer.Enforce(fmt.Sprint(role), obj, act)
+		allowed, err := enforcer.Enforce(fmt.Sprint(role), obj, act)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, response.NewErrorResponse("Authorization error", nil))
 			return
