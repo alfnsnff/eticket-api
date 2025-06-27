@@ -141,6 +141,11 @@ type TESTClaimSessionTicketDataEntry struct {
 	LicensePlate    *string `json:"license_plate"`
 }
 
+type TESTReadClaimSessionDataEntryResponse struct {
+	OrderID   string    `json:"order_id"`   // UUID for the session
+	ExpiresAt time.Time `json:"expires_at"` // Expiration time for the claim
+}
+
 type TESTWriteClaimSessionDataEntryRequest struct {
 	CustomerName   string                            `json:"customer_name"`
 	CustomerAge    int                               `json:"customer_age"`

@@ -155,7 +155,7 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 	ctx context.Context,
 	request *model.TESTWriteClaimSessionDataEntryRequest,
 	sessionID string,
-) (string, error) {
+) (*model.TESTReadClaimSessionDataEntryResponse, error) {
 	tx := cd.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -168,19 +168,19 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 	session, err := cd.ClaimSessionRepository.FindBySessionID(tx, sessionID)
 	if err != nil {
 		tx.Rollback()
-		return "", fmt.Errorf("get claim session failed: %w", err)
+		return nil, fmt.Errorf("get claim session failed: %w", err)
 	}
 	if session == nil {
 		tx.Rollback()
-		return "", errs.ErrNotFound
+		return nil, errs.ErrNotFound
 	}
 	if session.ExpiresAt.Before(time.Now()) {
 		tx.Rollback()
-		return "", errors.New("claim session expired")
+		return nil, errors.New("claim session expired")
 	}
 	if session.Status == "LOCKED" {
 		tx.Rollback()
-		return "", fmt.Errorf("claim session has invalid status: %s", session.Status)
+		return nil, fmt.Errorf("claim session has invalid status: %s", session.Status)
 	}
 
 	// Generate order ID
@@ -205,14 +205,14 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 	}
 	if err := cd.BookingRepository.Insert(tx, booking); err != nil {
 		tx.Rollback()
-		return "", fmt.Errorf("create booking failed: %w", err)
+		return nil, fmt.Errorf("create booking failed: %w", err)
 	}
 
 	// Fetch quota and map by ClassID
 	quotas, err := cd.QuotaRepository.FindByScheduleID(tx, session.ScheduleID)
 	if err != nil {
 		tx.Rollback()
-		return "", fmt.Errorf("fetch quotas failed: %w", err)
+		return nil, fmt.Errorf("fetch quotas failed: %w", err)
 	}
 	quotaByClass := make(map[uint]*domain.Quota, len(quotas))
 	for _, q := range quotas {
@@ -232,13 +232,13 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 		quota, ok := quotaByClass[item.ClassID]
 		if !ok {
 			tx.Rollback()
-			return "", fmt.Errorf("quota not found for class %d", item.ClassID)
+			return nil, fmt.Errorf("quota not found for class %d", item.ClassID)
 		}
 
 		classData := dataQueue[item.ClassID]
 		if len(classData) < item.Quantity {
 			tx.Rollback()
-			return "", fmt.Errorf("not enough ticket data for class %d", item.ClassID)
+			return nil, fmt.Errorf("not enough ticket data for class %d", item.ClassID)
 		}
 
 		for i := 0; i < item.Quantity; i++ {
@@ -269,7 +269,7 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 	// Insert tickets
 	if err := cd.TicketRepository.InsertBulk(tx, tickets); err != nil {
 		tx.Rollback()
-		return "", fmt.Errorf("failed to create tickets: %w", err)
+		return nil, fmt.Errorf("failed to create tickets: %w", err)
 	}
 
 	orderItems := make([]model.OrderItem, len(tickets))
@@ -292,12 +292,12 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 
 	payment, err := cd.TripayClient.CreatePayment(payload)
 	if err != nil {
-		return "", fmt.Errorf("create Tripay payment failed: %w", err)
+		return nil, fmt.Errorf("create Tripay payment failed: %w", err)
 	}
 
 	booking.ReferenceNumber = &payment.Reference
 	if err := cd.BookingRepository.Update(tx, booking); err != nil {
-		return "", fmt.Errorf("failed to update booking with reference number: %w", err)
+		return nil, fmt.Errorf("failed to update booking with reference number: %w", err)
 	}
 
 	// Decrement quota usage
@@ -305,19 +305,19 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 		quota, ok := quotaByClass[item.ClassID]
 		if !ok {
 			tx.Rollback()
-			return "", fmt.Errorf("quota not found for class %d", item.ClassID)
+			return nil, fmt.Errorf("quota not found for class %d", item.ClassID)
 		}
 
 		if quota.Quota < item.Quantity {
 			tx.Rollback()
-			return "", fmt.Errorf("not enough quota for class %d", item.ClassID)
+			return nil, fmt.Errorf("not enough quota for class %d", item.ClassID)
 		}
 
 		quota.Quota -= item.Quantity
 
 		if err := cd.QuotaRepository.Update(tx, quota); err != nil {
 			tx.Rollback()
-			return "", fmt.Errorf("failed to update quota usage: %w", err)
+			return nil, fmt.Errorf("failed to update quota usage: %w", err)
 		}
 	}
 
@@ -325,15 +325,18 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 	session.Status = "LOCKED"
 	if err := cd.ClaimSessionRepository.Update(tx, session); err != nil {
 		tx.Rollback()
-		return "", fmt.Errorf("failed to update session: %w", err)
+		return nil, fmt.Errorf("failed to update session: %w", err)
 	}
 
 	// Commit
 	if err := tx.Commit().Error; err != nil {
-		return "", fmt.Errorf("commit transaction failed: %w", err)
+		return nil, fmt.Errorf("commit transaction failed: %w", err)
 	}
 
-	return *booking.OrderID, nil
+	return &model.TESTReadClaimSessionDataEntryResponse{
+		OrderID:   *booking.OrderID,
+		ExpiresAt: booking.ExpiresAt,
+	}, nil
 }
 
 func (cs *ClaimSessionUsecase) CreateClaimSession(ctx context.Context, request *model.WriteClaimSessionLockTicketsRequest) (*model.ReadClaimSessionLockTicketsResponse, error) {

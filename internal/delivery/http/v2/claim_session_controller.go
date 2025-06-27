@@ -141,9 +141,9 @@ func (csc *ClaimSessionController) TESTUpdateClaimSession(ctx *gin.Context) {
 
 	// Clear cookies
 	ctx.SetSameSite(http.SameSiteNoneMode)
-	ctx.SetCookie("session_id", datas, -1, "/", "", true, true)
-	ctx.SetCookie("order_id", datas, 60*60, "/", "", true, true)
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Claim session updated successfully", nil))
+	ctx.SetCookie("session_id", "", -1, "/", "", true, true)
+	ctx.SetCookie("order_id", datas.OrderID, 60*60, "/", "", true, true)
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Claim session updated successfully", nil))
 }
 
 func (csc *ClaimSessionController) GetAllClaimSessions(ctx *gin.Context) {
