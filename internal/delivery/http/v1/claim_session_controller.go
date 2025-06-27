@@ -98,9 +98,9 @@ func (csc *ClaimSessionController) TESTCreateClaimSession(ctx *gin.Context) {
 	}
 
 	ctx.SetSameSite(http.SameSiteNoneMode)
-	ctx.SetCookie("session_id", datas, 60*60, "/", "", true, true)
+	ctx.SetCookie("session_id", datas.SessionID, 60*60, "/", "", true, true)
 
-	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Claim session created successfully", nil))
+	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(datas, "Claim session created successfully", nil))
 }
 
 func (csc *ClaimSessionController) TESTUpdateClaimSession(ctx *gin.Context) {

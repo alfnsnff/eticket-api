@@ -19,6 +19,7 @@ type PaymentUsecase struct {
 	TripayClient      domain.TripayClient
 	BookingRepository domain.BookingRepository
 	TicketRepository  domain.TicketRepository
+	QuotaRepository   domain.QuotaRepository
 	Mailer            mailer.Mailer
 }
 
@@ -28,6 +29,7 @@ func NewPaymentUsecase(
 	claim_session_repository domain.ClaimSessionRepository,
 	booking_repository domain.BookingRepository,
 	ticket_repository domain.TicketRepository,
+	quota_repository domain.QuotaRepository,
 	mailer mailer.Mailer,
 ) *PaymentUsecase {
 	return &PaymentUsecase{
@@ -35,6 +37,7 @@ func NewPaymentUsecase(
 		TripayClient:      tripay_client,
 		BookingRepository: booking_repository,
 		TicketRepository:  ticket_repository,
+		QuotaRepository:   quota_repository,
 		Mailer:            mailer,
 	}
 }
@@ -245,10 +248,39 @@ func (c *PaymentUsecase) HandleSuccessfulPayment(tx *gorm.DB, booking *domain.Bo
 	}
 
 	return nil
+
 }
 
 // Handle unsuccessful payment
 func (c *PaymentUsecase) HandleUnsuccessfulPayment(tx *gorm.DB, booking *domain.Booking, tickets []*domain.Ticket, status string) error {
+	// Restore quota for each ticket's class
+	restored := make(map[uint]bool)
+	for _, ticket := range tickets {
+		if ticket == nil {
+			continue
+		}
+		// Avoid double-restoring quota for the same class
+		if restored[ticket.ClassID] {
+			continue
+		}
+		quota, err := c.QuotaRepository.FindByScheduleIDAndClassID(tx, booking.ScheduleID, ticket.ClassID)
+		if err == nil && quota != nil {
+			// Count tickets for this class
+			count := 0
+			for _, t := range tickets {
+				if t != nil && t.ClassID == ticket.ClassID {
+					count++
+				}
+			}
+			quota.Quota += count
+			if err := c.QuotaRepository.Update(tx, quota); err != nil {
+				fmt.Printf("Warning: failed to restore quota for class %d: %v\n", ticket.ClassID, err)
+			}
+			restored[ticket.ClassID] = true
+		} else if err != nil {
+			fmt.Printf("Warning: failed to find quota for class %d: %v\n", ticket.ClassID, err)
+		}
+	}
 
 	subject := "Payment Failed - Booking Not Confirmed"
 	var htmlBody string
@@ -258,12 +290,12 @@ func (c *PaymentUsecase) HandleUnsuccessfulPayment(tx *gorm.DB, booking *domain.
 		htmlBody = templates.BookingFailedEmail(booking.CustomerName, *booking.OrderID, "Payment processing failed")
 	case "EXPIRED":
 		htmlBody = templates.BookingFailedEmail(booking.CustomerName, *booking.OrderID, "Payment time expired")
-	case "CANCELLED":
-		htmlBody = templates.BookingFailedEmail(booking.CustomerName, *booking.OrderID, "Payment was cancelled")
+	case "CANCELLED", "REFUND":
+		htmlBody = templates.BookingFailedEmail(booking.CustomerName, *booking.OrderID, "Payment was cancelled or refunded")
 	}
 
 	if err := c.Mailer.Send(booking.Email, subject, htmlBody); err != nil {
-		fmt.Printf("Warning: failed to send failure email: %v", err)
+		fmt.Printf("Warning: failed to send failure email: %v\n", err)
 	}
 
 	return nil

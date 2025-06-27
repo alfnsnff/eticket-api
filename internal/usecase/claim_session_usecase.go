@@ -52,7 +52,7 @@ func NewClaimSessionUsecase(
 func (cs *ClaimSessionUsecase) TESTCreateClaimSession(
 	ctx context.Context,
 	request *model.TESTWriteClaimSessionRequest,
-) (string, error) {
+) (*model.TESTReadClaimSessionLockResponse, error) {
 	tx := cs.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -64,17 +64,17 @@ func (cs *ClaimSessionUsecase) TESTCreateClaimSession(
 	// Step 1: Validate schedule existence
 	schedule, err := cs.ScheduleRepository.FindByID(tx, request.ScheduleID)
 	if err != nil {
-		return "", fmt.Errorf("retrieve schedule: %w", err)
+		return nil, fmt.Errorf("retrieve schedule: %w", err)
 	}
 	if schedule == nil {
-		return "", errs.ErrNotFound
+		return nil, errs.ErrNotFound
 	}
 
 	// Step 2: Fetch and map quotas
 	quotas, err := cs.QuotaRepository.FindByScheduleID(tx, request.ScheduleID)
 	if err != nil {
 
-		return "", fmt.Errorf("fetch quotas: %w", err)
+		return nil, fmt.Errorf("fetch quotas: %w", err)
 	}
 	quotaByClass := make(map[uint]*domain.Quota, len(quotas))
 	for i := range quotas {
@@ -85,7 +85,7 @@ func (cs *ClaimSessionUsecase) TESTCreateClaimSession(
 	sessions, err := cs.ClaimSessionRepository.FindByScheduleID(tx, request.ScheduleID)
 	if err != nil {
 
-		return "", fmt.Errorf("load active sessions: %w", err)
+		return nil, fmt.Errorf("load active sessions: %w", err)
 	}
 	usedByClass := make(map[uint]int64)
 	for i := range sessions {
@@ -101,13 +101,13 @@ func (cs *ClaimSessionUsecase) TESTCreateClaimSession(
 		quota, exists := quotaByClass[classID]
 		if !exists {
 			tx.Rollback()
-			return "", fmt.Errorf("quota not found for class %d", classID)
+			return nil, fmt.Errorf("quota not found for class %d", classID)
 		}
 		used := usedByClass[classID]
 		requested := int64(request.Items[i].Quantity)
 		if used+requested > int64(quota.Quota) {
 			tx.Rollback()
-			return "", fmt.Errorf("quota exceeded for class %d", classID)
+			return nil, fmt.Errorf("quota exceeded for class %d", classID)
 		}
 	}
 
@@ -129,16 +129,19 @@ func (cs *ClaimSessionUsecase) TESTCreateClaimSession(
 	}
 	if err := cs.ClaimSessionRepository.Insert(tx, claimSession); err != nil {
 		tx.Rollback()
-		return "", fmt.Errorf("create session: %w", err)
+		return nil, fmt.Errorf("create session: %w", err)
 	}
 
 	// Step 7: Commit
 	if err := tx.Commit().Error; err != nil {
-		return "", fmt.Errorf("commit transaction: %w", err)
+		return nil, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	// Step 8: Response
-	return claimSession.SessionID, nil
+	return &model.TESTReadClaimSessionLockResponse{
+		SessionID: claimSession.SessionID,
+		ExpiresAt: claimSession.ExpiresAt,
+	}, nil
 }
 
 func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(

@@ -132,6 +132,7 @@ func NewBootstrap(bootstrap *Bootstrap) error {
 		bootstrap.DB,
 		TicketRepository,
 		ScheduleRepository,
+		QuotaRepository,
 		// ManifestRepository,
 		// FareRepository,
 	)
@@ -177,6 +178,7 @@ func NewBootstrap(bootstrap *Bootstrap) error {
 		ClaimSessionRepository,
 		BookingRepository,
 		TicketRepository,
+		QuotaRepository,
 		bootstrap.Mailer,
 	)
 

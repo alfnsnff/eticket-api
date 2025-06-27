@@ -103,6 +103,11 @@ type ReadClaimSessionLockTicketsResponse struct {
 	ExpiresAt        time.Time `json:"expires_at"`       // Expiration time for the claim
 }
 
+type TESTReadClaimSessionLockResponse struct {
+	SessionID string    `json:"session_id"` // UUID for the session
+	ExpiresAt time.Time `json:"expires_at"` // Expiration time for the claim
+}
+
 // Extended/test version with full session details
 type TESTReadClaimSessionResponse struct {
 	ID          uint                               `json:"id"`

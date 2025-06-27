@@ -15,20 +15,22 @@ type TicketUsecase struct {
 	DB                 *gorm.DB
 	TicketRepository   domain.TicketRepository
 	ScheduleRepository domain.ScheduleRepository
+	QuotaRepository    domain.QuotaRepository
 }
 
 func NewTicketUsecase(
 	db *gorm.DB,
 	ticket_repository domain.TicketRepository,
 	schedule_repository domain.ScheduleRepository,
+	quota_reposiotry domain.QuotaRepository,
 ) *TicketUsecase {
 	return &TicketUsecase{
 		DB:                 db,
 		ScheduleRepository: schedule_repository,
 		TicketRepository:   ticket_repository,
+		QuotaRepository:    quota_reposiotry,
 	}
 }
-
 func (t *TicketUsecase) CreateTicket(ctx context.Context, request *model.WriteTicketRequest) error {
 	tx := t.DB.WithContext(ctx).Begin()
 	defer func() {
@@ -67,6 +69,23 @@ func (t *TicketUsecase) CreateTicket(ctx context.Context, request *model.WriteTi
 
 	if err := t.TicketRepository.Insert(tx, ticket); err != nil {
 		return fmt.Errorf("failed to create ticket: %w", err)
+	}
+
+	quota, err := t.QuotaRepository.FindByScheduleIDAndClassID(tx, request.ScheduleID, request.ClassID)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to retrieve quota: %w", err)
+	}
+	if quota == nil {
+		tx.Rollback()
+		return errs.ErrNotFound
+	}
+	quota.Quota -= 1
+
+	// Update quota after ticket creation
+	if err := t.QuotaRepository.Update(tx, quota); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to update quota: %w", err)
 	}
 
 	if err := tx.Commit().Error; err != nil {
