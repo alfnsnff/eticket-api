@@ -149,6 +149,11 @@ func NewBootstrap(bootstrap *Bootstrap) error {
 		bootstrap.DB,
 		ClaimItemRepository,
 	)
+	// === Payment Domain ===
+	TripayClient := client.NewTripayClient(
+		bootstrap.Client,
+		&bootstrap.Config.Tripay,
+	)
 
 	// === ClaimSession Domain ===
 	ClaimSessionRepository := repository.NewClaimSessionRepository()
@@ -163,13 +168,9 @@ func NewBootstrap(bootstrap *Bootstrap) error {
 		// FareRepository,
 		BookingRepository,
 		QuotaRepository,
+		TripayClient,
 	)
 
-	// === Payment Domain ===
-	TripayClient := client.NewTripayClient(
-		bootstrap.Client,
-		&bootstrap.Config.Tripay,
-	)
 	PaymentUsecase := usecase.NewPaymentUsecase(
 		bootstrap.DB,
 		TripayClient,

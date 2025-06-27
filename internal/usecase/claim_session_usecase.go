@@ -24,6 +24,7 @@ type ClaimSessionUsecase struct {
 	ScheduleRepository     domain.ScheduleRepository
 	BookingRepository      domain.BookingRepository
 	QuotaRepository        domain.QuotaRepository
+	TripayClient           domain.TripayClient
 }
 
 func NewClaimSessionUsecase(
@@ -34,6 +35,7 @@ func NewClaimSessionUsecase(
 	schedule_repository domain.ScheduleRepository,
 	booking_repository domain.BookingRepository,
 	quota_repository domain.QuotaRepository,
+	tripay_client domain.TripayClient,
 ) *ClaimSessionUsecase {
 	return &ClaimSessionUsecase{
 		DB:                     db,
@@ -43,6 +45,7 @@ func NewClaimSessionUsecase(
 		ScheduleRepository:     schedule_repository,
 		BookingRepository:      booking_repository,
 		QuotaRepository:        quota_repository,
+		TripayClient:           tripay_client,
 	}
 }
 
@@ -214,6 +217,7 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 
 	// Build ticket list
 	var tickets []*domain.Ticket
+	var amounts float64
 	for _, item := range session.ClaimItems {
 		quota, ok := quotaByClass[item.ClassID]
 		if !ok {
@@ -245,6 +249,7 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 				ScheduleID:      session.ScheduleID,
 				ClaimSessionID:  &session.ID,
 			})
+			amounts += quota.Price
 		}
 
 		// Trim used data
@@ -255,6 +260,34 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 	if err := cd.TicketRepository.InsertBulk(tx, tickets); err != nil {
 		tx.Rollback()
 		return "", fmt.Errorf("failed to create tickets: %w", err)
+	}
+
+	orderItems := make([]model.OrderItem, len(tickets))
+	for i, ticket := range tickets {
+		orderItems[i] = mapper.TicketToItem(ticket)
+	}
+
+	payload := &model.WriteTransactionRequest{
+		Method:        request.PaymentMethod,
+		Amount:        int(amounts), // Convert to integer cents
+		CustomerName:  booking.CustomerName,
+		CustomerEmail: booking.Email,
+		CustomerPhone: booking.PhoneNumber,
+		MerchantRef:   *booking.OrderID,
+		OrderItems:    orderItems,
+		CallbackUrl:   "https://example.com/callback",
+		ReturnUrl:     "https://example.com/callback",
+		ExpiredTime:   int(time.Now().Add(30 * time.Minute).Unix()),
+	}
+
+	payment, err := cd.TripayClient.CreatePayment(payload)
+	if err != nil {
+		return "", fmt.Errorf("create Tripay payment failed: %w", err)
+	}
+
+	booking.ReferenceNumber = &payment.Reference
+	if err := cd.BookingRepository.Update(tx, booking); err != nil {
+		return "", fmt.Errorf("failed to update booking with reference number: %w", err)
 	}
 
 	// Decrement quota usage
