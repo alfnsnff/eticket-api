@@ -113,9 +113,16 @@ func (cs *ClaimSessionUsecase) TESTCreateClaimSession(
 
 	claimItems := make([]domain.ClaimItem, len(request.Items))
 	for i, item := range request.Items {
+		quota, exists := quotaByClass[item.ClassID]
+		if !exists {
+			tx.Rollback()
+			return nil, fmt.Errorf("quota not found for class %d", item.ClassID)
+		}
+		subtotal := float64(item.Quantity) * quota.Price
 		claimItems[i] = domain.ClaimItem{
 			ClassID:  item.ClassID,
 			Quantity: item.Quantity,
+			Subtotal: subtotal, // <-- set subtotal by quota price
 		}
 	}
 

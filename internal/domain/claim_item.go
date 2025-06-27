@@ -11,6 +11,7 @@ type ClaimItem struct {
 	ClaimSessionID uint      `gorm:"column:claim_session_id;not null;index"` // Foreign key to ClaimSession
 	ClassID        uint      `gorm:"column:class_id;not null;index"`         // Foreign key to Class
 	Quantity       int       `gorm:"column:quantity;not null"`               // Number of tickets requested for this class
+	Subtotal       float64   `gorm:"column:subtotal;not null"`               // Total price for this class (Quantity * Price)
 	CreatedAt      time.Time `gorm:"column:created_at;not null"`
 	UpdatedAt      time.Time `gorm:"column:updated_at;not null"`
 

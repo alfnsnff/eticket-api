@@ -35,6 +35,7 @@ type ClaimSessionItemClass struct {
 type ClaimSessionItem struct {
 	ClassID  uint                  `json:"class_id"`
 	Class    ClaimSessionItemClass `json:"class"`
+	Subtotal float64               `json:"subtotal"` // Total price for this class (Quantity * Price)
 	Quantity int                   `json:"quantity"`
 }
 

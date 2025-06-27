@@ -17,6 +17,7 @@ func TESTClaimSessionToResponse(session *domain.ClaimSession) *model.TESTReadCla
 				ClassName: item.Class.ClassName,
 				Type:      item.Class.Type,
 			},
+			Subtotal: item.Subtotal, // Assuming Subtotal is set in ClaimItem
 			Quantity: item.Quantity,
 		}
 	}
