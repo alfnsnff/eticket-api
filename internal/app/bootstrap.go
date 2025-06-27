@@ -210,7 +210,6 @@ func NewBootstrap(bootstrap *Bootstrap) error {
 	// === Initialize Cleanup Job ===
 	cleanupJob := job.NewCleanupJob(
 		bootstrap.DB,
-		TicketRepository,
 		ClaimSessionRepository,
 	)
 	cleanupRunner := runner.NewCleanupRunner(cleanupJob)

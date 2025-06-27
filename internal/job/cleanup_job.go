@@ -17,10 +17,9 @@ type CleanupJob struct {
 	ClaimSessionRepository domain.ClaimSessionRepository
 }
 
-func NewCleanupJob(db *gorm.DB, ticket_repository domain.TicketRepository, claim_session_repository domain.ClaimSessionRepository) *CleanupJob {
+func NewCleanupJob(db *gorm.DB, claim_session_repository domain.ClaimSessionRepository) *CleanupJob {
 	return &CleanupJob{
 		DB:                     db,
-		TicketRepository:       ticket_repository,
 		ClaimSessionRepository: claim_session_repository,
 	}
 }

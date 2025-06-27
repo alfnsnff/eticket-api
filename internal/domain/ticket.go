@@ -11,7 +11,7 @@ type Ticket struct {
 	ScheduleID      uint      `gorm:"column:schedule_id;not null;index;"`
 	ClassID         uint      `gorm:"column:class_id;not null;index;"`
 	BookingID       *uint     `gorm:"column:booking_id;index"`
-	ClaimSessionID  *uint     `gorm:"column:claim_session_id;index"`
+	ClaimSessionID  *uint     `gorm:"column:claim_session_id;index"` // TO FIXED
 	IDType          *string   `gorm:"column:id_type;type:varchar(24)"`
 	IDNumber        *string   `gorm:"column:id_number;type:varchar(24)"`
 	PassengerAge    *int      `gorm:"column:passenger_age;"`

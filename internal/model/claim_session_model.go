@@ -111,17 +111,15 @@ type TESTReadClaimSessionLockResponse struct {
 
 // Extended/test version with full session details
 type TESTReadClaimSessionResponse struct {
-	ID        uint                 `json:"id"`
-	SessionID string               `json:"session_id"`
-	Schedule  ClaimSessionSchedule `json:"schedule"`
-	Status    string               `json:"status"` // e.g., 'active', 'inactive', 'cancelled'
-	// Tickets     []ClaimSessionTicket               `json:"tickets"`
-	Prices      []ClaimSessionTicketPricesResponse `json:"prices"`
-	Tickets     []ClaimSessionItem                 `json:"claim_items"`
-	TotalAmount float64                            `json:"total_amount"`
-	ExpiresAt   time.Time                          `json:"expires_at"`
-	CreatedAt   time.Time                          `json:"created_at"`
-	UpdatedAt   time.Time                          `json:"updated_at"`
+	ID          uint                 `json:"id"`
+	SessionID   string               `json:"session_id"`
+	Schedule    ClaimSessionSchedule `json:"schedule"`
+	Status      string               `json:"status"` // e.g., 'active', 'inactive', 'cancelled'
+	ClaimItems  []ClaimSessionItem   `json:"claim_items"`
+	TotalAmount float64              `json:"total_amount"`
+	ExpiresAt   time.Time            `json:"expires_at"`
+	CreatedAt   time.Time            `json:"created_at"`
+	UpdatedAt   time.Time            `json:"updated_at"`
 }
 
 type TESTWriteClaimSessionRequest struct {

@@ -8,8 +8,7 @@ import (
 // Map Ticket domain to ReadTicketResponse model
 func TicketToResponse(ticket *domain.Ticket) *model.ReadTicketResponse {
 	return &model.ReadTicketResponse{
-		ID:             ticket.ID,
-		ClaimSessionID: ticket.ClaimSessionID,
+		ID: ticket.ID,
 		Schedule: model.TicketSchedule{
 			ID: ticket.Schedule.ID,
 			Ship: model.TicketScheduleShip{

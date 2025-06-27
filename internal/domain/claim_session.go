@@ -16,8 +16,7 @@ type ClaimSession struct {
 	UpdatedAt  time.Time `gorm:"column:updated_at;not null"`
 
 	Schedule   Schedule    `gorm:"foreignKey:ScheduleID" json:"schedule"` // Gorm will create the relationship
-	Tickets    []Ticket    `gorm:"foreignKey:ClaimSessionID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"tickets"`
-	ClaimItems []ClaimItem `gorm:"foreignKey:ClaimSessionID" json:"claim_items"`
+	ClaimItems []ClaimItem `gorm:"foreignKey:ClaimSessionID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 func (cs *ClaimSession) TableName() string {

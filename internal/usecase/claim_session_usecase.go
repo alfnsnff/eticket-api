@@ -249,6 +249,8 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 					tx.Rollback()
 					return nil, fmt.Errorf("missing passenger info for class %d", item.ClassID)
 				}
+				seat := fmt.Sprintf("%s%d", quota.Class.ClassAlias, i+1)
+				data.SeatNumber = &seat
 			case "vehicle":
 				if data.LicensePlate == nil || *data.LicensePlate == "" {
 					tx.Rollback()
@@ -269,7 +271,6 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 				SeatNumber:      data.SeatNumber,
 				LicensePlate:    data.LicensePlate,
 				ScheduleID:      session.ScheduleID,
-				ClaimSessionID:  &session.ID,
 			})
 			amounts += quota.Price
 		}

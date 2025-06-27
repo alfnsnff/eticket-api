@@ -25,27 +25,6 @@ func (csr *ClaimSessionRepository) Count(db *gorm.DB) (int64, error) {
 	return total, result.Error
 }
 
-// func (r *ClaimSessionRepository) CountActiveReservedQuantity(db *gorm.DB, scheduleID, classID uint) (int64, error) {
-// 	var total int64
-
-// 	result := db.
-// 		Table("claim_session").
-// 		Select("COALESCE(SUM(claim_item.quantity), 0)").
-// 		Joins("JOIN claim_item ON claim_item.claim_session_id = claim_session.id").
-// 		Where("claim_session.schedule_id = ? AND claim_item.class_id = ?", scheduleID, classID).
-// 		Where(`
-// 			claim_session.status = ? OR
-// 			(claim_session.status IN ? AND claim_session.expires_at > ?)
-// 		`,
-// 			enum.ClaimSessionSuccess.String(),
-// 			enum.GetPendingClaimSessionStatuses(),
-// 			time.Now(),
-// 		).
-// 		Scan(&total)
-
-// 	return total, result.Error
-// }
-
 func (csr *ClaimSessionRepository) Insert(db *gorm.DB, claim_session *domain.ClaimSession) error {
 	result := db.Create(claim_session)
 	return result.Error
@@ -77,8 +56,6 @@ func (csr *ClaimSessionRepository) FindAll(db *gorm.DB, limit, offset int, sort,
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
 		Preload("Schedule.Ship").
-		Preload("Tickets").
-		Preload("Tickets.Class").
 		Preload("ClaimItems").
 		Preload("ClaimItems.Class")
 	if search != "" {
@@ -100,8 +77,6 @@ func (csr *ClaimSessionRepository) FindByID(db *gorm.DB, id uint) (*domain.Claim
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
 		Preload("Schedule.Ship").
-		Preload("Tickets").
-		Preload("Tickets.Class").
 		Preload("ClaimItems").
 		Preload("ClaimItems.Class").
 		First(&session, id)
@@ -118,8 +93,6 @@ func (csr *ClaimSessionRepository) FindBySessionID(db *gorm.DB, uuid string) (*d
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
 		Preload("Schedule.Ship").
-		Preload("Tickets").
-		Preload("Tickets.Class").
 		Preload("ClaimItems").
 		Preload("ClaimItems.Class").
 		Where("session_id = ?", uuid).First(&session)
@@ -135,8 +108,6 @@ func (r *ClaimSessionRepository) FindByScheduleID(tx *gorm.DB, scheduleID uint) 
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
 		Preload("Schedule.Ship").
-		Preload("Tickets").
-		Preload("Tickets.Class").
 		Preload("ClaimItems").
 		Preload("ClaimItems.Class").
 		Where("schedule_id = ? AND status = ?", scheduleID, enum.ClaimSessionPendingData).

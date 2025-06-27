@@ -35,23 +35,22 @@ type TicketClassItem struct {
 
 // TicketDTO represents a ticket.
 type ReadTicketResponse struct {
-	ID             uint            `json:"id"`
-	Schedule       TicketSchedule  `json:"schedule"`
-	Class          TicketClassItem `json:"class"`
-	ClaimSessionID *uint           `json:"claim_session_id"`
-	BookingID      *uint           `json:"booking_id"`
-	PassengerName  *string         `json:"passenger_name"`
-	PassengerAge   *int            `json:"passenger_age"`
-	Address        *string         `json:"address"`
-	IDType         *string         `json:"id_type"`
-	IDNumber       *string         `json:"id_number"`
-	SeatNumber     *string         `json:"seat_number"`
-	LicensePlate   *string         `json:"license_plate"`
-	Type           string          `json:"type" binding:"required,oneof=passenger vehicle"`
-	Price          float64         `json:"price"`
-	IsCheckedIn    bool            `json:"is_checked_in"`
-	CreatedAt      time.Time       `json:"created_at"`
-	UpdatedAt      time.Time       `json:"updated_at"`
+	ID            uint            `json:"id"`
+	Schedule      TicketSchedule  `json:"schedule"`
+	Class         TicketClassItem `json:"class"`
+	BookingID     *uint           `json:"booking_id"`
+	PassengerName *string         `json:"passenger_name"`
+	PassengerAge  *int            `json:"passenger_age"`
+	Address       *string         `json:"address"`
+	IDType        *string         `json:"id_type"`
+	IDNumber      *string         `json:"id_number"`
+	SeatNumber    *string         `json:"seat_number"`
+	LicensePlate  *string         `json:"license_plate"`
+	Type          string          `json:"type" binding:"required,oneof=passenger vehicle"`
+	Price         float64         `json:"price"`
+	IsCheckedIn   bool            `json:"is_checked_in"`
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
 }
 
 type WriteTicketRequest struct {

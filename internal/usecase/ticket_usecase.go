@@ -50,12 +50,22 @@ func (t *TicketUsecase) CreateTicket(ctx context.Context, request *model.WriteTi
 		return errs.ErrNotFound
 	}
 
+	quota, err := t.QuotaRepository.FindByScheduleIDAndClassID(tx, request.ScheduleID, request.ClassID)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to retrieve quota: %w", err)
+	}
+	if quota == nil {
+		tx.Rollback()
+		return errs.ErrNotFound
+	}
 	ticket := &domain.Ticket{
 		ScheduleID:      request.ScheduleID,
 		ClassID:         request.ClassID,
 		BookingID:       request.BookingID,
 		ClaimSessionID:  request.ClaimSessionID,
 		Type:            request.Type,
+		Price:           quota.Price,
 		Address:         request.Address,
 		PassengerName:   request.PassengerName,
 		PassengerAge:    request.PassengerAge,
@@ -71,15 +81,6 @@ func (t *TicketUsecase) CreateTicket(ctx context.Context, request *model.WriteTi
 		return fmt.Errorf("failed to create ticket: %w", err)
 	}
 
-	quota, err := t.QuotaRepository.FindByScheduleIDAndClassID(tx, request.ScheduleID, request.ClassID)
-	if err != nil {
-		tx.Rollback()
-		return fmt.Errorf("failed to retrieve quota: %w", err)
-	}
-	if quota == nil {
-		tx.Rollback()
-		return errs.ErrNotFound
-	}
 	quota.Quota -= 1
 
 	// Update quota after ticket creation

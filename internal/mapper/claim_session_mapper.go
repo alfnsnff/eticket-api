@@ -21,7 +21,7 @@ func TESTClaimSessionToResponse(session *domain.ClaimSession) *model.TESTReadCla
 			Quantity: item.Quantity,
 		}
 	}
-	prices, total := BuildPriceBreakdown(session.Tickets)
+
 	return &model.TESTReadClaimSessionResponse{
 		ID:        session.ID,
 		SessionID: session.SessionID,
@@ -43,12 +43,10 @@ func TESTClaimSessionToResponse(session *domain.ClaimSession) *model.TESTReadCla
 			DepartureDatetime: session.Schedule.DepartureDatetime,
 			ArrivalDatetime:   session.Schedule.ArrivalDatetime,
 		},
-		ExpiresAt:   session.ExpiresAt,
-		Prices:      prices,
-		Tickets:     claimItems,
-		TotalAmount: total,
-		CreatedAt:   session.CreatedAt,
-		UpdatedAt:   session.UpdatedAt,
+		ExpiresAt:  session.ExpiresAt,
+		ClaimItems: claimItems,
+		CreatedAt:  session.CreatedAt,
+		UpdatedAt:  session.UpdatedAt,
 	}
 }
 
@@ -62,8 +60,6 @@ func ClaimSessionToResponse(session *domain.ClaimSession) *model.ReadClaimSessio
 			Quantity: item.Quantity,
 		}
 	}
-	prices, total := BuildPriceBreakdown(session.Tickets)
-	details := BuildTicketBreakdown(session.Tickets)
 	return &model.ReadClaimSessionResponse{
 		ID:        session.ID,
 		SessionID: session.SessionID,
@@ -85,13 +81,10 @@ func ClaimSessionToResponse(session *domain.ClaimSession) *model.ReadClaimSessio
 			DepartureDatetime: session.Schedule.DepartureDatetime,
 			ArrivalDatetime:   session.Schedule.ArrivalDatetime,
 		},
-		ExpiresAt:   session.ExpiresAt,
-		ClaimItems:  claimItems,
-		Prices:      prices,
-		Tickets:     details,
-		TotalAmount: total,
-		CreatedAt:   session.CreatedAt,
-		UpdatedAt:   session.UpdatedAt,
+		ExpiresAt:  session.ExpiresAt,
+		ClaimItems: claimItems,
+		CreatedAt:  session.CreatedAt,
+		UpdatedAt:  session.UpdatedAt,
 	}
 }
 
