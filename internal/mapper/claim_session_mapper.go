@@ -6,7 +6,63 @@ import (
 )
 
 // Map ClaimSession domain to ReadClaimSessionResponse model
+func TESTClaimSessionToResponse(session *domain.ClaimSession) *model.TESTReadClaimSessionResponse {
+
+	claimItems := make([]model.ClaimSessionItem, len(session.ClaimItems))
+	for i, item := range session.ClaimItems {
+		claimItems[i] = model.ClaimSessionItem{
+			ClassID: item.Class.ID,
+			Class: model.ClaimSessionItemClass{
+				ID:        item.Class.ID,
+				ClassName: item.Class.ClassName,
+				Type:      item.Class.Type,
+			},
+			Quantity: item.Quantity,
+		}
+	}
+	prices, total := BuildPriceBreakdown(session.Tickets)
+	details := BuildTicketBreakdown(session.Tickets)
+	return &model.TESTReadClaimSessionResponse{
+		ID:        session.ID,
+		SessionID: session.SessionID,
+		Status:    session.Status,
+		Schedule: model.ClaimSessionSchedule{
+			ID: session.Schedule.ID,
+			Ship: model.ClaimSessionScheduleShip{
+				ID:       session.Schedule.Ship.ID,
+				ShipName: session.Schedule.Ship.ShipName,
+			},
+			DepartureHarbor: model.ClaimSessionScheduleHarbor{
+				ID:         session.Schedule.DepartureHarbor.ID,
+				HarborName: session.Schedule.DepartureHarbor.HarborName,
+			},
+			ArrivalHarbor: model.ClaimSessionScheduleHarbor{
+				ID:         session.Schedule.ArrivalHarbor.ID,
+				HarborName: session.Schedule.ArrivalHarbor.HarborName,
+			},
+			DepartureDatetime: session.Schedule.DepartureDatetime,
+			ArrivalDatetime:   session.Schedule.ArrivalDatetime,
+		},
+		ExpiresAt:   session.ExpiresAt,
+		ClaimItems:  claimItems,
+		Prices:      prices,
+		Tickets:     details,
+		TotalAmount: total,
+		CreatedAt:   session.CreatedAt,
+		UpdatedAt:   session.UpdatedAt,
+	}
+}
+
+// Map ClaimSession domain to ReadClaimSessionResponse model
 func ClaimSessionToResponse(session *domain.ClaimSession) *model.ReadClaimSessionResponse {
+
+	claimItems := make([]model.ClaimSessionItem, len(session.ClaimItems))
+	for i, item := range session.ClaimItems {
+		claimItems[i] = model.ClaimSessionItem{
+			ClassID:  item.Class.ID,
+			Quantity: item.Quantity,
+		}
+	}
 	prices, total := BuildPriceBreakdown(session.Tickets)
 	details := BuildTicketBreakdown(session.Tickets)
 	return &model.ReadClaimSessionResponse{
@@ -31,6 +87,7 @@ func ClaimSessionToResponse(session *domain.ClaimSession) *model.ReadClaimSessio
 			ArrivalDatetime:   session.Schedule.ArrivalDatetime,
 		},
 		ExpiresAt:   session.ExpiresAt,
+		ClaimItems:  claimItems,
 		Prices:      prices,
 		Tickets:     details,
 		TotalAmount: total,
@@ -40,12 +97,12 @@ func ClaimSessionToResponse(session *domain.ClaimSession) *model.ReadClaimSessio
 }
 
 // Build ticket breakdown
-func BuildTicketBreakdown(tickets []domain.Ticket) []model.ClaimSessionTicketDetailResponse {
-	result := make([]model.ClaimSessionTicketDetailResponse, len(tickets))
+func BuildTicketBreakdown(tickets []domain.Ticket) []model.ClaimSessionTicket {
+	result := make([]model.ClaimSessionTicket, len(tickets))
 	for i, ticket := range tickets {
-		result[i] = model.ClaimSessionTicketDetailResponse{
+		result[i] = model.ClaimSessionTicket{
 			TicketID: ticket.ID,
-			Class: model.ClaimSessionTicketClassItem{
+			Class: model.ClaimSessionItemClass{
 				ID:        ticket.Class.ID,
 				ClassName: ticket.Class.ClassName,
 				Type:      ticket.Class.Type,
@@ -68,7 +125,7 @@ func BuildPriceBreakdown(tickets []domain.Ticket) ([]model.ClaimSessionTicketPri
 
 		if _, exists := ticketSummary[classID]; !exists {
 			ticketSummary[classID] = &model.ClaimSessionTicketPricesResponse{
-				Class: model.ClaimSessionTicketClassItem{
+				Class: model.ClaimSessionItemClass{
 					ID:        ticket.Class.ID,
 					ClassName: ticket.Class.ClassName,
 					Type:      ticket.Class.Type,

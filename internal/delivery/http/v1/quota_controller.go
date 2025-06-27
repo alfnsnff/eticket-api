@@ -1,4 +1,4 @@
-package controller
+package v1
 
 import (
 	"eticket-api/internal/common/logger"
@@ -112,7 +112,6 @@ func (mc *QuotaController) GetQuotaByID(ctx *gin.Context) {
 		return
 	}
 
-	mc.Log.WithField("id", id).Info("Quota retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Quota retrieved successfully", nil))
 }
 
@@ -164,6 +163,5 @@ func (mc *QuotaController) DeleteQuota(ctx *gin.Context) {
 		return
 	}
 
-	mc.Log.WithField("id", id).Info("Quota deleted successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Quota deleted successfully", nil))
 }

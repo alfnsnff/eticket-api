@@ -25,6 +25,27 @@ func (csr *ClaimSessionRepository) Count(db *gorm.DB) (int64, error) {
 	return total, result.Error
 }
 
+// func (r *ClaimSessionRepository) CountActiveReservedQuantity(db *gorm.DB, scheduleID, classID uint) (int64, error) {
+// 	var total int64
+
+// 	result := db.
+// 		Table("claim_session").
+// 		Select("COALESCE(SUM(claim_item.quantity), 0)").
+// 		Joins("JOIN claim_item ON claim_item.claim_session_id = claim_session.id").
+// 		Where("claim_session.schedule_id = ? AND claim_item.class_id = ?", scheduleID, classID).
+// 		Where(`
+// 			claim_session.status = ? OR
+// 			(claim_session.status IN ? AND claim_session.expires_at > ?)
+// 		`,
+// 			enum.ClaimSessionSuccess.String(),
+// 			enum.GetPendingClaimSessionStatuses(),
+// 			time.Now(),
+// 		).
+// 		Scan(&total)
+
+// 	return total, result.Error
+// }
+
 func (csr *ClaimSessionRepository) Insert(db *gorm.DB, claim_session *domain.ClaimSession) error {
 	result := db.Create(claim_session)
 	return result.Error
@@ -53,12 +74,13 @@ func (csr *ClaimSessionRepository) Delete(db *gorm.DB, claim_session *domain.Cla
 func (csr *ClaimSessionRepository) FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.ClaimSession, error) {
 	sessions := []*domain.ClaimSession{}
 	query := db.Preload("Schedule").
-		Preload("Schedule.Route").
-		Preload("Schedule.Route.DepartureHarbor").
-		Preload("Schedule.Route.ArrivalHarbor").
+		Preload("Schedule.DepartureHarbor").
+		Preload("Schedule.ArrivalHarbor").
 		Preload("Schedule.Ship").
 		Preload("Tickets").
-		Preload("Tickets.Class")
+		Preload("Tickets.Class").
+		Preload("ClaimItems").
+		Preload("ClaimItems.Class")
 	if search != "" {
 		search = "%" + search + "%"
 		query = query.Where("session_id ILIKE ?", search)
@@ -74,12 +96,14 @@ func (csr *ClaimSessionRepository) FindAll(db *gorm.DB, limit, offset int, sort,
 
 func (csr *ClaimSessionRepository) FindByID(db *gorm.DB, id uint) (*domain.ClaimSession, error) {
 	session := new(domain.ClaimSession)
-	result := db.Preload("Schedule").Preload("Schedule").
+	result := db.Preload("Schedule").
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
 		Preload("Schedule.Ship").
 		Preload("Tickets").
 		Preload("Tickets.Class").
+		Preload("ClaimItems").
+		Preload("ClaimItems.Class").
 		First(&session, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
@@ -90,17 +114,38 @@ func (csr *ClaimSessionRepository) FindByID(db *gorm.DB, id uint) (*domain.Claim
 // FindByUUID retrieves a ClaimSession domain by its SessionUUID.
 func (csr *ClaimSessionRepository) FindBySessionID(db *gorm.DB, uuid string) (*domain.ClaimSession, error) {
 	session := new(domain.ClaimSession)
-	result := db.Preload("Schedule").Preload("Schedule").
+	result := db.Preload("Schedule").
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
 		Preload("Schedule.Ship").
 		Preload("Tickets").
 		Preload("Tickets.Class").
+		Preload("ClaimItems").
+		Preload("ClaimItems.Class").
 		Where("session_id = ?", uuid).First(&session)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	return session, result.Error
+}
+
+func (r *ClaimSessionRepository) FindByScheduleID(tx *gorm.DB, scheduleID uint) ([]*domain.ClaimSession, error) {
+	sessions := []*domain.ClaimSession{}
+	result := tx.Preload("Schedule").
+		Preload("Schedule.DepartureHarbor").
+		Preload("Schedule.ArrivalHarbor").
+		Preload("Schedule.Ship").
+		Preload("Tickets").
+		Preload("Tickets.Class").
+		Preload("ClaimItems").
+		Preload("ClaimItems.Class").
+		Where("schedule_id = ? AND status = ?", scheduleID, enum.ClaimSessionPendingData).
+		Where("expires_at > ?", time.Now()).
+		Find(&sessions)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return sessions, result.Error
 }
 
 func (csr *ClaimSessionRepository) FindExpired(db *gorm.DB, expiryTime time.Time, limit int) ([]*domain.ClaimSession, error) {

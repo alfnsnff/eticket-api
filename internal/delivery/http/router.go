@@ -7,8 +7,8 @@ import (
 	"eticket-api/internal/usecase"
 
 	// "eticket-api/internal/delivery/http/controller"
-	"eticket-api/internal/delivery/http/controller"
 	"eticket-api/internal/delivery/http/middleware"
+	v1 "eticket-api/internal/delivery/http/v1"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -20,23 +20,18 @@ func NewRouter(
 	token_util token.TokenUtil,
 	log logger.Logger,
 	validate validator.Validator,
-	// allocation *usecase.AllocationUsecase,
 	quota *usecase.QuotaUsecase,
 	auth *usecase.AuthUsecase,
 	booking *usecase.BookingUsecase,
 	class *usecase.ClassUsecase,
-	// fare *usecase.FareUsecase,
 	harbor *usecase.HarborUsecase,
-	// manifest *usecase.ManifestUsecase,
 	role *usecase.RoleUsecase,
-	// route *usecase.RouteUsecase,
 	schedule *usecase.ScheduleUsecase,
 	ship *usecase.ShipUsecase,
 	ticket *usecase.TicketUsecase,
 	user *usecase.UserUsecase,
 	payment *usecase.PaymentUsecase,
 	claim_session *usecase.ClaimSessionUsecase,
-
 ) {
 	router.Use(middleware.Logger(log))
 	router.Use(middleware.Recovery(log))
@@ -44,24 +39,38 @@ func NewRouter(
 	router.GET("/metrics", func(c *gin.Context) {
 		promhttp.Handler().ServeHTTP(c.Writer, c.Request)
 	})
-
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	V1 := router.Group("/v1")
-	protected := V1.Group("")
-	protected.Use(middleware.Authenticate(token_util))
-	controller.NewQuotaController(V1, protected, log, validate, quota)
-	controller.NewAuthController(V1, protected, log, validate, auth)
-	controller.NewBookingController(V1, protected, log, validate, booking)
-	controller.NewClassController(V1, protected, log, validate, class)
-	controller.NewClaimSessionController(V1, protected, log, validate, claim_session)
-	controller.NewHarborController(V1, protected, log, validate, harbor)
-	controller.NewPaymentController(V1, protected, log, validate, payment)
-	controller.NewRoleController(V1, protected, log, validate, role)
-	controller.NewScheduleController(V1, protected, log, validate, schedule)
-	controller.NewShipController(V1, protected, log, validate, ship)
-	controller.NewTicketController(V1, protected, log, validate, ticket)
-	controller.NewUserController(V1, protected, log, validate, user)
+	authMiddleware := middleware.Authenticate(token_util)
+
+	// API v1
+	v1Group := router.Group("/v1")
+	v1Protected := Protected(v1Group, authMiddleware)
+
+	v1.NewQuotaController(v1Group, v1Protected, log, validate, quota)
+	v1.NewAuthController(v1Group, v1Protected, log, validate, auth)
+	v1.NewBookingController(v1Group, v1Protected, log, validate, booking)
+	v1.NewClassController(v1Group, v1Protected, log, validate, class)
+	v1.NewClaimSessionController(v1Group, v1Protected, log, validate, claim_session)
+	v1.NewHarborController(v1Group, v1Protected, log, validate, harbor)
+	v1.NewPaymentController(v1Group, v1Protected, log, validate, payment)
+	v1.NewRoleController(v1Group, v1Protected, log, validate, role)
+	v1.NewScheduleController(v1Group, v1Protected, log, validate, schedule)
+	v1.NewShipController(v1Group, v1Protected, log, validate, ship)
+	v1.NewTicketController(v1Group, v1Protected, log, validate, ticket)
+	v1.NewUserController(v1Group, v1Protected, log, validate, user)
+
+	// API v2
+	v2Group := router.Group("/v2")
+	v2Protected := Protected(v2Group, authMiddleware)
+
+	v1.NewClaimSessionController(v2Group, v2Protected, log, validate, claim_session)
+}
+
+func Protected(rg *gin.RouterGroup, middleware ...gin.HandlerFunc) *gin.RouterGroup {
+	group := rg.Group("")
+	group.Use(middleware...)
+	return group
 }

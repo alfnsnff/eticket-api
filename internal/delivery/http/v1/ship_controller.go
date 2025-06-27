@@ -1,4 +1,4 @@
-package controller
+package v1
 
 import (
 	"eticket-api/internal/common/logger"
@@ -76,7 +76,6 @@ func (shc *ShipController) GetAllShips(ctx *gin.Context) {
 		return
 	}
 
-	shc.Log.WithField("count", total).Info("Ships retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewMetaResponse(
 		datas,
 		"Ships retrieved successfully",
@@ -115,7 +114,6 @@ func (shc *ShipController) GetShipByID(ctx *gin.Context) {
 		return
 	}
 
-	shc.Log.WithField("id", id).Info("Ship retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Ship retrieved successfully", nil))
 }
 
@@ -149,7 +147,6 @@ func (shc *ShipController) UpdateShip(ctx *gin.Context) {
 		return
 	}
 
-	shc.Log.WithField("id", id).Info("Ship updated successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ship updated successfully", nil))
 }
 
@@ -169,6 +166,5 @@ func (shc *ShipController) DeleteShip(ctx *gin.Context) {
 		return
 	}
 
-	shc.Log.WithField("id", id).Info("Ship deleted successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ship deleted successfully", nil))
 }

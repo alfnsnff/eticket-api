@@ -19,14 +19,15 @@ type QuotaSchedule struct {
 
 // QuotaDTO represents a Quota.
 type ReadQuotaResponse struct {
-	ID         uint          `json:"id"`
-	ScheduleID uint          `json:"schedule_id"` // Foreign key
-	Class      QuotaClass    `json:"class"`       // Foreign key
-	Schedule   QuotaSchedule `json:"schedule"`    // Foreign key
-	Quota      int           `json:"quota"`
-	Price      float64       `json:"price"` // Price of the quota
-	CreatedAt  time.Time     `json:"created_at"`
-	UpdatedAt  time.Time     `json:"updated_at"`
+	ID             uint          `json:"id"`
+	ScheduleID     uint          `json:"schedule_id"` // Foreign key
+	Class          QuotaClass    `json:"class"`       // Foreign key
+	Schedule       QuotaSchedule `json:"schedule"`    // Foreign key
+	Price          float64       `json:"price"`       // Price of the quota
+	Quota          int           `json:"quota"`
+	RemainingQuota int           `json:"remaining_quota"` // Remaining quota after reservations
+	CreatedAt      time.Time     `json:"created_at"`
+	UpdatedAt      time.Time     `json:"updated_at"`
 }
 
 // QuotaDTO represents a Quota.

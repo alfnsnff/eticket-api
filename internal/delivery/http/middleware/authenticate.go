@@ -27,7 +27,6 @@ func Authenticate(token_util token.TokenUtil) gin.HandlerFunc {
 
 		c.Set("rolename", claims.User.Role.RoleName)
 		c.Set("token", tokenStr)
-
 		c.Next()
 	}
 }

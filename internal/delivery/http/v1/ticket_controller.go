@@ -1,4 +1,4 @@
-package controller
+package v1
 
 import (
 	"eticket-api/internal/common/logger"
@@ -78,7 +78,6 @@ func (tc *TicketController) GetAllTickets(ctx *gin.Context) {
 		return
 	}
 
-	tc.Log.WithField("count", total).Info("Tickets retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewMetaResponse(
 		datas,
 		"Tickets retrieved successfully",
@@ -109,7 +108,6 @@ func (tc *TicketController) GetAllTicketsByScheduleID(ctx *gin.Context) {
 		return
 	}
 
-	tc.Log.WithField("schedule_id", id).WithField("count", total).Info("Tickets retrieved successfully by schedule ID")
 	ctx.JSON(http.StatusOK, response.NewMetaResponse(
 		datas,
 		"Tickets retrieved successfully",
@@ -145,7 +143,6 @@ func (tc *TicketController) GetTicketByID(ctx *gin.Context) {
 		return
 	}
 
-	tc.Log.WithField("id", id).Info("Ticket retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Ticket retrieved successfully", nil))
 }
 
@@ -179,7 +176,6 @@ func (tc *TicketController) UpdateTicket(ctx *gin.Context) {
 		return
 	}
 
-	tc.Log.WithField("id", id).Info("Ticket updated successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ticket updated successfully", nil))
 }
 
@@ -199,7 +195,6 @@ func (tc *TicketController) DeleteTicket(ctx *gin.Context) {
 		return
 	}
 
-	tc.Log.WithField("id", id).Info("Ticket deleted successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ticket deleted successfully", nil))
 }
 
@@ -219,6 +214,5 @@ func (tc *TicketController) CheckIn(ctx *gin.Context) {
 		return
 	}
 
-	tc.Log.WithField("id", id).Info("Ticket checked in successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Ticket checked in successfully", nil))
 }

@@ -26,6 +26,7 @@ func (cs *ClaimSession) TableName() string {
 
 type ClaimSessionRepository interface {
 	Count(db *gorm.DB) (int64, error)
+	// CountActiveReservedQuantity(db *gorm.DB, scheduleID, classID uint) (int64, error)
 	Insert(db *gorm.DB, entity *ClaimSession) error
 	InsertBulk(db *gorm.DB, sessions []*ClaimSession) error
 	Update(db *gorm.DB, entity *ClaimSession) error
@@ -34,5 +35,6 @@ type ClaimSessionRepository interface {
 	FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*ClaimSession, error)
 	FindByID(db *gorm.DB, id uint) (*ClaimSession, error)
 	FindExpired(db *gorm.DB, expiryTime time.Time, limit int) ([]*ClaimSession, error)
+	FindByScheduleID(db *gorm.DB, scheduleID uint) ([]*ClaimSession, error)
 	FindBySessionID(db *gorm.DB, uuid string) (*ClaimSession, error)
 }

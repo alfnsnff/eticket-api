@@ -10,6 +10,7 @@ import (
 	"eticket-api/internal/common/httpclient"
 	"eticket-api/internal/model"
 	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -79,8 +80,15 @@ func (c *TripayClient) CreatePayment(payload *model.WriteTransactionRequest) (mo
 	}
 	defer resp.Body.Close()
 
+	// Print raw response body to console
+	rawBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return model.ReadTransactionResponse{}, fmt.Errorf("failed to read response body: %w", err)
+	}
+	fmt.Println("Raw response body:", string(rawBody))
+
 	var raw model.Result
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+	if err := json.Unmarshal(rawBody, &raw); err != nil {
 		return model.ReadTransactionResponse{}, fmt.Errorf("failed to decode raw result: %w", err)
 	}
 

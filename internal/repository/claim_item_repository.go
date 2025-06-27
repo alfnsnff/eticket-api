@@ -2,10 +2,8 @@ package repository
 
 import (
 	"errors"
-	enum "eticket-api/internal/common/enums"
 	"eticket-api/internal/domain"
 	"strings"
-	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -21,27 +19,6 @@ func (cr *ClaimItemRepository) Count(db *gorm.DB) (int64, error) {
 	var total int64
 	result := db.Model(&domain.ClaimItem{}).Count(&total)
 	return total, result.Error
-}
-
-func (cr *ClaimItemRepository) CountActiveReservedQuantity(db *gorm.DB, scheduleID, classID uint) (int64, error) {
-	var total int64
-	now := time.Now()
-
-	err := db.Table("claim_item").
-		Select("COALESCE(SUM(claim_item.quantity), 0)").
-		Joins("JOIN claim_session ON claim_item.claim_session_id = claim_session.id").
-		Where("claim_session.schedule_id = ? AND claim_item.class_id = ?", scheduleID, classID).
-		Where(`
-			claim_session.status = ? OR 
-			(claim_session.status IN ? AND claim_session.expires_at > ?)
-		`,
-			enum.ClaimSessionSuccess.String(),
-			enum.GetPendingClaimSessionStatuses(),
-			now,
-		).
-		Scan(&total).Error
-
-	return total, err
 }
 
 func (ar *ClaimItemRepository) Insert(db *gorm.DB, claimItem *domain.ClaimItem) error {

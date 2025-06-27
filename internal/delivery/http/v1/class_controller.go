@@ -1,4 +1,4 @@
-package controller
+package v1
 
 import (
 	"errors"
@@ -79,7 +79,6 @@ func (cc *ClassController) GetAllClasses(ctx *gin.Context) {
 		return
 	}
 
-	cc.Log.WithField("count", total).Info("Classes retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewMetaResponse(
 		datas,
 		"Classes retrieved successfully",
@@ -102,7 +101,6 @@ func (cc *ClassController) GetClassByID(ctx *gin.Context) {
 	}
 
 	data, err := cc.ClassUsecase.GetClassByID(ctx, uint(id))
-
 	if err != nil {
 		if errors.Is(err, errs.ErrNotFound) {
 			cc.Log.WithField("id", id).Warn("class not found")
@@ -121,13 +119,12 @@ func (cc *ClassController) GetClassByID(ctx *gin.Context) {
 		return
 	}
 
-	cc.Log.WithField("id", id).Info("Class retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Class retrieved successfully", nil))
 }
 
 func (cc *ClassController) UpdateClass(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
-	if err != nil || id == 0 {
+	if err != nil {
 		cc.Log.WithError(err).WithField("id", ctx.Param("id")).Error("failed to parse class ID")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid or missing class ID", nil))
 		return
@@ -149,12 +146,17 @@ func (cc *ClassController) UpdateClass(ctx *gin.Context) {
 	}
 
 	if err := cc.ClassUsecase.UpdateClass(ctx, request); err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			cc.Log.WithField("id", id).Warn("class not found")
+			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Class not found", nil))
+			return
+		}
+
 		cc.Log.WithError(err).WithField("id", id).Error("failed to update class")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update class", err.Error()))
 		return
 	}
 
-	cc.Log.WithField("id", id).Info("Class updated successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Class updated successfully", nil))
 }
 
@@ -168,11 +170,16 @@ func (cc *ClassController) DeleteClass(ctx *gin.Context) {
 	}
 
 	if err := cc.ClassUsecase.DeleteClass(ctx, uint(id)); err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			cc.Log.WithField("id", id).Warn("class not found")
+			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Class not found", nil))
+			return
+		}
+
 		cc.Log.WithError(err).WithField("id", id).Error("failed to delete class")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete class", err.Error()))
 		return
 	}
 
-	cc.Log.WithField("id", id).Info("Class deleted successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Class deleted successfully", nil))
 }

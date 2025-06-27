@@ -1,4 +1,4 @@
-package controller
+package v1
 
 import (
 	"eticket-api/internal/common/logger"
@@ -78,7 +78,6 @@ func (rc *RoleController) GetAllRoles(ctx *gin.Context) {
 		return
 	}
 
-	rc.Log.WithField("count", total).Info("Roles retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewMetaResponse(
 		datas,
 		"Roles retrieved successfully",
@@ -148,7 +147,6 @@ func (rc *RoleController) UpdateRole(ctx *gin.Context) {
 		return
 	}
 
-	rc.Log.WithField("id", id).Info("Role updated successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Role updated successfully", nil))
 }
 
@@ -167,6 +165,5 @@ func (rc *RoleController) DeleteRole(ctx *gin.Context) {
 		return
 	}
 
-	rc.Log.WithField("id", id).Info("Role deleted successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Role deleted successfully", nil))
 }

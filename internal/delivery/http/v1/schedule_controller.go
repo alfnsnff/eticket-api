@@ -1,4 +1,4 @@
-package controller
+package v1
 
 import (
 	"eticket-api/internal/common/logger"
@@ -78,7 +78,6 @@ func (scc *ScheduleController) GetAllSchedules(ctx *gin.Context) {
 		return
 	}
 
-	scc.Log.WithField("count", total).Info("Schedules retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewMetaResponse(
 		datas,
 		"Schedules retrieved successfully",
@@ -101,7 +100,6 @@ func (scc *ScheduleController) GetAllScheduled(ctx *gin.Context) {
 		return
 	}
 
-	scc.Log.WithField("count", len(datas)).Info("Active schedules retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Schedules retrieved successfully", nil))
 }
 
@@ -128,7 +126,6 @@ func (scc *ScheduleController) GetScheduleByID(ctx *gin.Context) {
 		return
 	}
 
-	scc.Log.WithField("id", id).Info("Schedule retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Schedule retrieved successfully", nil))
 }
 
@@ -162,7 +159,6 @@ func (scc *ScheduleController) UpdateSchedule(ctx *gin.Context) {
 		return
 	}
 
-	scc.Log.WithField("id", id).Info("Schedule updated successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Schedule updated successfully", nil))
 }
 
@@ -182,6 +178,5 @@ func (scc *ScheduleController) DeleteSchedule(ctx *gin.Context) {
 		return
 	}
 
-	scc.Log.WithField("id", id).Info("Schedule deleted successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Schedule deleted successfully", nil))
 }

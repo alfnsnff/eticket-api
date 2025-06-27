@@ -1,6 +1,8 @@
-package controller
+package v1
 
 import (
+	"errors"
+	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/response"
@@ -80,7 +82,6 @@ func (bc *BookingController) GetAllBookings(ctx *gin.Context) {
 		return
 	}
 
-	bc.Log.WithField("count", total).Info("Bookings retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewMetaResponse(
 		datas,
 		"Bookings retrieved successfully",
@@ -127,6 +128,12 @@ func (bc *BookingController) GetBookingByOrderID(ctx *gin.Context) {
 	data, err := bc.BookingUsecase.GetBookingByOrderID(ctx, id)
 
 	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			bc.Log.WithField("id", id).Warn("booking not found")
+			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("booking not found", nil))
+			return
+		}
+
 		bc.Log.WithError(err).WithField("orderID", id).Error("failed to retrieve booking by order ID")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve booking", err.Error()))
 		return
@@ -138,7 +145,6 @@ func (bc *BookingController) GetBookingByOrderID(ctx *gin.Context) {
 		return
 	}
 
-	bc.Log.WithField("orderID", id).Info("Booking retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Booking retrieved successfully", nil))
 }
 
@@ -166,12 +172,17 @@ func (bc *BookingController) UpdateBooking(ctx *gin.Context) {
 	}
 
 	if err := bc.BookingUsecase.UpdateBooking(ctx, request); err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			bc.Log.WithField("id", id).Warn("booking not found")
+			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("booking not found", nil))
+			return
+		}
+
 		bc.Log.WithError(err).WithField("id", id).Error("failed to update booking")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update booking", err.Error()))
 		return
 	}
 
-	bc.Log.WithField("id", id).Info("Booking updated successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Booking updated successfully", nil))
 }
 
@@ -185,11 +196,16 @@ func (bc *BookingController) DeleteBooking(ctx *gin.Context) {
 	}
 
 	if err := bc.BookingUsecase.DeleteBooking(ctx, uint(id)); err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			bc.Log.WithField("id", id).Warn("booking not found")
+			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("booking not found", nil))
+			return
+		}
+
 		bc.Log.WithError(err).WithField("id", id).Error("failed to delete booking")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete booking", err.Error()))
 		return
 	}
 
-	bc.Log.WithField("id", id).Info("Booking deleted successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Booking deleted successfully", nil))
 }

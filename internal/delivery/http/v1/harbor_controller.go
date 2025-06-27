@@ -1,6 +1,8 @@
-package controller
+package v1
 
 import (
+	"errors"
+	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/response"
@@ -100,6 +102,12 @@ func (hc *HarborController) GetHarborByID(ctx *gin.Context) {
 	data, err := hc.HarborUsecase.GetHarborByID(ctx, uint(id))
 
 	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			hc.Log.WithField("id", id).Warn("harbor not found")
+			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("class not found", nil))
+			return
+		}
+
 		hc.Log.WithError(err).WithField("id", id).Error("failed to retrieve harbor")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve harbor", err.Error()))
 		return
@@ -110,8 +118,6 @@ func (hc *HarborController) GetHarborByID(ctx *gin.Context) {
 		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Harbor not found", nil))
 		return
 	}
-
-	hc.Log.WithField("id", id).Info("Harbor retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Harbor retrieved successfully", nil))
 }
 
@@ -139,12 +145,17 @@ func (hc *HarborController) UpdateHarbor(ctx *gin.Context) {
 	}
 
 	if err := hc.HarborUsecase.UpdateHarbor(ctx, request); err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			hc.Log.WithField("id", id).Warn("harbor not found")
+			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("harbor not found", nil))
+			return
+		}
+
 		hc.Log.WithError(err).WithField("id", id).Error("failed to update harbor")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update harbor", err.Error()))
 		return
 	}
 
-	hc.Log.WithField("id", id).Info("Harbor updated successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Harbor updated successfully", nil))
 }
 
@@ -158,11 +169,16 @@ func (hc *HarborController) DeleteHarbor(ctx *gin.Context) {
 	}
 
 	if err := hc.HarborUsecase.DeleteHarbor(ctx, uint(id)); err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			hc.Log.WithField("id", id).Warn("harbor not found")
+			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("harbor not found", nil))
+			return
+		}
+
 		hc.Log.WithError(err).WithField("id", id).Error("failed to delete harbor")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete harbor", err.Error()))
 		return
 	}
 
-	hc.Log.WithField("id", id).Info("Harbor deleted successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Harbor deleted successfully", nil))
 }

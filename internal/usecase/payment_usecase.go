@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	enum "eticket-api/internal/common/enums"
 	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/mailer"
 	"eticket-api/internal/common/templates"
@@ -16,12 +15,11 @@ import (
 )
 
 type PaymentUsecase struct {
-	DB                     *gorm.DB // Assuming you have a DB field for the transaction manager
-	TripayClient           domain.TripayClient
-	ClaimSessionRepository domain.ClaimSessionRepository
-	BookingRepository      domain.BookingRepository
-	TicketRepository       domain.TicketRepository
-	Mailer                 mailer.Mailer
+	DB                *gorm.DB // Assuming you have a DB field for the transaction manager
+	TripayClient      domain.TripayClient
+	BookingRepository domain.BookingRepository
+	TicketRepository  domain.TicketRepository
+	Mailer            mailer.Mailer
 }
 
 func NewPaymentUsecase(
@@ -33,12 +31,11 @@ func NewPaymentUsecase(
 	mailer mailer.Mailer,
 ) *PaymentUsecase {
 	return &PaymentUsecase{
-		DB:                     db,
-		TripayClient:           tripay_client,
-		ClaimSessionRepository: claim_session_repository,
-		BookingRepository:      booking_repository,
-		TicketRepository:       ticket_repository,
-		Mailer:                 mailer,
+		DB:                db,
+		TripayClient:      tripay_client,
+		BookingRepository: booking_repository,
+		TicketRepository:  ticket_repository,
+		Mailer:            mailer,
 	}
 }
 
@@ -58,7 +55,7 @@ func (c *PaymentUsecase) GetTransactionDetail(ctx context.Context, reference str
 	return c.TripayClient.GetTransactionDetail(reference)
 }
 
-func (c *PaymentUsecase) CreatePayment(ctx context.Context, request *model.WritePaymentRequest, sessionID string) (*model.ReadTransactionResponse, error) {
+func (c *PaymentUsecase) TESTCreatePayment(ctx context.Context, request *model.WritePaymentRequest, orderID string) (*model.ReadTransactionResponse, error) {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -69,17 +66,65 @@ func (c *PaymentUsecase) CreatePayment(ctx context.Context, request *model.Write
 		}
 	}()
 
-	session, err := c.ClaimSessionRepository.FindBySessionID(tx, sessionID)
+	booking, err := c.BookingRepository.FindByOrderID(tx, request.OrderID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get session: %w", err)
+		return nil, fmt.Errorf("failed to get booking: %w", err)
 	}
-	if session == nil {
+	if booking == nil {
 		return nil, errs.ErrNotFound
 	}
 
-	if time.Now().After(session.ExpiresAt) {
-		return nil, errs.ErrExpired
+	var amounts float64
+	for _, ticket := range booking.Tickets {
+		amounts += ticket.Price
 	}
+
+	orderItems := make([]model.OrderItem, len(booking.Tickets))
+	for i, ticket := range booking.Tickets {
+		orderItems[i] = mapper.TicketToItem(&ticket)
+	}
+
+	payload := &model.WriteTransactionRequest{
+		Method:        request.PaymentMethod,
+		Amount:        int(amounts), // Convert to integer cents
+		CustomerName:  booking.CustomerName,
+		CustomerEmail: booking.Email,
+		CustomerPhone: booking.PhoneNumber,
+		MerchantRef:   *booking.OrderID,
+		OrderItems:    orderItems,
+		CallbackUrl:   "https://example.com/callback",
+		ReturnUrl:     "https://example.com/callback",
+		ExpiredTime:   int(time.Now().Add(30 * time.Minute).Unix()),
+	}
+
+	// Create payment
+	payment, err := c.TripayClient.CreatePayment(payload)
+	if err != nil {
+		return nil, fmt.Errorf("create Tripay payment failed: %w", err)
+	}
+
+	booking.ReferenceNumber = &payment.Reference
+	if err := c.BookingRepository.Update(tx, booking); err != nil {
+		return nil, fmt.Errorf("failed to update booking with reference number: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return &payment, nil
+}
+
+func (c *PaymentUsecase) CreatePayment(ctx context.Context, request *model.WritePaymentRequest) (*model.ReadTransactionResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else {
+			tx.Rollback()
+		}
+	}()
 
 	booking, err := c.BookingRepository.FindByOrderID(tx, request.OrderID)
 	if err != nil {
@@ -130,17 +175,6 @@ func (c *PaymentUsecase) CreatePayment(ctx context.Context, request *model.Write
 	if err := c.BookingRepository.Update(tx, booking); err != nil {
 		return nil, fmt.Errorf("failed to update booking with reference number: %w", err)
 	}
-	session = &domain.ClaimSession{
-		ID:         session.ID,
-		SessionID:  session.SessionID,
-		ScheduleID: session.ScheduleID,
-		Status:     enum.ClaimSessionPendingTransaction.String(),
-		ExpiresAt:  time.Unix(int64(payment.ExpiredTime), 0), // Convert Unix timestamp to time.Time
-	}
-
-	if err := c.ClaimSessionRepository.Update(tx, session); err != nil {
-		return nil, fmt.Errorf("update claim session failed: %w", err)
-	}
 
 	if err := tx.Commit().Error; err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
@@ -175,31 +209,17 @@ func (c *PaymentUsecase) HandleCallback(ctx context.Context, request *model.Writ
 		return errs.ErrNotFound
 	}
 
-	// Get session from the first ticket's claim_session_id
-	var session *domain.ClaimSession
-	if tickets[0].ClaimSessionID != nil {
-		session, err = c.ClaimSessionRepository.FindByID(tx, *tickets[0].ClaimSessionID)
-		if err != nil {
-			return fmt.Errorf("failed to get session: %w", err)
-		}
-		if session == nil {
-			return errs.ErrNotFound
-		}
-	} else {
-		return fmt.Errorf("tickets have no associated claim session")
-	}
-
-	// Handle different payment statuses
+	// Handle different payment statuse
 	switch request.Status {
 	case "PAID":
 		// Payment successful
-		if err := c.HandleSuccessfulPayment(tx, booking, tickets, session); err != nil {
+		if err := c.HandleSuccessfulPayment(tx, booking, tickets); err != nil {
 			return err
 		}
 
 	case "FAILED", "EXPIRED", "REFUND":
 		// Payment unsuccessful
-		if err := c.HandleUnsuccessfulPayment(tx, booking, tickets, session, request.Status); err != nil {
+		if err := c.HandleUnsuccessfulPayment(tx, booking, tickets, request.Status); err != nil {
 			return err
 		}
 
@@ -215,14 +235,7 @@ func (c *PaymentUsecase) HandleCallback(ctx context.Context, request *model.Writ
 }
 
 // Handle successful payment
-func (c *PaymentUsecase) HandleSuccessfulPayment(tx *gorm.DB, booking *domain.Booking, tickets []*domain.Ticket, session *domain.ClaimSession) error {
-	// Update session to success status
-	session.Status = enum.ClaimSessionSuccess.String()
-
-	if err := c.ClaimSessionRepository.Update(tx, session); err != nil {
-		return fmt.Errorf("update claim session failed: %w", err)
-	}
-
+func (c *PaymentUsecase) HandleSuccessfulPayment(tx *gorm.DB, booking *domain.Booking, tickets []*domain.Ticket) error {
 	// Send confirmation email
 	subject := "Your Booking is Confirmed"
 	htmlBody := templates.BookingSuccessEmail(booking.CustomerName, *booking.OrderID, len(tickets), time.Now().Year())
@@ -235,14 +248,7 @@ func (c *PaymentUsecase) HandleSuccessfulPayment(tx *gorm.DB, booking *domain.Bo
 }
 
 // Handle unsuccessful payment
-func (c *PaymentUsecase) HandleUnsuccessfulPayment(tx *gorm.DB, booking *domain.Booking, tickets []*domain.Ticket, session *domain.ClaimSession, status string) error {
-
-	// Update session to failed status
-	session.Status = enum.ClaimSessionFailed.String() // Expire immediately
-
-	if err := c.ClaimSessionRepository.Update(tx, session); err != nil {
-		return fmt.Errorf("update claim session failed: %w", err)
-	}
+func (c *PaymentUsecase) HandleUnsuccessfulPayment(tx *gorm.DB, booking *domain.Booking, tickets []*domain.Ticket, status string) error {
 
 	subject := "Payment Failed - Booking Not Confirmed"
 	var htmlBody string

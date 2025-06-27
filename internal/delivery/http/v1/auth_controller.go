@@ -1,4 +1,4 @@
-package controller
+package v1
 
 import (
 	"eticket-api/internal/common/logger"
@@ -43,7 +43,6 @@ func NewAuthController(
 }
 
 func (auc *AuthController) Login(ctx *gin.Context) {
-	auc.Log.Info("Processing login request")
 	request := new(model.WriteLoginRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
@@ -75,7 +74,6 @@ func (auc *AuthController) Login(ctx *gin.Context) {
 }
 
 func (auc *AuthController) Logout(ctx *gin.Context) {
-	auc.Log.Info("Processing logout request")
 	refreshToken, err := ctx.Cookie("refresh_token")
 	if err != nil {
 		auc.Log.WithError(err).Error("missing refresh token in logout request")
@@ -96,7 +94,6 @@ func (auc *AuthController) Logout(ctx *gin.Context) {
 	ctx.SetCookie("access_token", "", -1, "/", "", true, true)
 	ctx.SetCookie("refresh_token", "", -1, "/", "", true, true)
 
-	auc.Log.Info("User logged out successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Logout successful", nil))
 }
 
@@ -119,8 +116,6 @@ func (auc *AuthController) RefreshToken(ctx *gin.Context) {
 	// Set new access token cookie
 	ctx.SetSameSite(http.SameSiteNoneMode)
 	ctx.SetCookie("access_token", newAccessToken, 15*60, "/", "", true, true)
-
-	auc.Log.Info("Token refreshed successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Token refreshed successfully", nil))
 }
 
@@ -146,8 +141,6 @@ func (auc *AuthController) ForgetPassword(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Reset password failed", err.Error()))
 		return
 	}
-
-	auc.Log.WithField("email", request.Email).Info("Password reset request processed")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "We will send reset password email if it matched to our system", nil))
 }
 
@@ -167,6 +160,5 @@ func (auc *AuthController) Me(ctx *gin.Context) {
 		return
 	}
 
-	auc.Log.WithField("username", user.Username).Info("User profile retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(user, "User info retrieved successfully", nil))
 }

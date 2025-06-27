@@ -1,4 +1,4 @@
-package controller
+package v1
 
 import (
 	"eticket-api/internal/common/logger"
@@ -78,7 +78,6 @@ func (uc *UserController) GetAllUsers(ctx *gin.Context) {
 		return
 	}
 
-	uc.Log.WithField("count", total).Info("Users retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewMetaResponse(
 		datas,
 		"Users retrieved successfully",
@@ -115,7 +114,6 @@ func (uc *UserController) GetUserByID(ctx *gin.Context) {
 		return
 	}
 
-	uc.Log.WithField("id", id).Info("User retrieved successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "User retrieved successfully", nil))
 }
 
@@ -149,7 +147,6 @@ func (uc *UserController) UpdateUser(ctx *gin.Context) {
 		return
 	}
 
-	uc.Log.WithField("id", id).Info("User updated successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "User updated successfully", nil))
 }
 
@@ -169,6 +166,5 @@ func (uc *UserController) DeleteUser(ctx *gin.Context) {
 		return
 	}
 
-	uc.Log.WithField("id", id).Info("User deleted successfully")
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "User deleted successfully", nil))
 }
