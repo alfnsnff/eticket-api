@@ -243,6 +243,18 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 
 		for i := 0; i < item.Quantity; i++ {
 			data := classData[i]
+			switch quota.Class.Type {
+			case "passenger":
+				if data.PassengerName == "" || data.IDType == "" || data.IDNumber == "" {
+					tx.Rollback()
+					return nil, fmt.Errorf("missing passenger info for class %d", item.ClassID)
+				}
+			case "vehicle":
+				if data.LicensePlate == nil || *data.LicensePlate == "" {
+					tx.Rollback()
+					return nil, fmt.Errorf("missing license plate for vehicle class %d", item.ClassID)
+				}
+			}
 			tickets = append(tickets, &domain.Ticket{
 				BookingID:       &booking.ID,
 				ClassID:         item.ClassID,
