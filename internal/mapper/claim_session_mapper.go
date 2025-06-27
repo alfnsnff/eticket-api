@@ -21,7 +21,6 @@ func TESTClaimSessionToResponse(session *domain.ClaimSession) *model.TESTReadCla
 		}
 	}
 	prices, total := BuildPriceBreakdown(session.Tickets)
-	details := BuildTicketBreakdown(session.Tickets)
 	return &model.TESTReadClaimSessionResponse{
 		ID:        session.ID,
 		SessionID: session.SessionID,
@@ -44,9 +43,8 @@ func TESTClaimSessionToResponse(session *domain.ClaimSession) *model.TESTReadCla
 			ArrivalDatetime:   session.Schedule.ArrivalDatetime,
 		},
 		ExpiresAt:   session.ExpiresAt,
-		ClaimItems:  claimItems,
 		Prices:      prices,
-		Tickets:     details,
+		Tickets:     claimItems,
 		TotalAmount: total,
 		CreatedAt:   session.CreatedAt,
 		UpdatedAt:   session.UpdatedAt,
