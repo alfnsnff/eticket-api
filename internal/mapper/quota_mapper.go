@@ -24,6 +24,7 @@ func QuotaToResponse(quota *domain.Quota) *model.ReadQuotaResponse {
 		},
 		Price:     quota.Price,
 		Quota:     quota.Quota,
+		Capacity:  quota.Capacity, // Remaining quota after reservations
 		CreatedAt: quota.CreatedAt,
 		UpdatedAt: quota.UpdatedAt,
 	}

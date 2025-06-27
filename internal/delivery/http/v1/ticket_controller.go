@@ -32,8 +32,8 @@ func NewTicketController(
 	}
 
 	router.GET("/tickets", tc.GetAllTickets)
+	router.GET("/tickets/schedule/:id", tc.GetAllTicketsByScheduleID)
 	router.GET("/ticket/:id", tc.GetTicketByID)
-	router.GET("/ticket/schedule/:id", tc.GetAllTicketsByScheduleID)
 
 	protected.PATCH("/ticket/check-in/:id", tc.CheckIn)
 	protected.POST("/ticket/create", tc.CreateTicket)

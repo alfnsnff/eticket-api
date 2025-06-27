@@ -8,7 +8,7 @@ import (
 
 type Booking struct {
 	ID              uint      `gorm:"column:id;primaryKey"`
-	OrderID         *string   `gorm:"column:order_id;type:varchar(64);;uniqueIndex"`
+	OrderID         string    `gorm:"column:order_id;type:varchar(64);not null;uniqueIndex"` // Business order ID
 	ReferenceNumber *string   `gorm:"column:reference_number;"`
 	ScheduleID      uint      `gorm:"column:schedule_id;not null;index;"`
 	IDType          string    `gorm:"column:id_type;type:varchar(24);not null"`

@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	errs "eticket-api/internal/common/errors"
+	"eticket-api/internal/common/utils"
 	"eticket-api/internal/domain"
 	"eticket-api/internal/mapper"
 	"eticket-api/internal/model"
@@ -59,12 +60,32 @@ func (t *TicketUsecase) CreateTicket(ctx context.Context, request *model.WriteTi
 		tx.Rollback()
 		return errs.ErrNotFound
 	}
+
+	// Validation and seat number generation
+	switch quota.Class.Type {
+	case "passenger":
+		if request.IDType == nil || *request.IDType == "" ||
+			request.IDNumber == nil || *request.IDNumber == "" {
+			tx.Rollback()
+			return fmt.Errorf("missing passenger info for class %d", request.ClassID)
+		}
+		// Generate seat number if not provided
+		if request.SeatNumber == nil || *request.SeatNumber == "" {
+			seat := fmt.Sprintf("%s%d", quota.Class.ClassAlias, quota.Capacity-quota.Quota+1)
+			request.SeatNumber = &seat
+		}
+	case "vehicle":
+		if request.LicensePlate == nil || *request.LicensePlate == "" {
+			tx.Rollback()
+			return fmt.Errorf("missing license plate for vehicle class %d", request.ClassID)
+		}
+	}
+
 	ticket := &domain.Ticket{
+		TicketCode:      utils.GenerateTicketReferenceID(), // Unique ticket code
 		ScheduleID:      request.ScheduleID,
 		ClassID:         request.ClassID,
-		BookingID:       request.BookingID,
-		ClaimSessionID:  request.ClaimSessionID,
-		Type:            request.Type,
+		Type:            quota.Class.Type,
 		Price:           quota.Price,
 		Address:         request.Address,
 		PassengerName:   request.PassengerName,
@@ -78,6 +99,7 @@ func (t *TicketUsecase) CreateTicket(ctx context.Context, request *model.WriteTi
 	}
 
 	if err := t.TicketRepository.Insert(tx, ticket); err != nil {
+		tx.Rollback()
 		return fmt.Errorf("failed to create ticket: %w", err)
 	}
 
@@ -212,8 +234,6 @@ func (t *TicketUsecase) UpdateTicket(ctx context.Context, request *model.UpdateT
 
 	ticket.ScheduleID = request.ScheduleID
 	ticket.ClassID = request.ClassID
-	ticket.BookingID = request.BookingID
-	ticket.ClaimSessionID = request.ClaimSessionID
 	ticket.Type = request.Type
 	ticket.Address = request.Address
 	ticket.PassengerName = request.PassengerName
@@ -223,7 +243,8 @@ func (t *TicketUsecase) UpdateTicket(ctx context.Context, request *model.UpdateT
 	ticket.IDNumber = request.IDNumber
 	ticket.SeatNumber = request.SeatNumber
 	ticket.LicensePlate = request.LicensePlate
-	ticket.IsCheckedIn = request.IsCheckedIn // Default value
+	ticket.IsCheckedIn = request.IsCheckedIn              // Default value
+	ticket.TicketCode = utils.GenerateTicketReferenceID() // Unique ticket code
 
 	if err := t.TicketRepository.Update(tx, ticket); err != nil {
 		return fmt.Errorf("failed to update ticket: %w", err)

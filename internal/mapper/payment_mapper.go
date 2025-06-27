@@ -8,8 +8,8 @@ import (
 
 func TicketToItem(ticket *domain.Ticket) model.OrderItem {
 	name := "Tiket " + ticket.Type
-	if ticket.Type == "passenger" && ticket.PassengerName != nil {
-		name = fmt.Sprintf("Tiket Penumpang - %s", *ticket.PassengerName)
+	if ticket.Type == "passenger" && ticket.PassengerName != "" {
+		name = fmt.Sprintf("Tiket Penumpang - %s", ticket.PassengerName)
 	}
 	if ticket.Type == "vehicle" && ticket.LicensePlate != nil {
 		name = fmt.Sprintf("Tiket Kendaraan - %s", *ticket.LicensePlate)

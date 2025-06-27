@@ -102,6 +102,7 @@ func (tr *TicketRepository) FindByID(db *gorm.DB, id uint) (*domain.Ticket, erro
 		Preload("Schedule.Ship").
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
+		Preload("Booking").
 		First(&ticket, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
@@ -116,6 +117,7 @@ func (tr *TicketRepository) FindByIDs(db *gorm.DB, ids []uint) ([]*domain.Ticket
 		Preload("Schedule.Ship").
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
+		Preload("Booking").
 		Where("id IN ?", ids).Find(&tickets)
 	if result.Error != nil {
 		return nil, result.Error
@@ -130,6 +132,7 @@ func (tr *TicketRepository) FindByBookingID(db *gorm.DB, bookingID uint) ([]*dom
 		Preload("Schedule.Ship").
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
+		Preload("Booking").
 		Where("booking_id = ?", bookingID).
 		Find(&tickets)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -145,6 +148,7 @@ func (tr *TicketRepository) FindByScheduleID(db *gorm.DB, scheduleID uint) ([]*d
 		Preload("Schedule.Ship").
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
+		Preload("Booking").
 		Where("schedule_id = ?", scheduleID).
 		Find(&tickets)
 	if result.Error != nil {
@@ -160,6 +164,7 @@ func (tr *TicketRepository) FindByClaimSessionID(db *gorm.DB, sessionID uint) ([
 		Preload("Schedule.Ship").
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
+		Preload("Booking").
 		Where("claim_session_id = ?", sessionID).Find(&tickets)
 	if result.Error != nil {
 		return nil, result.Error

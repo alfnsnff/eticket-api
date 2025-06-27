@@ -39,7 +39,8 @@ func (a *QuotaUsecase) CreateQuota(ctx context.Context, request *model.WriteQuot
 		ScheduleID: request.ScheduleID,
 		ClassID:    request.ClassID,
 		Price:      request.Price,
-		Quota:      request.Quota,
+		Quota:      request.Capacity,
+		Capacity:   request.Capacity, // Assuming Capacity is the same as Quota
 	}
 
 	if err := a.QuotaRepository.Insert(tx, Quota); err != nil {
@@ -129,7 +130,8 @@ func (a *QuotaUsecase) UpdateQuota(ctx context.Context, request *model.UpdateQuo
 
 	Quota.ScheduleID = request.ScheduleID
 	Quota.ClassID = request.ClassID
-	Quota.Quota = request.Quota
+	Quota.Capacity = request.Capacity // Assuming Capacity is the same as Quota
+	Quota.Quota = request.Capacity
 	Quota.Price = request.Price
 
 	// Save updated Quota

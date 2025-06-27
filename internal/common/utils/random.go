@@ -7,9 +7,9 @@ import (
 	"time"
 )
 
-func GenerateOrderID(departure, arrival, shipCode string, date time.Time) string {
-	fullDate := date.Format("060102") // YYMMDD
-	return fmt.Sprintf("%s%s%s", departure, fullDate, Random(3))
+func GenerateOrderID(departure, arrival, shipCode string) string {
+	now := time.Now().Format("060102") // YYMMDD
+	return fmt.Sprintf("%s%s%s", departure, now, Random(3))
 }
 
 func Random(n int) string {
@@ -29,4 +29,10 @@ func ShuffleString(s string) string {
 		runes[i], runes[j] = runes[j], runes[i]
 	})
 	return string(runes)
+}
+
+func GenerateTicketReferenceID() string {
+	now := time.Now().Format("060102") // YYMMDD
+	random := Random(3)                // 6-char alphanumeric
+	return fmt.Sprintf("T-%s-%s", now, random)
 }

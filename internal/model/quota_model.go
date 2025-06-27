@@ -19,23 +19,23 @@ type QuotaSchedule struct {
 
 // QuotaDTO represents a Quota.
 type ReadQuotaResponse struct {
-	ID             uint          `json:"id"`
-	ScheduleID     uint          `json:"schedule_id"` // Foreign key
-	Class          QuotaClass    `json:"class"`       // Foreign key
-	Schedule       QuotaSchedule `json:"schedule"`    // Foreign key
-	Price          float64       `json:"price"`       // Price of the quota
-	Quota          int           `json:"quota"`
-	RemainingQuota int           `json:"remaining_quota"` // Remaining quota after reservations
-	CreatedAt      time.Time     `json:"created_at"`
-	UpdatedAt      time.Time     `json:"updated_at"`
+	ID         uint          `json:"id"`
+	ScheduleID uint          `json:"schedule_id"` // Foreign key
+	Class      QuotaClass    `json:"class"`       // Foreign key
+	Schedule   QuotaSchedule `json:"schedule"`    // Foreign key
+	Price      float64       `json:"price"`       // Price of the quota
+	Quota      int           `json:"quota"`
+	Capacity   int           `json:"Capacity"` // Remaining quota after reservations
+	CreatedAt  time.Time     `json:"created_at"`
+	UpdatedAt  time.Time     `json:"updated_at"`
 }
 
 // QuotaDTO represents a Quota.
 type WriteQuotaRequest struct {
 	ScheduleID uint    `json:"schedule_id" validate:"required,gt=0"`
-	ClassID    uint    `json:"class_id" validate:"required,gt=0"` // must be > 0
-	Price      float64 `json:"price"`                             // Price of the quota
-	Quota      int     `json:"quota" validate:"required,gte=0"`   // must be ≥ 0
+	ClassID    uint    `json:"class_id" validate:"required,gt=0"`  // must be > 0
+	Capacity   int     `json:"capacity" validate:"required,gte=0"` // must be ≥ 0
+	Price      float64 `json:"price"`                              // Price of the quota
 }
 
 // QuotaDTO represents a Quota.
@@ -44,5 +44,5 @@ type UpdateQuotaRequest struct {
 	ScheduleID uint    `json:"schedule_id" validate:"required,gt=0"` // must be > 0
 	ClassID    uint    `json:"class_id" validate:"required,gt=0"`    // must be > 0
 	Price      float64 `json:"price"`                                // Price of the quota
-	Quota      int     `json:"quota" validate:"required,gte=0"`      // must be ≥ 0
+	Capacity   int     `json:"capacity" validate:"required,gte=0"`   // must be ≥ 0
 }

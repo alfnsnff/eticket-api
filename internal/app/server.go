@@ -33,19 +33,18 @@ func NewApp(cfg *config.Config) (*Server, error) {
 		log.Fatalf("Database connection failed: %v", err)
 	}
 
-	// Automatically migrate your models (creating tables, etc.)
 	if err := db.AutoMigrate(
-		&domain.Class{},
-		&domain.Schedule{},
-		&domain.Ship{},
-		&domain.Harbor{},
-		&domain.Booking{},
-		&domain.ClaimItem{},
-		&domain.ClaimSession{},
-		&domain.Ticket{},
 		&domain.Role{},
 		&domain.User{},
+		&domain.Ship{},
+		&domain.Harbor{},
+		&domain.Class{},
+		&domain.Schedule{},
+		&domain.Booking{},
 		&domain.Quota{},
+		&domain.ClaimSession{},
+		&domain.ClaimItem{},
+		&domain.Ticket{},
 		&domain.RefreshToken{},
 		&domain.PasswordReset{},
 	); err != nil {

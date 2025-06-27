@@ -35,23 +35,25 @@ type BookingTicketClass struct {
 
 // TicketDTO represents a ticket.
 type BookingTicket struct {
-	ID            uint               `json:"id"`
-	Class         BookingTicketClass `json:"class"`
-	Type          string             `json:"type" binding:"required,oneof=passenger vehicle"`
-	PassengerName *string            `json:"passenger_name"`
-	PassengerAge  *int               `json:"passenger_age"`
-	Address       *string            `json:"address"`
-	IDType        *string            `json:"id_type"`
-	IDNumber      *string            `json:"id_number"`
-	SeatNumber    *string            `json:"seat_number"`
-	LicensePlate  *string            `json:"license_plate"`
-	Price         float64            `json:"price"`
+	ID              uint               `json:"id"`
+	TicketCode      string             `json:"ticket_code"` // Unique ticket code
+	Class           BookingTicketClass `json:"class"`
+	Type            string             `json:"type" binding:"required,oneof=passenger vehicle"`
+	PassengerName   string             `json:"passenger_name"`
+	PassengerAge    int                `json:"passenger_age"`
+	Address         string             `json:"address"`
+	PassengerGender *string            `json:"passenger_gender"` // Optional field for passe
+	IDType          *string            `json:"id_type"`
+	IDNumber        *string            `json:"id_number"`
+	SeatNumber      *string            `json:"seat_number"`
+	LicensePlate    *string            `json:"license_plate"`
+	Price           float64            `json:"price"`
 }
 
 // BookingDTO represents the person who booked the ticket.
 type ReadBookingResponse struct {
 	ID              uint            `json:"id"`
-	OrderID         *string         `json:"order_id"` // Unique identifier for the booking, e.g., 'ORD123456'
+	OrderID         string          `json:"order_id"` // Unique identifier for the booking, e.g., 'ORD123456'
 	Schedule        BookingSchedule `json:"schedule"`
 	CustomerName    string          `json:"customer_name"`
 	CustomerAge     int             `json:"customer_age"`    // Age of the customer
@@ -67,7 +69,7 @@ type ReadBookingResponse struct {
 }
 
 type WriteBookingRequest struct {
-	OrderID         *string `json:"order_id"`                                                    // Required
+	OrderID         string  `json:"order_id"`                                                    // Required
 	ScheduleID      uint    `json:"schedule_id" validate:"required"`                             // Required
 	IDType          string  `json:"id_type" validate:"required"`                                 // Required
 	IDNumber        string  `json:"id_number" validate:"required"`                               // Required
@@ -81,7 +83,7 @@ type WriteBookingRequest struct {
 
 type UpdateBookingRequest struct {
 	ID              uint    `json:"id,omitempty"`
-	OrderID         *string `json:"order_id"`
+	OrderID         string  `json:"order_id"`
 	ScheduleID      uint    `json:"schedule_id" validate:"required"`
 	CustomerName    string  `json:"customer_name" validate:"required"`
 	CustomerAge     int     `json:"customer_age" validate:"required,min=0,max=120"`

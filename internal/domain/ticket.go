@@ -8,16 +8,16 @@ import (
 
 type Ticket struct {
 	ID              uint      `gorm:"column:id;primaryKey"`
+	BookingID       *uint     `gorm:"column:booking_id;not null;index;"`
+	TicketCode      string    `gorm:"column:ticket_code;type:varchar(64);not null;uniqueIndex"` // Unique ticket code
 	ScheduleID      uint      `gorm:"column:schedule_id;not null;index;"`
 	ClassID         uint      `gorm:"column:class_id;not null;index;"`
-	BookingID       *uint     `gorm:"column:booking_id;index"`
-	ClaimSessionID  *uint     `gorm:"column:claim_session_id;index"` // TO FIXED
+	PassengerName   string    `gorm:"column:passenger_name;type:varchar(32)"`
+	PassengerAge    int       `gorm:"column:passenger_age;"`
+	Address         string    `gorm:"column:address;type:varchar(32)"`
+	PassengerGender *string   `gorm:"column:passenger_gender;type:varchar(24);"`
 	IDType          *string   `gorm:"column:id_type;type:varchar(24)"`
 	IDNumber        *string   `gorm:"column:id_number;type:varchar(24)"`
-	PassengerAge    *int      `gorm:"column:passenger_age;"`
-	PassengerName   *string   `gorm:"column:passenger_name;type:varchar(32)"`
-	PassengerGender *string   `gorm:"column:passenger_gender;type:varchar(24);"`
-	Address         *string   `gorm:"column:address;type:varchar(32)"`
 	SeatNumber      *string   `gorm:"column:seat_number;type:varchar(24)"`
 	LicensePlate    *string   `gorm:"column:license_plate;type:varchar(24)"`
 	Type            string    `gorm:"column:type;type:varchar(20);not null"` // "passenger" or "vehicle"

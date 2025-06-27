@@ -16,15 +16,18 @@ func BookingToResponse(booking *domain.Booking) *model.ReadBookingResponse {
 			Class: model.BookingTicketClass{
 				ID:        ticket.Class.ID,
 				ClassName: ticket.Class.ClassName,
-				Type:      ticket.Class.Type},
-			PassengerName: ticket.PassengerName,
-			PassengerAge:  ticket.PassengerAge,
-			Address:       ticket.Address,
-			IDType:        ticket.IDType,
-			IDNumber:      ticket.IDNumber,
-			SeatNumber:    ticket.SeatNumber,
-			LicensePlate:  ticket.LicensePlate,
-			Price:         ticket.Price,
+				Type:      ticket.Class.Type,
+			},
+			TicketCode:      ticket.TicketCode, // Unique ticket code
+			PassengerName:   ticket.PassengerName,
+			PassengerAge:    ticket.PassengerAge,
+			PassengerGender: ticket.PassengerGender,
+			Address:         ticket.Address,
+			IDType:          ticket.IDType,
+			IDNumber:        ticket.IDNumber,
+			SeatNumber:      ticket.SeatNumber,
+			LicensePlate:    ticket.LicensePlate,
+			Price:           ticket.Price,
 		}
 	}
 

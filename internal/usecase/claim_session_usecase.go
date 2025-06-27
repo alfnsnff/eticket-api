@@ -188,12 +188,11 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 		session.Schedule.DepartureHarbor.HarborAlias,
 		session.Schedule.ArrivalHarbor.HarborAlias,
 		session.Schedule.Ship.ShipAlias,
-		time.Now(),
 	)
 
 	// Create booking
 	booking := &domain.Booking{
-		OrderID:      &orderID,
+		OrderID:      orderID,
 		ScheduleID:   session.ScheduleID,
 		IDType:       request.IDType,
 		IDNumber:     request.IDNumber,
@@ -249,25 +248,29 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 					tx.Rollback()
 					return nil, fmt.Errorf("missing passenger info for class %d", item.ClassID)
 				}
-				seat := fmt.Sprintf("%s%d", quota.Class.ClassAlias, i+1)
+				seat := fmt.Sprintf("%s%d", quota.Class.ClassAlias, quota.Capacity-quota.Quota+1)
 				data.SeatNumber = &seat
 			case "vehicle":
 				if data.LicensePlate == nil || *data.LicensePlate == "" {
 					tx.Rollback()
 					return nil, fmt.Errorf("missing license plate for vehicle class %d", item.ClassID)
 				}
+			default:
+				tx.Rollback()
+				return nil, fmt.Errorf("unsupported ticket type or missing required fields for class %d", item.ClassID)
 			}
 			tickets = append(tickets, &domain.Ticket{
+				TicketCode:      utils.GenerateTicketReferenceID(), // Unique ticket code
 				BookingID:       &booking.ID,
 				ClassID:         item.ClassID,
 				Price:           quota.Price,
 				Type:            quota.Class.Type,
-				PassengerName:   &data.PassengerName,
+				PassengerName:   data.PassengerName,
+				PassengerAge:    data.PassengerAge,
+				Address:         data.Address,
+				PassengerGender: &data.PassengerGender,
 				IDType:          &data.IDType,
 				IDNumber:        &data.IDNumber,
-				PassengerAge:    &data.PassengerAge,
-				PassengerGender: &data.PassengerGender,
-				Address:         &data.Address,
 				SeatNumber:      data.SeatNumber,
 				LicensePlate:    data.LicensePlate,
 				ScheduleID:      session.ScheduleID,
@@ -296,7 +299,7 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 		CustomerName:  booking.CustomerName,
 		CustomerEmail: booking.Email,
 		CustomerPhone: booking.PhoneNumber,
-		MerchantRef:   *booking.OrderID,
+		MerchantRef:   booking.OrderID,
 		OrderItems:    orderItems,
 		CallbackUrl:   "https://example.com/callback",
 		ReturnUrl:     "https://example.com/callback",
@@ -347,7 +350,7 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 	}
 
 	return &model.TESTReadClaimSessionDataEntryResponse{
-		OrderID:   *booking.OrderID,
+		OrderID:   booking.OrderID,
 		ExpiresAt: booking.ExpiresAt,
 	}, nil
 }
@@ -419,12 +422,11 @@ func (cs *ClaimSessionUsecase) CreateClaimSession(ctx context.Context, request *
 
 		for i := 0; i < int(item.Quantity); i++ {
 			ticketsToBuild = append(ticketsToBuild, &domain.Ticket{
-				ScheduleID:     request.ScheduleID,
-				ClassID:        item.ClassID,
-				Price:          quota.Price,
-				Type:           quota.Class.Type,
-				ClaimSessionID: &claimSession.ID,
-				IsCheckedIn:    false,
+				ScheduleID:  request.ScheduleID,
+				ClassID:     item.ClassID,
+				Price:       quota.Price,
+				Type:        quota.Class.Type,
+				IsCheckedIn: false,
 			})
 		}
 	}
@@ -577,11 +579,10 @@ func (cs *ClaimSessionUsecase) UpdateClaimSession(ctx context.Context, request *
 		schedule.DepartureHarbor.HarborAlias,
 		schedule.ArrivalHarbor.HarborAlias,
 		schedule.Ship.ShipAlias,
-		time.Now(),
 	)
 
 	booking := &domain.Booking{
-		OrderID:      &orderID,
+		OrderID:      orderID,
 		ScheduleID:   session.ScheduleID,
 		IDType:       request.IDType,
 		IDNumber:     request.IDNumber,
@@ -611,11 +612,9 @@ func (cs *ClaimSessionUsecase) UpdateClaimSession(ctx context.Context, request *
 			return nil, fmt.Errorf("ticket %d not found in session", id)
 		}
 
-		ticket.PassengerName = &data.PassengerName
-		ticket.PassengerAge = &data.PassengerAge
-		ticket.PassengerGender = &data.PassengerGender
-		ticket.Address = &data.Address
-		ticket.BookingID = &booking.ID
+		ticket.PassengerName = data.PassengerName
+		ticket.PassengerAge = data.PassengerAge
+		ticket.Address = data.Address
 
 		switch ticket.Type {
 		case "Passenger":
@@ -624,6 +623,7 @@ func (cs *ClaimSessionUsecase) UpdateClaimSession(ctx context.Context, request *
 			}
 			ticket.IDType = &data.IDType
 			ticket.IDNumber = &data.IDNumber
+			ticket.PassengerGender = &data.PassengerGender
 
 			count, err := cs.TicketRepository.CountByScheduleIDAndClassIDWithStatus(
 				tx, ticket.ScheduleID, ticket.ClassID,
