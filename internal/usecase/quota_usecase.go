@@ -54,6 +54,38 @@ func (a *QuotaUsecase) CreateQuota(ctx context.Context, request *model.WriteQuot
 	return nil
 }
 
+func (a *QuotaUsecase) CreateQuotaBulk(ctx context.Context, requests []*model.WriteQuotaRequest) error {
+	tx := a.DB.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	quotas := make([]*domain.Quota, len(requests))
+	for i, request := range requests {
+		quotas[i] = &domain.Quota{
+			ScheduleID: request.ScheduleID,
+			ClassID:    request.ClassID,
+			Price:      request.Price,
+			Quota:      request.Capacity,
+			Capacity:   request.Capacity,
+		}
+	}
+
+	if err := a.QuotaRepository.InsertBulk(tx, quotas); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to create quotas in bulk: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
 func (a *QuotaUsecase) ListQuotas(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadQuotaResponse, int, error) {
 	tx := a.DB.WithContext(ctx).Begin()
 	defer func() {

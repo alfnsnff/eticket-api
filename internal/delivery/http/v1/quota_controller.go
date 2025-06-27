@@ -36,10 +36,12 @@ func NewQuotaController(
 	router.GET("/quota/:id", ac.GetQuotaByID)
 
 	protected.POST("/quota/create", ac.CreateQuota)
+	protected.POST("/quota/create/bulk", ac.CreateQuotaBulk)
 	protected.PUT("/quota/update/:id", ac.UpdateQuota)
 	protected.DELETE("/quota/:id", ac.DeleteQuota)
 
 }
+
 func (mc *QuotaController) CreateQuota(ctx *gin.Context) {
 	request := new(model.WriteQuotaRequest)
 
@@ -63,6 +65,36 @@ func (mc *QuotaController) CreateQuota(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Quota created successfully", nil))
+}
+
+func (mc *QuotaController) CreateQuotaBulk(ctx *gin.Context) {
+	requests := []*model.WriteQuotaRequest{}
+
+	if err := ctx.ShouldBindJSON(&requests); err != nil {
+		mc.Log.WithError(err).Error("failed to bind JSON request body for bulk create")
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+		return
+	}
+
+	for i, req := range requests {
+		if err := mc.Validate.Struct(req); err != nil {
+			mc.Log.WithError(err).Error("failed to validate request body at index %d", i)
+			errors := validator.ParseErrors(err)
+			ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", map[string]interface{}{
+				"index":  i,
+				"errors": errors,
+			}))
+			return
+		}
+	}
+
+	if err := mc.QuotaUsecase.CreateQuotaBulk(ctx, requests); err != nil {
+		mc.Log.WithError(err).Error("failed to create Quotas in bulk")
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create Quotas in bulk", err.Error()))
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Quotas created successfully", nil))
 }
 
 func (mc *QuotaController) GetAllQuotas(ctx *gin.Context) {
