@@ -9,6 +9,7 @@ const (
 	ScheduleCancelled
 )
 
+// Hapuss
 func (ss ScheduleStatus) String() string {
 	switch ss {
 	case ScheduleActive:
