@@ -163,7 +163,7 @@ func (uc *PaymentUsecase) HandleCallback(ctx context.Context, request *model.Wri
 func (uc *PaymentUsecase) HandleSuccessfulPayment(ctx context.Context, tx gotann.Connection, booking *domain.Booking, tickets []*domain.Ticket) error {
 	// Send confirmation email
 	subject := "Your Booking is Confirmed"
-	htmlBody := templates.BookingSuccessEmail(booking.CustomerName, booking.OrderID, len(tickets), time.Now().Year())
+	htmlBody := templates.BookingSuccessEmail(booking, tickets)
 
 	if err := uc.Mailer.Send(booking.Email, subject, htmlBody); err != nil {
 		return fmt.Errorf("failed to send confirmation email: %w", err)
@@ -209,11 +209,11 @@ func (uc *PaymentUsecase) HandleUnsuccessfulPayment(ctx context.Context, tx gota
 
 	switch status {
 	case "FAILED":
-		htmlBody = templates.BookingFailedEmail(booking.CustomerName, booking.OrderID, "Payment processing failed")
+		htmlBody = templates.BookingFailedEmail(booking, "Payment processing failed")
 	case "EXPIRED":
-		htmlBody = templates.BookingFailedEmail(booking.CustomerName, booking.OrderID, "Payment time expired")
+		htmlBody = templates.BookingFailedEmail(booking, "Payment time expired")
 	case "CANCELLED", "REFUND":
-		htmlBody = templates.BookingFailedEmail(booking.CustomerName, booking.OrderID, "Payment was cancelled or refunded")
+		htmlBody = templates.BookingFailedEmail(booking, "Payment was cancelled or refunded")
 	}
 
 	if err := uc.Mailer.Send(booking.Email, subject, htmlBody); err != nil {

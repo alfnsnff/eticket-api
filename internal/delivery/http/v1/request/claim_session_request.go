@@ -1,10 +1,56 @@
 package request
 
-import "time"
+import (
+	"time"
+)
+
+type ClaimSessionScheduleHarbor struct {
+	ID         uint   `json:"id"`
+	HarborName string `json:"harbor_name"`
+}
+
+type ClaimSessionScheduleShip struct {
+	ID       uint   `json:"id"`
+	ShipName string `json:"ship_name"`
+}
+
+type ClaimSessionSchedule struct {
+	ID                uint                       `json:"id"`
+	Ship              ClaimSessionScheduleShip   `json:"ship"`
+	DepartureHarbor   ClaimSessionScheduleHarbor `json:"departure_harbor"`
+	ArrivalHarbor     ClaimSessionScheduleHarbor `json:"arrival_harbor"`
+	DepartureDatetime time.Time                  `json:"departure_datetime"`
+	ArrivalDatetime   time.Time                  `json:"arrival_datetime"`
+}
+
+type ClaimSessionItemClass struct {
+	ID        uint   `json:"id"`
+	ClassName string `json:"class_name"`
+	Type      string `json:"type"`
+}
+
+type ClaimSessionItem struct {
+	ClassID  uint                  `json:"class_id"`
+	Class    ClaimSessionItemClass `json:"class"`
+	Subtotal float64               `json:"subtotal"` // Total price for this class (Quantity * Price)
+	Quantity int                   `json:"quantity"`
+}
 
 type TESTLockClaimSessionRequest struct {
 	ScheduleID uint               `json:"schedule_id"` // The schedule the user wants tickets for
 	Items      []ClaimSessionItem `json:"items"`       // List of classes and quantities requested
+}
+
+type TESTClaimSessionTicketDataEntry struct {
+	ClassID         uint    `json:"class_id"` // The class ID for the ticket
+	PassengerName   string  `json:"passenger_name"`
+	IDType          string  `json:"id_type"`
+	IDNumber        string  `json:"id_number"`
+	PassengerAge    int     `json:"passenger_age"`
+	PassengerGender string  `json:"passenger_gender"`
+	Address         string  `json:"address"`
+	SeatNumber      *string `json:"seat_number"`
+	LicensePlate    *string `json:"license_plate"`
 }
 
 type TESTDataEntryClaimSessionRequest struct {
