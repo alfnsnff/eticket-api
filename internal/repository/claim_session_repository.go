@@ -128,11 +128,12 @@ func (r *ClaimSessionRepository) FindByScheduleID(ctx context.Context, conn gota
 	return sessions, result.Error
 }
 
-func (r *ClaimSessionRepository) FindExpired(ctx context.Context, conn gotann.Connection, expiryTime time.Time, limit int) ([]*domain.ClaimSession, error) {
+func (r *ClaimSessionRepository) FindExpired(ctx context.Context, conn gotann.Connection, limit int) ([]*domain.ClaimSession, error) {
 	var sessions []*domain.ClaimSession
+	now := time.Now()
 	result := conn.Where(
 		"(expires_at <= ? AND status NOT IN ?) OR status IN ?",
-		expiryTime,
+		now,
 		enum.GetSuccessClaimSessionStatuses(),
 		enum.GetFailedClaimSessionStatuses(),
 	).Limit(limit).Find(&sessions)

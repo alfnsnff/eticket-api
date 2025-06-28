@@ -165,14 +165,8 @@ func (cd *ClaimSessionUsecase) EntryClaimSession(
 			return errs.ErrNotFound
 		}
 		if session.ExpiresAt.Before(time.Now()) {
-
 			return errors.New("claim session expired")
 		}
-		if session.Status == "LOCKED" {
-
-			return fmt.Errorf("claim session has invalid status: %s", session.Status)
-		}
-
 		// Generate order ID
 		orderID := utils.GenerateOrderID(
 			session.Schedule.DepartureHarbor.HarborAlias,
@@ -189,7 +183,7 @@ func (cd *ClaimSessionUsecase) EntryClaimSession(
 			PhoneNumber:  request.PhoneNumber,
 			CustomerName: request.CustomerName,
 			Email:        request.Email,
-			Status:       "PENDING_PAYMENT",
+			Status:       enum.ClaimSessionPendingData.String(),
 			ExpiresAt:    time.Now().Add(13 * time.Minute), // Set expiration for 13 minutes
 		}
 		if err := cd.BookingRepository.Insert(ctx, tx, booking); err != nil {
@@ -485,7 +479,7 @@ func (uc *ClaimSessionUsecase) DeleteClaimSession(ctx context.Context, id uint) 
 
 func (uc *ClaimSessionUsecase) DeleteExpiredClaimSession(ctx context.Context) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-		expiredSessions, err := uc.ClaimSessionRepository.FindExpired(ctx, tx, time.Now(), 50)
+		expiredSessions, err := uc.ClaimSessionRepository.FindExpired(ctx, tx, 50)
 		if err != nil {
 			return fmt.Errorf("failed to find expired sessions: %w", err)
 		}

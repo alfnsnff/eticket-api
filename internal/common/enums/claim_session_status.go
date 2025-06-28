@@ -7,7 +7,6 @@ const (
 	ClaimSessionFailed ClaimSessionStatus = iota
 	ClaimSessionPendingData
 	ClaimSessionPendingPayment
-	ClaimSessionPendingTransaction
 	ClaimSessionSuccess
 	ClaimSessionCancelled
 )
@@ -20,10 +19,8 @@ func (css ClaimSessionStatus) String() string {
 		return "DATA_PENDING"
 	case ClaimSessionPendingPayment:
 		return "PAYMENT_PENDING"
-	case ClaimSessionPendingTransaction:
-		return "TRANSACTION_PENDING"
 	case ClaimSessionSuccess:
-		return "SUCCESS"
+		return "RESERVED"
 	case ClaimSessionCancelled:
 		return "CANCELLED"
 	default:
@@ -43,7 +40,6 @@ func GetPendingClaimSessionStatuses() []string {
 	return []string{
 		ClaimSessionPendingData.String(),
 		ClaimSessionPendingPayment.String(),
-		ClaimSessionPendingTransaction.String(),
 	}
 }
 
