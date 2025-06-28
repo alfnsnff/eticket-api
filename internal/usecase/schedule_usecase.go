@@ -3,16 +3,16 @@ package usecase
 import (
 	"context"
 	errs "eticket-api/internal/common/errors"
+	"eticket-api/internal/common/transact"
 	"eticket-api/internal/domain"
 	"eticket-api/internal/mapper"
 	"eticket-api/internal/model"
+	"eticket-api/pkg/gotann"
 	"fmt"
-
-	"gorm.io/gorm"
 )
 
 type ScheduleUsecase struct {
-	DB                 *gorm.DB // Assuming you have a DB field for the transaction manager
+	Transactor         *transact.Transactor
 	ClassRepository    domain.ClassRepository
 	ShipRepository     domain.ShipRepository
 	ScheduleRepository domain.ScheduleRepository
@@ -20,14 +20,16 @@ type ScheduleUsecase struct {
 }
 
 func NewScheduleUsecase(
-	db *gorm.DB,
+
+	transactor *transact.Transactor,
 	class_repository domain.ClassRepository,
 	ship_repository domain.ShipRepository,
 	schedule_repository domain.ScheduleRepository,
 	ticket_repository domain.TicketRepository,
 ) *ScheduleUsecase {
 	return &ScheduleUsecase{
-		DB:                 db,
+
+		Transactor:         transactor,
 		ClassRepository:    class_repository,
 		ShipRepository:     ship_repository,
 		ScheduleRepository: schedule_repository,
@@ -35,187 +37,125 @@ func NewScheduleUsecase(
 	}
 }
 
-func (sc *ScheduleUsecase) CreateSchedule(ctx context.Context, request *model.WriteScheduleRequest) error {
-	tx := sc.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		} else if tx.Error != nil {
-			tx.Rollback()
+func (uc *ScheduleUsecase) CreateSchedule(ctx context.Context, request *model.WriteScheduleRequest) error {
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		schedule := &domain.Schedule{
+			ShipID:            request.ShipID,
+			DepartureHarborID: request.DepartureHarborID,
+			ArrivalHarborID:   request.ArrivalHarborID,
+			DepartureDatetime: request.DepartureDatetime,
+			ArrivalDatetime:   request.ArrivalDatetime,
+			Status:            request.Status,
 		}
-	}()
-
-	schedule := &domain.Schedule{
-		ShipID:            request.ShipID,
-		DepartureHarborID: request.DepartureHarborID,
-		ArrivalHarborID:   request.ArrivalHarborID,
-		DepartureDatetime: request.DepartureDatetime,
-		ArrivalDatetime:   request.ArrivalDatetime,
-		Status:            request.Status,
-	}
-	if err := sc.ScheduleRepository.Insert(tx, schedule); err != nil {
-		return fmt.Errorf("failed to create schedule: %w", err)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return nil
+		if err := uc.ScheduleRepository.Insert(ctx, tx, schedule); err != nil {
+			if errs.IsUniqueConstraintError(err) {
+				return errs.ErrConflict
+			}
+			return fmt.Errorf("failed to create schedule: %w", err)
+		}
+		return nil
+	})
 }
 
-func (sc *ScheduleUsecase) ListSchedules(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadScheduleResponse, int, error) {
-	tx := sc.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		} else {
-			tx.Rollback()
+func (uc *ScheduleUsecase) ListSchedules(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadScheduleResponse, int, error) {
+	var err error
+	var total int64
+	schedules := []*domain.Schedule{}
+	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		total, err = uc.ScheduleRepository.Count(ctx, tx)
+		if err != nil {
+			return fmt.Errorf("failed to count schedules: %w", err)
 		}
-	}()
-	total, err := sc.ScheduleRepository.Count(tx)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count schedules: %w", err)
-	}
 
-	schedules, err := sc.ScheduleRepository.FindAll(tx, limit, offset, sort, search)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get all schedules: %w", err)
+		schedules, err = uc.ScheduleRepository.FindAll(ctx, tx, limit, offset, sort, search)
+		if err != nil {
+			return fmt.Errorf("failed to get all schedules: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return nil, 0, fmt.Errorf("failed to list schedules: %w", err)
 	}
-
 	responses := make([]*model.ReadScheduleResponse, len(schedules))
 	for i, schedule := range schedules {
 		responses[i] = mapper.ScheduleToResponse(schedule)
 	}
-
-	if err := tx.Commit().Error; err != nil {
-		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
 	return responses, int(total), nil
 }
 
-func (sc *ScheduleUsecase) ListActiveSchedules(ctx context.Context) ([]*model.ReadScheduleResponse, error) {
-	tx := sc.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		} else {
-			tx.Rollback()
+func (uc *ScheduleUsecase) ListActiveSchedules(ctx context.Context) ([]*model.ReadScheduleResponse, error) {
+	var err error
+	var schedules []*domain.Schedule
+	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		schedules, err = uc.ScheduleRepository.FindActiveSchedules(ctx, tx)
+		if err != nil {
+			return fmt.Errorf("failed to get all active schedules: %w", err)
 		}
-	}()
-
-	schedules, err := sc.ScheduleRepository.FindActiveSchedule(tx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get all active schedules: %w", err)
+		return nil
+	}); err != nil {
+		return nil, fmt.Errorf("failed to list active schedules: %w", err)
 	}
-
 	responses := make([]*model.ReadScheduleResponse, len(schedules))
 	for i, schedule := range schedules {
 		responses[i] = mapper.ScheduleToResponse(schedule)
 	}
-
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
 	return responses, nil
 }
 
-func (sc *ScheduleUsecase) GetScheduleByID(ctx context.Context, id uint) (*model.ReadScheduleResponse, error) {
-	tx := sc.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		} else if tx.Error != nil {
-			tx.Rollback()
+func (uc *ScheduleUsecase) GetScheduleByID(ctx context.Context, id uint) (*model.ReadScheduleResponse, error) {
+	var err error
+	var schedule *domain.Schedule
+	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		schedule, err = uc.ScheduleRepository.FindByID(ctx, tx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get schedule: %w", err)
 		}
-	}()
-
-	schedule, err := sc.ScheduleRepository.FindByID(tx, id)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get schedule: %w", err)
+		if schedule == nil {
+			return errs.ErrNotFound
+		}
+		return nil
+	}); err != nil {
+		return nil, fmt.Errorf("failed to get schedule by ID: %w", err)
 	}
-
-	if schedule == nil {
-		return nil, errs.ErrNotFound
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
 	return mapper.ScheduleToResponse(schedule), nil
 }
 
-func (sc *ScheduleUsecase) UpdateSchedule(ctx context.Context, request *model.UpdateScheduleRequest) error {
-	tx := sc.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		} else {
-			tx.Rollback()
+func (uc *ScheduleUsecase) UpdateSchedule(ctx context.Context, request *model.UpdateScheduleRequest) error {
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		schedule, err := uc.ScheduleRepository.FindByID(ctx, tx, request.ID)
+		if err != nil {
+			return fmt.Errorf("failed to find schedule: %w", err)
 		}
-	}()
+		if schedule == nil {
+			return errs.ErrNotFound
+		}
 
-	// Fetch existing allocation
-	schedule, err := sc.ScheduleRepository.FindByID(tx, request.ID)
-	if err != nil {
-		return fmt.Errorf("failed to find schedule: %w", err)
-	}
-	if schedule == nil {
-		return errs.ErrNotFound
-	}
+		schedule.ShipID = request.ShipID
+		schedule.DepartureHarborID = request.DepartureHarborID
+		schedule.ArrivalHarborID = request.ArrivalHarborID
+		schedule.DepartureDatetime = request.DepartureDatetime
+		schedule.ArrivalDatetime = request.ArrivalDatetime
+		schedule.Status = request.Status
 
-	schedule.ShipID = request.ShipID
-	schedule.DepartureHarborID = request.DepartureHarborID
-	schedule.ArrivalHarborID = request.ArrivalHarborID
-	schedule.DepartureDatetime = request.DepartureDatetime
-	schedule.ArrivalDatetime = request.ArrivalDatetime
-	schedule.Status = request.Status
-
-	if err := sc.ScheduleRepository.Update(tx, schedule); err != nil {
-		return fmt.Errorf("failed to update schedule: %w", err)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return nil
+		if err := uc.ScheduleRepository.Update(ctx, tx, schedule); err != nil {
+			return fmt.Errorf("failed to update schedule: %w", err)
+		}
+		return nil
+	})
 }
 
-func (sc *ScheduleUsecase) DeleteSchedule(ctx context.Context, id uint) error {
-	tx := sc.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		} else {
-			tx.Rollback()
+func (uc *ScheduleUsecase) DeleteSchedule(ctx context.Context, id uint) error {
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		schedule, err := uc.ScheduleRepository.FindByID(ctx, tx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get schedule: %w", err)
 		}
-	}()
+		if schedule == nil {
+			return errs.ErrNotFound
+		}
 
-	schedule, err := sc.ScheduleRepository.FindByID(tx, id)
-	if err != nil {
-		return fmt.Errorf("failed to get schedule: %w", err)
-	}
-	if schedule == nil {
-		return errs.ErrNotFound
-	}
-
-	if err := sc.ScheduleRepository.Delete(tx, schedule); err != nil {
-		return fmt.Errorf("failed to delete allocation: %w", err)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return nil
+		if err := uc.ScheduleRepository.Delete(ctx, tx, schedule); err != nil {
+			return fmt.Errorf("failed to delete allocation: %w", err)
+		}
+		return nil
+	})
 }

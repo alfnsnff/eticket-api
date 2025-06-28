@@ -8,12 +8,11 @@ import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/mailer"
 	"eticket-api/internal/common/token"
-	"eticket-api/internal/common/transactor"
+	"eticket-api/internal/common/transact"
 	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http"
 	"eticket-api/internal/job"
 	"eticket-api/internal/repository"
-	"eticket-api/internal/runner"
 	"eticket-api/internal/usecase"
 
 	"github.com/gin-gonic/gin"
@@ -24,7 +23,7 @@ type Bootstrap struct {
 	Config     *config.Config
 	App        *gin.Engine
 	DB         *gorm.DB
-	Transactor *transactor.Transactor
+	Transactor *transact.Transactor
 	Client     *httpclient.HTTP
 	Enforcer   enforcer.Enforcer
 	Validate   validator.Validator
@@ -33,172 +32,137 @@ type Bootstrap struct {
 	Log        logger.Logger
 }
 
-func NewBootstrap(bootstrap *Bootstrap) error {
+func NewBootstrap(i *Bootstrap) error {
 	// === Role Domain ===
-	RoleRepository := repository.NewRoleRepository()
+	RoleRepository := repository.NewRoleRepository(i.DB)
 	RoleUsecase := usecase.NewRoleUsecase(
-		bootstrap.DB,
+		i.Transactor,
 		RoleRepository,
 	)
 
 	// === User Domain ===
-	UserRepository := repository.NewUserRepository()
+	UserRepository := repository.NewUserRepository(i.DB)
 	UserUsecase := usecase.NewUserUsecase(
-		bootstrap.DB,
+		i.Transactor,
 		UserRepository,
 	)
 
 	// === Auth Domain ===
-	AuthRepository := repository.NewAuthRepository()
+	AuthRepository := repository.NewAuthRepository(i.DB)
 	AuthUsecase := usecase.NewAuthUsecase(
-		bootstrap.DB,
+		i.Transactor,
 		AuthRepository,
 		UserRepository,
-		bootstrap.Mailer,
-		bootstrap.Token,
+		i.Mailer,
+		i.Token,
 	)
 
 	// === Ship Domain ===
-	ShipRepository := repository.NewShipRepository()
+	ShipRepository := repository.NewShipRepository(i.DB)
 	ShipUsecase := usecase.NewShipUsecase(
-		bootstrap.DB,
+		i.Transactor,
 		ShipRepository,
 	)
 
-	// // === Route Domain ===
-	// RouteRepository := repository.NewRouteRepository()
-	// RouteUsecase := usecase.NewRouteUsecase(
-	// 	bootstrap.DB,
-	// 	RouteRepository,
-	// )
-
 	// === Harbor Domain ===
-	HarborRepository := repository.NewHarborRepository()
+	HarborRepository := repository.NewHarborRepository(i.DB)
 	HarborUsecase := usecase.NewHarborUsecase(
-		bootstrap.DB,
+		i.Transactor,
 		HarborRepository,
 	)
 
 	// === Class Domain ===
-	ClassRepository := repository.NewClassRepository()
+	ClassRepository := repository.NewClassRepository(i.DB)
 	ClassUsecase := usecase.NewClassUsecase(
-		bootstrap.DB,
+		i.Transactor,
 		ClassRepository,
 	)
 
-	// // === Fare Domain ===
-	// FareRepository := repository.NewFareRepository()
-	// FareUsecase := usecase.NewFareUsecase(
-	// 	bootstrap.DB,
-	// 	FareRepository,
-	// )
-
-	// // === Manifest Domain ===
-	// ManifestRepository := repository.NewManifestRepository()
-	// ManifestUsecase := usecase.NewManifestUsecase(
-	// 	bootstrap.DB,
-	// 	ManifestRepository,
-	// )
-
-	// // === Allocation Domain ===
-	// AllocationRepository := repository.NewAllocationRepository()
-	// AllocationUsecase := usecase.NewAllocationUsecase(
-	// 	bootstrap.DB,
-	// 	AllocationRepository,
-	// 	FareRepository,
-	// )
-
-	QuotaRepository := repository.NewQuotaRepository()
+	QuotaRepository := repository.NewQuotaRepository(i.DB)
 	QuotaUsecase := usecase.NewQuotaUsecase(
-		bootstrap.DB,
+		i.Transactor,
 		QuotaRepository,
 	)
 
 	// === Schedule Domain ===
 	// === Ticket Domain ===
-	TicketRepository := repository.NewTicketRepository()
-	ScheduleRepository := repository.NewScheduleRepository()
+	TicketRepository := repository.NewTicketRepository(i.DB)
+	ScheduleRepository := repository.NewScheduleRepository(i.DB)
 	ScheduleUsecase := usecase.NewScheduleUsecase(
-		bootstrap.DB,
-		// AllocationRepository,
+		i.Transactor,
 		ClassRepository,
-		// FareRepository,
-		// ManifestRepository,
 		ShipRepository,
 		ScheduleRepository,
 		TicketRepository,
 	)
 	TicketUsecase := usecase.NewTicketUsecase(
-		bootstrap.DB,
+		i.Transactor,
 		TicketRepository,
 		ScheduleRepository,
 		QuotaRepository,
-		// ManifestRepository,
-		// FareRepository,
 	)
 
 	// === Booking Domain ===
-	BookingRepository := repository.NewBookingRepository()
+	BookingRepository := repository.NewBookingRepository(i.DB)
 	BookingUsecase := usecase.NewBookingUsecase(
-		bootstrap.DB,
+		i.Transactor,
 		BookingRepository,
 	)
 
 	// === ClaimSession Domain ===
-	ClaimItemRepository := repository.NewClaimItemRepository()
+	ClaimItemRepository := repository.NewClaimItemRepository(i.DB)
 	_ = usecase.NewClaimItemUsecase(
-		bootstrap.DB,
+		i.Transactor,
 		ClaimItemRepository,
 	)
+
 	// === Payment Domain ===
 	TripayClient := client.NewTripayClient(
-		bootstrap.Client,
-		&bootstrap.Config.Tripay,
+		i.Client,
+		&i.Config.Tripay,
 	)
 
 	// === ClaimSession Domain ===
-	ClaimSessionRepository := repository.NewClaimSessionRepository()
+	ClaimSessionRepository := repository.NewClaimSessionRepository(i.DB)
 	ClaimSessionUsecase := usecase.NewClaimSessionUsecase(
-		bootstrap.DB,
+		i.Transactor,
 		ClaimSessionRepository,
 		ClaimItemRepository,
 		TicketRepository,
 		ScheduleRepository,
-		// AllocationRepository,
-		// ManifestRepository,
-		// FareRepository,
 		BookingRepository,
 		QuotaRepository,
 		TripayClient,
 	)
+	ClaimSessionJob := job.NewClaimSessionJob(i.Log, ClaimSessionUsecase)
+	ClaimSessionJob.CleanExpiredClaimSession()
 
 	PaymentUsecase := usecase.NewPaymentUsecase(
-		bootstrap.DB,
+		i.Transactor,
 		TripayClient,
-		ClaimSessionRepository,
 		BookingRepository,
 		TicketRepository,
 		QuotaRepository,
-		bootstrap.Mailer,
+		i.Mailer,
 	)
 
 	// === Initialize HTTP Router ===
-	api := bootstrap.App.Group("/api")
+	api := i.App.Group("/api")
 	http.NewRouter(
 		api,
-		bootstrap.Token,
-		bootstrap.Log,
-		bootstrap.Validate,
-		// AllocationUsecase,
+		i.Token,
+		i.Log,
+		i.Validate,
+
 		QuotaUsecase,
 		AuthUsecase,
 		BookingUsecase,
 		ClassUsecase,
-		// FareUsecase,
+
 		HarborUsecase,
-		// ManifestUsecase,
+
 		RoleUsecase,
-		// RouteUsecase,
+
 		ScheduleUsecase,
 		ShipUsecase,
 		TicketUsecase,
@@ -207,13 +171,13 @@ func NewBootstrap(bootstrap *Bootstrap) error {
 		ClaimSessionUsecase,
 	)
 
-	// === Initialize Cleanup Job ===
-	cleanupJob := job.NewCleanupJob(
-		bootstrap.DB,
-		ClaimSessionRepository,
-	)
-	cleanupRunner := runner.NewCleanupRunner(cleanupJob)
-	cleanupRunner.Start()
+	// // === Initialize Cleanup Job ===
+	// cleanupJob := job.NewCleanupJob(
+	// 	i.Transactor,
+	// 	ClaimSessionRepository,
+	// )
+	// cleanupRunner := runner.NewCleanupRunner(cleanupJob)
+	// cleanupRunner.Start()
 
 	return nil
 }

@@ -1,9 +1,9 @@
 package domain
 
 import (
+	"context"
+	"eticket-api/pkg/gotann"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type Booking struct {
@@ -32,13 +32,13 @@ func (b *Booking) TableName() string {
 }
 
 type BookingRepository interface {
-	Count(db *gorm.DB) (int64, error)
-	Insert(db *gorm.DB, entity *Booking) error
-	InsertBulk(db *gorm.DB, bookings []*Booking) error
-	Update(db *gorm.DB, entity *Booking) error
-	UpdateBulk(db *gorm.DB, bookings []*Booking) error
-	Delete(db *gorm.DB, entity *Booking) error
-	FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*Booking, error)
-	FindByID(db *gorm.DB, id uint) (*Booking, error)
-	FindByOrderID(db *gorm.DB, id string) (*Booking, error)
+	Count(ctx context.Context, conn gotann.Connection) (int64, error)
+	Insert(ctx context.Context, conn gotann.Connection, entity *Booking) error
+	InsertBulk(ctx context.Context, conn gotann.Connection, bookings []*Booking) error
+	Update(ctx context.Context, conn gotann.Connection, entity *Booking) error
+	UpdateBulk(ctx context.Context, conn gotann.Connection, bookings []*Booking) error
+	Delete(ctx context.Context, conn gotann.Connection, entity *Booking) error
+	FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*Booking, error)
+	FindByID(ctx context.Context, conn gotann.Connection, id uint) (*Booking, error)
+	FindByOrderID(ctx context.Context, conn gotann.Connection, id string) (*Booking, error)
 }

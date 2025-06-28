@@ -1,9 +1,9 @@
 package domain
 
 import (
+	"context"
+	"eticket-api/pkg/gotann"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type Role struct {
@@ -19,12 +19,12 @@ func (r *Role) TableName() string {
 }
 
 type RoleRepository interface {
-	Count(db *gorm.DB) (int64, error)
-	Insert(db *gorm.DB, entity *Role) error
-	InsertBulk(db *gorm.DB, roles []*Role) error
-	Update(db *gorm.DB, entity *Role) error
-	UpdateBulk(db *gorm.DB, roles []*Role) error
-	Delete(db *gorm.DB, entity *Role) error
-	FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*Role, error)
-	FindByID(db *gorm.DB, id uint) (*Role, error)
+	Count(ctx context.Context, conn gotann.Connection) (int64, error)
+	Insert(ctx context.Context, conn gotann.Connection, entity *Role) error
+	InsertBulk(ctx context.Context, conn gotann.Connection, roles []*Role) error
+	Update(ctx context.Context, conn gotann.Connection, entity *Role) error
+	UpdateBulk(ctx context.Context, conn gotann.Connection, roles []*Role) error
+	Delete(ctx context.Context, conn gotann.Connection, entity *Role) error
+	FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*Role, error)
+	FindByID(ctx context.Context, conn gotann.Connection, id uint) (*Role, error)
 }

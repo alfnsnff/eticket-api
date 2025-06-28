@@ -1,10 +1,10 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"eticket-api/internal/domain"
 	"eticket-api/pkg/gotann"
-	"fmt"
 	"strings"
 	"time"
 
@@ -12,61 +12,49 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type ScheduleRepository struct{}
-
-// FindAllScheduled implements domain.ScheduleRepository.
-func (sr *ScheduleRepository) FindAllScheduled(db *gorm.DB) ([]*domain.Schedule, error) {
-	panic("unimplemented")
+type ScheduleRepository struct {
+	DB *gorm.DB
 }
 
-func NewScheduleRepository() *ScheduleRepository {
-	return &ScheduleRepository{}
+func NewScheduleRepository(db *gorm.DB) *ScheduleRepository {
+	return &ScheduleRepository{DB: db}
 }
 
-func (sr *ScheduleRepository) Count(db *gorm.DB) (int64, error) {
+func (r *ScheduleRepository) Count(ctx context.Context, conn gotann.Connection) (int64, error) {
 	var total int64
-	result := db.Model(&domain.Schedule{}).Count(&total)
+	result := conn.Model(&domain.Schedule{}).Count(&total)
 	return total, result.Error
 }
 
-func (sr *ScheduleRepository) Insert(db *gorm.DB, schedule *domain.Schedule) error {
-	result := db.Create(schedule)
-	return result.Error
-}
-
-func (sr *ScheduleRepository) Inserts(conn *gotann.Connection, schedule *domain.Schedule) error {
-	db, err := gotann.GetGormDB(conn)
-	if err != nil {
-		return fmt.Errorf("failed to get GORM DB: %w", err)
-	}
-	result := db.Create(schedule)
+func (r *ScheduleRepository) Insert(ctx context.Context, conn gotann.Connection, schedule *domain.Schedule) error {
+	result := conn.Create(schedule)
 	return result.Error
 }
 
 // Add bulk operations for consistency
-func (sr *ScheduleRepository) InsertBulk(db *gorm.DB, schedules []*domain.Schedule) error {
-	result := db.Create(&schedules)
+func (r *ScheduleRepository) InsertBulk(ctx context.Context, conn gotann.Connection, schedules []*domain.Schedule) error {
+	result := conn.Create(&schedules)
 	return result.Error
 }
 
-func (sr *ScheduleRepository) Update(db *gorm.DB, schedule *domain.Schedule) error {
-	result := db.Save(schedule)
+func (r *ScheduleRepository) Update(ctx context.Context, conn gotann.Connection, schedule *domain.Schedule) error {
+	result := conn.Save(schedule)
 	return result.Error
 }
 
-func (sr *ScheduleRepository) UpdateBulk(db *gorm.DB, schedules []*domain.Schedule) error {
-	result := db.Save(&schedules)
+func (r *ScheduleRepository) UpdateBulk(ctx context.Context, conn gotann.Connection, schedules []*domain.Schedule) error {
+	result := conn.Save(&schedules)
 	return result.Error
 }
 
-func (sr *ScheduleRepository) Delete(db *gorm.DB, schedule *domain.Schedule) error {
-	result := db.Select(clause.Associations).Delete(schedule)
+func (r *ScheduleRepository) Delete(ctx context.Context, conn gotann.Connection, schedule *domain.Schedule) error {
+	result := conn.Select(clause.Associations).Delete(schedule)
 	return result.Error
 }
 
-func (sr *ScheduleRepository) FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.Schedule, error) {
+func (r *ScheduleRepository) FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*domain.Schedule, error) {
 	schedules := []*domain.Schedule{}
-	query := db.Preload("DepartureHarbor").
+	query := conn.Model(&domain.Schedule{}).Preload("DepartureHarbor").
 		Preload("ArrivalHarbor").
 		Preload("Ship").
 		Preload("Quotas").
@@ -84,9 +72,9 @@ func (sr *ScheduleRepository) FindAll(db *gorm.DB, limit, offset int, sort, sear
 	return schedules, err
 }
 
-func (sr *ScheduleRepository) FindByID(db *gorm.DB, id uint) (*domain.Schedule, error) {
+func (r *ScheduleRepository) FindByID(ctx context.Context, conn gotann.Connection, id uint) (*domain.Schedule, error) {
 	schedule := new(domain.Schedule)
-	result := db.
+	result := conn.
 		Preload("DepartureHarbor").
 		Preload("ArrivalHarbor").
 		Preload("Ship").
@@ -99,9 +87,9 @@ func (sr *ScheduleRepository) FindByID(db *gorm.DB, id uint) (*domain.Schedule, 
 	return schedule, result.Error
 }
 
-func (sr *ScheduleRepository) FindByStatus(db *gorm.DB, status string) ([]*domain.Schedule, error) {
+func (r *ScheduleRepository) FindByStatus(ctx context.Context, conn gotann.Connection, status string) ([]*domain.Schedule, error) {
 	schedules := []*domain.Schedule{}
-	result := db.
+	result := conn.
 		Preload("DepartureHarbor").
 		Preload("ArrivalHarbor").
 		Preload("Ship").
@@ -115,15 +103,16 @@ func (sr *ScheduleRepository) FindByStatus(db *gorm.DB, status string) ([]*domai
 	return schedules, nil
 }
 
-func (sr *ScheduleRepository) FindActiveSchedule(db *gorm.DB) ([]*domain.Schedule, error) {
+func (r *ScheduleRepository) FindActiveSchedules(ctx context.Context, conn gotann.Connection) ([]*domain.Schedule, error) {
 	schedules := []*domain.Schedule{}
-	result := db.
+	result := conn.
 		Preload("DepartureHarbor").
 		Preload("ArrivalHarbor").
 		Preload("Ship").
 		Preload("Quotas").
 		Preload("Quotas.Class").
 		Where("departure_datetime > ?", time.Now()).
+		Limit(7).
 		Find(&schedules)
 
 	if result.Error != nil {

@@ -5,13 +5,24 @@ import (
 	"eticket-api/internal/model"
 )
 
-// Map User domain to ReadUserResponse model
 func AuthToResponse(user *domain.User) *model.ReadLoginResponse {
-	return &model.ReadLoginResponse{
-		Role: model.UserRole{
+	var role model.UserRole
+
+	if user.Role.ID != 0 {
+		role = model.UserRole{
 			ID:          user.Role.ID,
 			RoleName:    user.Role.RoleName,
 			Description: user.Role.Description,
-		},
+		}
+	} else {
+		role = model.UserRole{
+			ID:          0,
+			RoleName:    "UNKNOWN",
+			Description: "Unknown role",
+		}
+	}
+
+	return &model.ReadLoginResponse{
+		Role: role,
 	}
 }

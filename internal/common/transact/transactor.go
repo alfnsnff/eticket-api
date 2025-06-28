@@ -1,9 +1,8 @@
-package transactor
+package transact
 
 import (
 	"context"
 	"eticket-api/pkg/gotann"
-	"log/slog"
 	"time"
 
 	"gorm.io/gorm"
@@ -15,7 +14,7 @@ type Transactor struct {
 }
 
 // NewTransactionManager creates a new transaction manager for your app
-func NewTransactionManager(db *gorm.DB, logger *slog.Logger) *Transactor {
+func NewTransactionManager(db *gorm.DB) *Transactor {
 	// Create GORM provider
 	provider := gotann.NewGormProvider(db, gotann.GormConfig{
 		MaxOpenConns:    100,
@@ -28,7 +27,6 @@ func NewTransactionManager(db *gorm.DB, logger *slog.Logger) *Transactor {
 	manager := gotann.NewBuilder(provider).
 		WithMaxConcurrentTransactions(50).
 		WithDefaultTimeout(30 * time.Second).
-		WithLogger(logger).
 		WithMetrics(true).
 		WithTracing(false).
 		Build()

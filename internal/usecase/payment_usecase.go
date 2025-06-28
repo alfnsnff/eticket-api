@@ -5,17 +5,17 @@ import (
 	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/mailer"
 	"eticket-api/internal/common/templates"
+	"eticket-api/internal/common/transact"
 	"eticket-api/internal/domain"
 	"eticket-api/internal/mapper"
 	"eticket-api/internal/model"
+	"eticket-api/pkg/gotann"
 	"fmt"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type PaymentUsecase struct {
-	DB                *gorm.DB // Assuming you have a DB field for the transaction manager
+	Transactor        *transact.Transactor // Assuming transact package is imported
 	TripayClient      domain.TripayClient
 	BookingRepository domain.BookingRepository
 	TicketRepository  domain.TicketRepository
@@ -24,16 +24,15 @@ type PaymentUsecase struct {
 }
 
 func NewPaymentUsecase(
-	db *gorm.DB,
+	transactor *transact.Transactor, // Assuming transact package is imported
 	tripay_client domain.TripayClient,
-	claim_session_repository domain.ClaimSessionRepository,
 	booking_repository domain.BookingRepository,
 	ticket_repository domain.TicketRepository,
 	quota_repository domain.QuotaRepository,
 	mailer mailer.Mailer,
 ) *PaymentUsecase {
 	return &PaymentUsecase{
-		DB:                db,
+		Transactor:        transactor,
 		TripayClient:      tripay_client,
 		BookingRepository: booking_repository,
 		TicketRepository:  ticket_repository,
@@ -42,8 +41,8 @@ func NewPaymentUsecase(
 	}
 }
 
-func (c *PaymentUsecase) ListPaymentChannels(ctx context.Context) ([]*model.ReadPaymentChannelResponse, error) {
-	channels, err := c.TripayClient.GetPaymentChannels()
+func (uc *PaymentUsecase) ListPaymentChannels(ctx context.Context) ([]*model.ReadPaymentChannelResponse, error) {
+	channels, err := uc.TripayClient.GetPaymentChannels()
 	if err != nil {
 		return nil, err
 	}
@@ -54,196 +53,119 @@ func (c *PaymentUsecase) ListPaymentChannels(ctx context.Context) ([]*model.Read
 	return result, nil
 }
 
-func (c *PaymentUsecase) GetTransactionDetail(ctx context.Context, reference string) (*model.ReadTransactionResponse, error) {
-	return c.TripayClient.GetTransactionDetail(reference)
+func (uc *PaymentUsecase) GetTransactionDetail(ctx context.Context, reference string) (*model.ReadTransactionResponse, error) {
+	return uc.TripayClient.GetTransactionDetail(reference)
 }
 
-func (c *PaymentUsecase) TESTCreatePayment(ctx context.Context, request *model.WritePaymentRequest, orderID string) (*model.ReadTransactionResponse, error) {
-	tx := c.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		} else {
-			tx.Rollback()
+func (uc *PaymentUsecase) CreatePayment(ctx context.Context, request *model.WritePaymentRequest) (*model.ReadTransactionResponse, error) {
+	var payment model.ReadTransactionResponse
+	if err := uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		booking, err := uc.BookingRepository.FindByOrderID(ctx, tx, request.OrderID)
+		if err != nil {
+			return fmt.Errorf("failed to get booking: %w", err)
 		}
-	}()
+		if booking == nil {
+			return errs.ErrNotFound
+		}
 
-	booking, err := c.BookingRepository.FindByOrderID(tx, request.OrderID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get booking: %w", err)
-	}
-	if booking == nil {
-		return nil, errs.ErrNotFound
-	}
+		tickets, err := uc.TicketRepository.FindByBookingID(ctx, tx, booking.ID)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve tickets: %w", err)
+		}
+		if len(tickets) == 0 {
+			return errs.ErrNotFound
+		}
 
-	var amounts float64
-	for _, ticket := range booking.Tickets {
-		amounts += ticket.Price
-	}
+		var amounts float64
+		for _, ticket := range tickets {
+			amounts += ticket.Price
+		}
 
-	orderItems := make([]model.OrderItem, len(booking.Tickets))
-	for i, ticket := range booking.Tickets {
-		orderItems[i] = mapper.TicketToItem(&ticket)
-	}
+		orderItems := make([]model.OrderItem, len(tickets))
+		for i, ticket := range tickets {
+			orderItems[i] = mapper.TicketToItem(ticket)
+		}
 
-	payload := &model.WriteTransactionRequest{
-		Method:        request.PaymentMethod,
-		Amount:        int(amounts), // Convert to integer cents
-		CustomerName:  booking.CustomerName,
-		CustomerEmail: booking.Email,
-		CustomerPhone: booking.PhoneNumber,
-		MerchantRef:   booking.OrderID,
-		OrderItems:    orderItems,
-		CallbackUrl:   "https://example.com/callback",
-		ReturnUrl:     "https://example.com/callback",
-		ExpiredTime:   int(time.Now().Add(30 * time.Minute).Unix()),
-	}
+		payload := &model.WriteTransactionRequest{
+			Method:        request.PaymentMethod,
+			Amount:        int(amounts), // Convert to integer cents
+			CustomerName:  booking.CustomerName,
+			CustomerEmail: booking.Email,
+			CustomerPhone: booking.PhoneNumber,
+			MerchantRef:   booking.OrderID,
+			OrderItems:    orderItems,
+			CallbackUrl:   "https://example.com/callback",
+			ReturnUrl:     "https://example.com/callback",
+			ExpiredTime:   int(time.Now().Add(30 * time.Minute).Unix()),
+		}
 
-	// Create payment
-	payment, err := c.TripayClient.CreatePayment(payload)
-	if err != nil {
-		return nil, fmt.Errorf("create Tripay payment failed: %w", err)
-	}
+		// Create payment
+		payment, err = uc.TripayClient.CreatePayment(payload)
+		if err != nil {
+			return fmt.Errorf("create Tripay payment failed: %w", err)
+		}
 
-	booking.ReferenceNumber = &payment.Reference
-	if err := c.BookingRepository.Update(tx, booking); err != nil {
-		return nil, fmt.Errorf("failed to update booking with reference number: %w", err)
-	}
+		booking.ReferenceNumber = &payment.Reference
+		if err := uc.BookingRepository.Update(ctx, tx, booking); err != nil {
+			if errs.IsUniqueConstraintError(err) {
+				return errs.ErrConflict
+			}
+			return fmt.Errorf("failed to update booking with reference number: %w", err)
+		}
 
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		return nil
+	}); err != nil {
+		return nil, fmt.Errorf("failed to start transaction: %w", err)
 	}
 
 	return &payment, nil
 }
 
-func (c *PaymentUsecase) CreatePayment(ctx context.Context, request *model.WritePaymentRequest) (*model.ReadTransactionResponse, error) {
-	tx := c.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		} else {
-			tx.Rollback()
+func (uc *PaymentUsecase) HandleCallback(ctx context.Context, request *model.WriteCallbackRequest) error {
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		booking, err := uc.BookingRepository.FindByOrderID(ctx, tx, request.MerchantRef)
+		if err != nil {
+			return fmt.Errorf("failed to get booking: %w", err)
 		}
-	}()
-
-	booking, err := c.BookingRepository.FindByOrderID(tx, request.OrderID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get booking: %w", err)
-	}
-	if booking == nil {
-		return nil, errs.ErrNotFound
-	}
-
-	tickets, err := c.TicketRepository.FindByBookingID(tx, booking.ID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve tickets: %w", err)
-	}
-	if len(tickets) == 0 {
-		return nil, errs.ErrNotFound
-	}
-
-	var amounts float64
-	for _, ticket := range tickets {
-		amounts += ticket.Price
-	}
-
-	orderItems := make([]model.OrderItem, len(tickets))
-	for i, ticket := range tickets {
-		orderItems[i] = mapper.TicketToItem(ticket)
-	}
-
-	payload := &model.WriteTransactionRequest{
-		Method:        request.PaymentMethod,
-		Amount:        int(amounts), // Convert to integer cents
-		CustomerName:  booking.CustomerName,
-		CustomerEmail: booking.Email,
-		CustomerPhone: booking.PhoneNumber,
-		MerchantRef:   booking.OrderID,
-		OrderItems:    orderItems,
-		CallbackUrl:   "https://example.com/callback",
-		ReturnUrl:     "https://example.com/callback",
-		ExpiredTime:   int(time.Now().Add(30 * time.Minute).Unix()),
-	}
-
-	// Create payment
-	payment, err := c.TripayClient.CreatePayment(payload)
-	if err != nil {
-		return nil, fmt.Errorf("create Tripay payment failed: %w", err)
-	}
-
-	booking.ReferenceNumber = &payment.Reference
-	if err := c.BookingRepository.Update(tx, booking); err != nil {
-		return nil, fmt.Errorf("failed to update booking with reference number: %w", err)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return &payment, nil
-}
-
-func (c *PaymentUsecase) HandleCallback(ctx context.Context, request *model.WriteCallbackRequest) error {
-	tx := c.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		} else {
-			tx.Rollback()
+		if booking == nil {
+			return errs.ErrNotFound
 		}
-	}()
-
-	booking, err := c.BookingRepository.FindByOrderID(tx, request.MerchantRef)
-	if err != nil {
-		return fmt.Errorf("failed to get booking: %w", err)
-	}
-	if booking == nil {
-		return errs.ErrNotFound
-	}
-	tickets, err := c.TicketRepository.FindByBookingID(tx, booking.ID)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve tickets: %w", err)
-	}
-	if len(tickets) == 0 { // Changed from tickets == nil to len(tickets) == 0
-		return errs.ErrNotFound
-	}
-
-	// Handle different payment statuse
-	switch request.Status {
-	case "PAID":
-		// Payment successful
-		if err := c.HandleSuccessfulPayment(tx, booking, tickets); err != nil {
-			return err
+		tickets, err := uc.TicketRepository.FindByBookingID(ctx, tx, booking.ID)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve tickets: %w", err)
+		}
+		if len(tickets) == 0 { // Changed from tickets == nil to len(tickets) == 0
+			return errs.ErrNotFound
 		}
 
-	case "FAILED", "EXPIRED", "REFUND":
-		// Payment unsuccessful
-		if err := c.HandleUnsuccessfulPayment(tx, booking, tickets, request.Status); err != nil {
-			return err
+		// Handle different payment statuse
+		switch request.Status {
+		case "PAID":
+			// Payment successful
+			if err := uc.HandleSuccessfulPayment(ctx, tx, booking, tickets); err != nil {
+				return err
+			}
+
+		case "FAILED", "EXPIRED", "REFUND":
+			// Payment unsuccessful
+			if err := uc.HandleUnsuccessfulPayment(ctx, tx, booking, tickets, request.Status); err != nil {
+				return err
+			}
+
+		default:
+			return fmt.Errorf("unknown payment status: %s", request.Status)
 		}
-
-	default:
-		return fmt.Errorf("unknown payment status: %s", request.Status)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 // Handle successful payment
-func (c *PaymentUsecase) HandleSuccessfulPayment(tx *gorm.DB, booking *domain.Booking, tickets []*domain.Ticket) error {
+func (uc *PaymentUsecase) HandleSuccessfulPayment(ctx context.Context, tx gotann.Connection, booking *domain.Booking, tickets []*domain.Ticket) error {
 	// Send confirmation email
 	subject := "Your Booking is Confirmed"
 	htmlBody := templates.BookingSuccessEmail(booking.CustomerName, booking.OrderID, len(tickets), time.Now().Year())
 
-	if err := c.Mailer.Send(booking.Email, subject, htmlBody); err != nil {
+	if err := uc.Mailer.Send(booking.Email, subject, htmlBody); err != nil {
 		return fmt.Errorf("failed to send confirmation email: %w", err)
 	}
 
@@ -252,7 +174,7 @@ func (c *PaymentUsecase) HandleSuccessfulPayment(tx *gorm.DB, booking *domain.Bo
 }
 
 // Handle unsuccessful payment
-func (c *PaymentUsecase) HandleUnsuccessfulPayment(tx *gorm.DB, booking *domain.Booking, tickets []*domain.Ticket, status string) error {
+func (uc *PaymentUsecase) HandleUnsuccessfulPayment(ctx context.Context, tx gotann.Connection, booking *domain.Booking, tickets []*domain.Ticket, status string) error {
 	// Restore quota for each ticket's class
 	restored := make(map[uint]bool)
 	for _, ticket := range tickets {
@@ -263,7 +185,7 @@ func (c *PaymentUsecase) HandleUnsuccessfulPayment(tx *gorm.DB, booking *domain.
 		if restored[ticket.ClassID] {
 			continue
 		}
-		quota, err := c.QuotaRepository.FindByScheduleIDAndClassID(tx, booking.ScheduleID, ticket.ClassID)
+		quota, err := uc.QuotaRepository.FindByScheduleIDAndClassID(ctx, tx, booking.ScheduleID, ticket.ClassID)
 		if err == nil && quota != nil {
 			// Count tickets for this class
 			count := 0
@@ -273,7 +195,7 @@ func (c *PaymentUsecase) HandleUnsuccessfulPayment(tx *gorm.DB, booking *domain.
 				}
 			}
 			quota.Quota += count
-			if err := c.QuotaRepository.Update(tx, quota); err != nil {
+			if err := uc.QuotaRepository.Update(ctx, tx, quota); err != nil {
 				fmt.Printf("Warning: failed to restore quota for class %d: %v\n", ticket.ClassID, err)
 			}
 			restored[ticket.ClassID] = true
@@ -294,7 +216,7 @@ func (c *PaymentUsecase) HandleUnsuccessfulPayment(tx *gorm.DB, booking *domain.
 		htmlBody = templates.BookingFailedEmail(booking.CustomerName, booking.OrderID, "Payment was cancelled or refunded")
 	}
 
-	if err := c.Mailer.Send(booking.Email, subject, htmlBody); err != nil {
+	if err := uc.Mailer.Send(booking.Email, subject, htmlBody); err != nil {
 		fmt.Printf("Warning: failed to send failure email: %v\n", err)
 	}
 

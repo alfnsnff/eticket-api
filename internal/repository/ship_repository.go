@@ -1,57 +1,61 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"eticket-api/internal/domain"
+	"eticket-api/pkg/gotann"
 	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-type ShipRepository struct{}
-
-func NewShipRepository() *ShipRepository {
-	return &ShipRepository{}
+type ShipRepository struct {
+	DB *gorm.DB
 }
 
-func (sr *ShipRepository) Count(db *gorm.DB) (int64, error) {
+func NewShipRepository(db *gorm.DB) *ShipRepository {
+	return &ShipRepository{DB: db}
+}
+
+func (r *ShipRepository) Count(ctx context.Context, conn gotann.Connection) (int64, error) {
 	var total int64
-	result := db.Model(&domain.Ship{}).Count(&total)
+	result := conn.Model(&domain.Ship{}).Count(&total)
 	if result.Error != nil {
 		return 0, result.Error
 	}
 	return total, nil
 }
 
-func (sr *ShipRepository) Insert(db *gorm.DB, ship *domain.Ship) error {
-	result := db.Create(ship)
+func (r *ShipRepository) Insert(ctx context.Context, conn gotann.Connection, ship *domain.Ship) error {
+	result := conn.Create(ship)
 	return result.Error
 }
 
-func (sr *ShipRepository) InsertBulk(db *gorm.DB, ships []*domain.Ship) error {
-	result := db.Create(ships)
+func (r *ShipRepository) InsertBulk(ctx context.Context, conn gotann.Connection, ships []*domain.Ship) error {
+	result := conn.Create(ships)
 	return result.Error
 }
 
-func (sr *ShipRepository) Update(db *gorm.DB, ship *domain.Ship) error {
-	result := db.Save(ship)
+func (r *ShipRepository) Update(ctx context.Context, conn gotann.Connection, ship *domain.Ship) error {
+	result := conn.Save(ship)
 	return result.Error
 }
 
-func (sr *ShipRepository) UpdateBulk(db *gorm.DB, ships []*domain.Ship) error {
-	result := db.Save(ships)
+func (r *ShipRepository) UpdateBulk(ctx context.Context, conn gotann.Connection, ships []*domain.Ship) error {
+	result := conn.Save(ships)
 	return result.Error
 }
 
-func (sr *ShipRepository) Delete(db *gorm.DB, ship *domain.Ship) error {
-	result := db.Select(clause.Associations).Delete(ship)
+func (r *ShipRepository) Delete(ctx context.Context, conn gotann.Connection, ship *domain.Ship) error {
+	result := conn.Select(clause.Associations).Delete(ship)
 	return result.Error
 }
 
-func (sr *ShipRepository) FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.Ship, error) {
+func (r *ShipRepository) FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*domain.Ship, error) {
 	ships := []*domain.Ship{}
-	query := db
+	query := conn.Model(&domain.Ship{})
 	if search != "" {
 		search = "%" + search + "%"
 		query = query.Where("ship_name ILIKE ?", search)
@@ -65,9 +69,9 @@ func (sr *ShipRepository) FindAll(db *gorm.DB, limit, offset int, sort, search s
 	return ships, err
 }
 
-func (sr *ShipRepository) FindByID(db *gorm.DB, id uint) (*domain.Ship, error) {
+func (r *ShipRepository) FindByID(ctx context.Context, conn gotann.Connection, id uint) (*domain.Ship, error) {
 	ship := new(domain.Ship)
-	result := db.First(&ship, id)
+	result := conn.First(&ship, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}

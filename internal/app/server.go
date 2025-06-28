@@ -8,6 +8,7 @@ import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/mailer"
 	"eticket-api/internal/common/token"
+	"eticket-api/internal/common/transact"
 	"eticket-api/internal/common/validator"
 	"eticket-api/internal/domain"
 	"fmt"
@@ -68,15 +69,16 @@ func NewApp(cfg *config.Config) (*Server, error) {
 	}))
 
 	bootstrap := &Bootstrap{
-		Config:   cfg,
-		App:      app,
-		DB:       db,
-		Client:   httpclient.NewHTTPClient(cfg),
-		Enforcer: enforcer.NewCasbinEnforcer(cfg),
-		Token:    token.NewJWT(cfg),
-		Mailer:   mailer.NewSMTP(cfg),
-		Log:      logger.NewLogrusLogger("eticket-api"),
-		Validate: validator.NewValidator(cfg),
+		Config:     cfg,
+		App:        app,
+		DB:         db,
+		Transactor: transact.NewTransactionManager(db),
+		Client:     httpclient.NewHTTPClient(cfg),
+		Enforcer:   enforcer.NewCasbinEnforcer(cfg),
+		Token:      token.NewJWT(cfg),
+		Mailer:     mailer.NewSMTP(cfg),
+		Log:        logger.NewLogrusLogger("eticket-api"),
+		Validate:   validator.NewValidator(cfg),
 	}
 
 	if err := NewBootstrap(bootstrap); err != nil {

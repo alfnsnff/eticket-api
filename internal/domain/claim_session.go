@@ -1,9 +1,9 @@
 package domain
 
 import (
+	"context"
+	"eticket-api/pkg/gotann"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type ClaimSession struct {
@@ -24,16 +24,16 @@ func (cs *ClaimSession) TableName() string {
 }
 
 type ClaimSessionRepository interface {
-	Count(db *gorm.DB) (int64, error)
-	// CountActiveReservedQuantity(db *gorm.DB, scheduleID, classID uint) (int64, error)
-	Insert(db *gorm.DB, entity *ClaimSession) error
-	InsertBulk(db *gorm.DB, sessions []*ClaimSession) error
-	Update(db *gorm.DB, entity *ClaimSession) error
-	UpdateBulk(db *gorm.DB, sessions []*ClaimSession) error
-	Delete(db *gorm.DB, entity *ClaimSession) error
-	FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*ClaimSession, error)
-	FindByID(db *gorm.DB, id uint) (*ClaimSession, error)
-	FindExpired(db *gorm.DB, expiryTime time.Time, limit int) ([]*ClaimSession, error)
-	FindByScheduleID(db *gorm.DB, scheduleID uint) ([]*ClaimSession, error)
-	FindBySessionID(db *gorm.DB, uuid string) (*ClaimSession, error)
+	Count(ctx context.Context, conn gotann.Connection) (int64, error)
+	Insert(ctx context.Context, conn gotann.Connection, entity *ClaimSession) error
+	InsertBulk(ctx context.Context, conn gotann.Connection, sessions []*ClaimSession) error
+	Update(ctx context.Context, conn gotann.Connection, entity *ClaimSession) error
+	UpdateBulk(ctx context.Context, conn gotann.Connection, sessions []*ClaimSession) error
+	Delete(ctx context.Context, conn gotann.Connection, entity *ClaimSession) error
+	DeleteBulk(ctx context.Context, conn gotann.Connection, entity []*ClaimSession) error
+	FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*ClaimSession, error)
+	FindByID(ctx context.Context, conn gotann.Connection, id uint) (*ClaimSession, error)
+	FindExpired(ctx context.Context, conn gotann.Connection, expiryTime time.Time, limit int) ([]*ClaimSession, error)
+	FindByScheduleID(ctx context.Context, conn gotann.Connection, scheduleID uint) ([]*ClaimSession, error)
+	FindBySessionID(ctx context.Context, conn gotann.Connection, uuid string) (*ClaimSession, error)
 }

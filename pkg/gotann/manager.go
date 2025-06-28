@@ -108,8 +108,6 @@ func (m *Manager) ExecuteWithOptions(ctx context.Context, opts TxOptions, fn fun
 
 	return m.executeOnce(ctx, opts, fn)
 }
-
-// executeOnce performs a single transaction execution
 func (m *Manager) executeOnce(ctx context.Context, opts TxOptions, fn func(tx Transaction) error) (err error) {
 	// Check concurrent transaction limit
 	if !m.canStartTransaction() {
@@ -155,7 +153,7 @@ func (m *Manager) executeOnce(ctx context.Context, opts TxOptions, fn func(tx Tr
 				}
 			}
 
-			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			if rollbackErr := tx.RollbackTx(); rollbackErr != nil {
 				m.logger.Error("Failed to rollback after panic",
 					"tx_id", tx.ID(),
 					"error", rollbackErr,
@@ -170,7 +168,7 @@ func (m *Manager) executeOnce(ctx context.Context, opts TxOptions, fn func(tx Tr
 	// Execute after begin hook
 	if opts.Hooks != nil && opts.Hooks.AfterBegin != nil {
 		if err := opts.Hooks.AfterBegin(ctx, tx); err != nil {
-			tx.Rollback()
+			tx.RollbackTx()
 			return fmt.Errorf("after begin hook failed: %w", err)
 		}
 	}
@@ -193,7 +191,7 @@ func (m *Manager) executeOnce(ctx context.Context, opts TxOptions, fn func(tx Tr
 		}
 
 		// Rollback transaction
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+		if rollbackErr := tx.RollbackTx(); rollbackErr != nil {
 			m.logger.Error("Failed to rollback transaction",
 				"tx_id", tx.ID(),
 				"original_error", err,
@@ -216,13 +214,13 @@ func (m *Manager) executeOnce(ctx context.Context, opts TxOptions, fn func(tx Tr
 	// Execute before commit hook
 	if opts.Hooks != nil && opts.Hooks.BeforeCommit != nil {
 		if err := opts.Hooks.BeforeCommit(ctx, tx); err != nil {
-			tx.Rollback()
+			tx.RollbackTx()
 			return fmt.Errorf("before commit hook failed: %w", err)
 		}
 	}
 
 	// Commit transaction
-	if err := tx.Commit(); err != nil {
+	if err := tx.CommitTx(); err != nil {
 		atomic.AddInt64(&m.stats.failedTx, 1)
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}

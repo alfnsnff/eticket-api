@@ -1,9 +1,9 @@
 package domain
 
 import (
+	"context"
+	"eticket-api/pkg/gotann"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type Quota struct {
@@ -25,14 +25,14 @@ func (q *Quota) TableName() string {
 }
 
 type QuotaRepository interface {
-	Count(db *gorm.DB) (int64, error)
-	Insert(db *gorm.DB, entity *Quota) error
-	InsertBulk(db *gorm.DB, Quotas []*Quota) error
-	Update(db *gorm.DB, entity *Quota) error
-	UpdateBulk(db *gorm.DB, Quotas []*Quota) error
-	Delete(db *gorm.DB, entity *Quota) error
-	FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*Quota, error)
-	FindByID(db *gorm.DB, id uint) (*Quota, error)
-	FindByScheduleID(db *gorm.DB, scheduleID uint) ([]*Quota, error)
-	FindByScheduleIDAndClassID(db *gorm.DB, scheduleID uint, classID uint) (*Quota, error)
+	Count(ctx context.Context, conn gotann.Connection) (int64, error)
+	Insert(ctx context.Context, conn gotann.Connection, entity *Quota) error
+	InsertBulk(ctx context.Context, conn gotann.Connection, Quotas []*Quota) error
+	Update(ctx context.Context, conn gotann.Connection, entity *Quota) error
+	UpdateBulk(ctx context.Context, conn gotann.Connection, Quotas []*Quota) error
+	Delete(ctx context.Context, conn gotann.Connection, entity *Quota) error
+	FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*Quota, error)
+	FindByID(ctx context.Context, conn gotann.Connection, id uint) (*Quota, error)
+	FindByScheduleID(ctx context.Context, conn gotann.Connection, scheduleID uint) ([]*Quota, error)
+	FindByScheduleIDAndClassID(ctx context.Context, conn gotann.Connection, scheduleID uint, classID uint) (*Quota, error)
 }

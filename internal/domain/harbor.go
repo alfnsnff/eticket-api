@@ -1,9 +1,9 @@
 package domain
 
 import (
+	"context"
+	"eticket-api/pkg/gotann"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type Harbor struct {
@@ -21,12 +21,12 @@ func (h *Harbor) TableName() string {
 }
 
 type HarborRepository interface {
-	Count(db *gorm.DB) (int64, error)
-	Insert(db *gorm.DB, entity *Harbor) error
-	InsertBulk(db *gorm.DB, harbors []*Harbor) error
-	Update(db *gorm.DB, entity *Harbor) error
-	UpdateBulk(db *gorm.DB, harbors []*Harbor) error
-	Delete(db *gorm.DB, entity *Harbor) error
-	FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*Harbor, error)
-	FindByID(db *gorm.DB, id uint) (*Harbor, error)
+	Count(ctx context.Context, conn gotann.Connection) (int64, error)
+	Insert(ctx context.Context, conn gotann.Connection, entity *Harbor) error
+	InsertBulk(ctx context.Context, conn gotann.Connection, harbors []*Harbor) error
+	Update(ctx context.Context, conn gotann.Connection, entity *Harbor) error
+	UpdateBulk(ctx context.Context, conn gotann.Connection, harbors []*Harbor) error
+	Delete(ctx context.Context, conn gotann.Connection, entity *Harbor) error
+	FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*Harbor, error)
+	FindByID(ctx context.Context, conn gotann.Connection, id uint) (*Harbor, error)
 }

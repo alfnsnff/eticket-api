@@ -2,17 +2,120 @@ package gotann
 
 import (
 	"context"
+	"database/sql"
 	"time"
+
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+	"gorm.io/gorm/logger"
+	"gorm.io/gorm/schema"
 )
 
-// Connection represents any database connection (regular or transactional)
-type Connection interface{}
+// Connection represents any database connection (regular or transactional) that exposes a GORM-like API
+type Connection interface {
+	// Basic CRUD
+	Create(value interface{}) *gorm.DB
+	First(dest interface{}, conds ...interface{}) *gorm.DB
+	FirstOrCreate(dest interface{}, conds ...interface{}) *gorm.DB
+	FirstOrInit(dest interface{}, conds ...interface{}) *gorm.DB
+	Find(dest interface{}, conds ...interface{}) *gorm.DB
+	Take(dest interface{}, conds ...interface{}) *gorm.DB
+	Last(dest interface{}, conds ...interface{}) *gorm.DB
+	Save(value interface{}) *gorm.DB
+	Update(column string, value interface{}) *gorm.DB
+	Updates(values interface{}) *gorm.DB
+	UpdateColumn(column string, value interface{}) *gorm.DB
+	UpdateColumns(values interface{}) *gorm.DB
+	Delete(value interface{}, conds ...interface{}) *gorm.DB
+
+	// Query
+	Where(query interface{}, args ...interface{}) *gorm.DB
+	Not(query interface{}, args ...interface{}) *gorm.DB
+	Or(query interface{}, args ...interface{}) *gorm.DB
+	Select(query interface{}, args ...interface{}) *gorm.DB
+	Omit(columns ...string) *gorm.DB
+	Joins(query string, args ...interface{}) *gorm.DB
+	Preload(query string, args ...interface{}) *gorm.DB
+	Group(name string) *gorm.DB
+	Having(query interface{}, args ...interface{}) *gorm.DB
+	Order(value interface{}) *gorm.DB
+	Limit(limit int) *gorm.DB
+	Offset(offset int) *gorm.DB
+	Distinct(args ...interface{}) *gorm.DB
+	Table(name string, args ...interface{}) *gorm.DB
+	Model(value interface{}) *gorm.DB
+	Scopes(funcs ...func(*gorm.DB) *gorm.DB) *gorm.DB
+	Unscoped() *gorm.DB
+	Attrs(attrs ...interface{}) *gorm.DB
+	Assign(attrs ...interface{}) *gorm.DB
+	Count(count *int64) *gorm.DB
+
+	// Advanced
+	Raw(sql string, values ...interface{}) *gorm.DB
+	Exec(sql string, values ...interface{}) *gorm.DB
+	Scan(dest interface{}) *gorm.DB
+	Pluck(column string, dest interface{}) *gorm.DB
+	Row() *sql.Row
+	Rows() (*sql.Rows, error)
+	ScanRows(rows *sql.Rows, dest interface{}) error
+	Transaction(fc func(tx *gorm.DB) error, opts ...*sql.TxOptions) (err error)
+	Begin(opts ...*sql.TxOptions) *gorm.DB
+	Commit() *gorm.DB
+	Rollback() *gorm.DB
+	SavePoint(name string) *gorm.DB
+	RollbackTo(name string) *gorm.DB
+
+	// Context and Callbacks
+	WithContext(ctx context.Context) *gorm.DB
+	Session(config *gorm.Session) *gorm.DB
+	Unwrap() *gorm.DB
+	Debug() *gorm.DB
+	Set(name string, value interface{}) *gorm.DB
+	Get(name string) (interface{}, bool)
+	InstanceSet(name string, value interface{}) *gorm.DB
+	InstanceGet(name string) (interface{}, bool)
+
+	// Logger
+	Logger() logger.Interface
+
+	// Statement and Schema
+	Statement() *gorm.Statement
+	RowsAffected() int64
+	Error() error
+
+	// Migrator
+	AutoMigrate(dst ...interface{}) error
+	Migrator() gorm.Migrator
+
+	// Clause
+	Clauses(conds ...clause.Expression) *gorm.DB
+
+	// Association
+	Association(column string) *gorm.Association
+
+	// NamingStrategy
+	NamingStrategy() schema.Namer
+
+	// Utilities
+	AddError(err error) error
+	Use(plugin gorm.Plugin) error
+
+	// Utility
+	Name() string
+	Dialector() gorm.Dialector
+
+	// Context
+	Context() context.Context
+
+	// DB
+	DB() (*sql.DB, error)
+}
 
 // Transaction represents a database transaction with advanced capabilities
 type Transaction interface {
 	Connection
-	Commit() error
-	Rollback() error
+	CommitTx() error
+	RollbackTx() error
 	Context() context.Context
 	ID() string
 	StartTime() time.Time

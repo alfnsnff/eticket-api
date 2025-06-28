@@ -1,9 +1,9 @@
 package domain
 
 import (
+	"context"
+	"eticket-api/pkg/gotann"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type User struct {
@@ -24,14 +24,14 @@ func (u *User) TableName() string {
 }
 
 type UserRepository interface {
-	Count(db *gorm.DB) (int64, error)
-	Insert(db *gorm.DB, entity *User) error
-	InsertBulk(db *gorm.DB, users []*User) error
-	Update(db *gorm.DB, entity *User) error
-	UpdateBulk(db *gorm.DB, users []*User) error
-	Delete(db *gorm.DB, entity *User) error
-	FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*User, error)
-	FindByID(db *gorm.DB, id uint) (*User, error)
-	FindByEmail(db *gorm.DB, email string) (*User, error)
-	FindByUsername(db *gorm.DB, username string) (*User, error)
+	Count(ctx context.Context, conn gotann.Connection) (int64, error)
+	Insert(ctx context.Context, conn gotann.Connection, entity *User) error
+	InsertBulk(ctx context.Context, conn gotann.Connection, users []*User) error
+	Update(ctx context.Context, conn gotann.Connection, entity *User) error
+	UpdateBulk(ctx context.Context, conn gotann.Connection, users []*User) error
+	Delete(ctx context.Context, conn gotann.Connection, entity *User) error
+	FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*User, error)
+	FindByID(ctx context.Context, conn gotann.Connection, id uint) (*User, error)
+	FindByEmail(ctx context.Context, conn gotann.Connection, email string) (*User, error)
+	FindByUsername(ctx context.Context, conn gotann.Connection, username string) (*User, error)
 }

@@ -1,10 +1,9 @@
 package domain
 
 import (
+	"context"
 	"eticket-api/pkg/gotann"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type Schedule struct {
@@ -30,15 +29,13 @@ func (sch *Schedule) TableName() string {
 }
 
 type ScheduleRepository interface {
-	Count(db *gorm.DB) (int64, error)
-	Insert(db *gorm.DB, entity *Schedule) error
-	Inserts(conn *gotann.Connection, entity *Schedule) error
-	InsertBulk(db *gorm.DB, schedules []*Schedule) error
-	Update(db *gorm.DB, entity *Schedule) error
-	UpdateBulk(db *gorm.DB, schedules []*Schedule) error
-	Delete(db *gorm.DB, entity *Schedule) error
-	FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*Schedule, error)
-	FindByID(db *gorm.DB, id uint) (*Schedule, error)
-	FindAllScheduled(db *gorm.DB) ([]*Schedule, error)
-	FindActiveSchedule(db *gorm.DB) ([]*Schedule, error)
+	Count(ctx context.Context, conn gotann.Connection) (int64, error)
+	Insert(ctx context.Context, conn gotann.Connection, entity *Schedule) error
+	InsertBulk(ctx context.Context, conn gotann.Connection, schedules []*Schedule) error
+	Update(ctx context.Context, conn gotann.Connection, entity *Schedule) error
+	UpdateBulk(ctx context.Context, conn gotann.Connection, schedules []*Schedule) error
+	Delete(ctx context.Context, conn gotann.Connection, entity *Schedule) error
+	FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*Schedule, error)
+	FindByID(ctx context.Context, conn gotann.Connection, id uint) (*Schedule, error)
+	FindActiveSchedules(ctx context.Context, conn gotann.Connection) ([]*Schedule, error)
 }

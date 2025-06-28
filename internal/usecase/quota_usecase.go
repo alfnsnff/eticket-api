@@ -3,206 +3,156 @@ package usecase
 import (
 	"context"
 	errs "eticket-api/internal/common/errors"
+	"eticket-api/internal/common/transact"
 	"eticket-api/internal/domain"
 	"eticket-api/internal/mapper"
 	"eticket-api/internal/model"
+	"eticket-api/pkg/gotann"
 	"fmt"
-
-	"gorm.io/gorm"
 )
 
 type QuotaUsecase struct {
-	DB              *gorm.DB // Assuming you have a DB field for the transaction manager
+	Transactor      *transact.Transactor
 	QuotaRepository domain.QuotaRepository
 }
 
 func NewQuotaUsecase(
-	db *gorm.DB,
+
+	transactor *transact.Transactor,
 	Quota_repository domain.QuotaRepository,
 ) *QuotaUsecase {
 	return &QuotaUsecase{
-		DB:              db,
+
+		Transactor:      transactor,
 		QuotaRepository: Quota_repository,
 	}
 }
 
-func (a *QuotaUsecase) CreateQuota(ctx context.Context, request *model.WriteQuotaRequest) error {
-	tx := a.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-	}()
-
-	Quota := &domain.Quota{
-		ScheduleID: request.ScheduleID,
-		ClassID:    request.ClassID,
-		Price:      request.Price,
-		Quota:      request.Capacity,
-		Capacity:   request.Capacity, // Assuming Capacity is the same as Quota
-	}
-
-	if err := a.QuotaRepository.Insert(tx, Quota); err != nil {
-		return fmt.Errorf("failed to create Quota: %w", err)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return nil
-}
-
-func (a *QuotaUsecase) CreateQuotaBulk(ctx context.Context, requests []*model.WriteQuotaRequest) error {
-	tx := a.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-	}()
-
-	quotas := make([]*domain.Quota, len(requests))
-	for i, request := range requests {
-		quotas[i] = &domain.Quota{
+func (uc *QuotaUsecase) CreateQuota(ctx context.Context, request *model.WriteQuotaRequest) error {
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		quota := &domain.Quota{
 			ScheduleID: request.ScheduleID,
 			ClassID:    request.ClassID,
-			Price:      request.Price,
 			Quota:      request.Capacity,
 			Capacity:   request.Capacity,
+			Price:      request.Price,
 		}
-	}
-
-	if err := a.QuotaRepository.InsertBulk(tx, quotas); err != nil {
-		tx.Rollback()
-		return fmt.Errorf("failed to create quotas in bulk: %w", err)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return nil
+		if err := uc.QuotaRepository.Insert(ctx, tx, quota); err != nil {
+			if errs.IsUniqueConstraintError(err) {
+				return errs.ErrConflict
+			}
+			return fmt.Errorf("failed to create quota: %w", err)
+		}
+		return nil
+	})
 }
 
-func (a *QuotaUsecase) ListQuotas(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadQuotaResponse, int, error) {
-	tx := a.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *QuotaUsecase) CreateQuotaBulk(ctx context.Context, requests []*model.WriteQuotaRequest) error {
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		quotas := make([]*domain.Quota, len(requests))
+		for i, request := range requests {
+			quotas[i] = &domain.Quota{
+				ScheduleID: request.ScheduleID,
+				ClassID:    request.ClassID,
+				Price:      request.Price,
+				Quota:      request.Capacity,
+				Capacity:   request.Capacity,
+			}
 		}
-	}()
 
-	total, err := a.QuotaRepository.Count(tx)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count Quotas: %w", err)
+		if err := uc.QuotaRepository.InsertBulk(ctx, tx, quotas); err != nil {
+			if errs.IsUniqueConstraintError(err) {
+				return errs.ErrConflict
+			}
+			return fmt.Errorf("failed to create quotas in bulk: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (uc *QuotaUsecase) ListQuotas(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadQuotaResponse, int, error) {
+	var err error
+	var total int64
+	var quotas []*domain.Quota
+	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		total, err = uc.QuotaRepository.Count(ctx, tx)
+		if err != nil {
+			return fmt.Errorf("failed to count Quotas: %w", err)
+		}
+		quotas, err = uc.QuotaRepository.FindAll(ctx, tx, limit, offset, sort, search)
+		if err != nil {
+			return fmt.Errorf("failed to get all Quotas: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return nil, 0, fmt.Errorf("failed to list Quotas: %w", err)
 	}
 
-	Quotas, err := a.QuotaRepository.FindAll(tx, limit, offset, sort, search)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get all Quotas: %w", err)
-	}
-
-	responses := make([]*model.ReadQuotaResponse, len(Quotas))
-	for i, Quota := range Quotas {
+	responses := make([]*model.ReadQuotaResponse, len(quotas))
+	for i, Quota := range quotas {
 		responses[i] = mapper.QuotaToResponse(Quota)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return responses, int(total), nil
 }
 
-func (a *QuotaUsecase) GetQuotaByID(ctx context.Context, id uint) (*model.ReadQuotaResponse, error) {
-	tx := a.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *QuotaUsecase) GetQuotaByID(ctx context.Context, id uint) (*model.ReadQuotaResponse, error) {
+	var err error
+	var quota *domain.Quota
+	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		quota, err = uc.QuotaRepository.FindByID(ctx, tx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get Quota: %w", err)
 		}
-	}()
 
-	Quota, err := a.QuotaRepository.FindByID(tx, id)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Quota: %w", err)
+		if quota == nil {
+			return errs.ErrNotFound
+		}
+		return nil
+	}); err != nil {
+		return nil, fmt.Errorf("failed to get Quota by ID: %w", err)
 	}
 
-	if Quota == nil {
-		return nil, errs.ErrNotFound
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return mapper.QuotaToResponse(Quota), nil
+	return mapper.QuotaToResponse(quota), nil
 }
 
-func (a *QuotaUsecase) UpdateQuota(ctx context.Context, request *model.UpdateQuotaRequest) error {
-	tx := a.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *QuotaUsecase) UpdateQuota(ctx context.Context, request *model.UpdateQuotaRequest) error {
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		quota, err := uc.QuotaRepository.FindByID(ctx, tx, request.ID)
+		if err != nil {
+			return fmt.Errorf("failed to find quota: %w", err)
 		}
-	}()
+		if quota == nil {
+			return errs.ErrNotFound
+		}
 
-	// Fetch existing Quota
-	Quota, err := a.QuotaRepository.FindByID(tx, request.ID)
-	if err != nil {
-		return fmt.Errorf("failed to find Quota: %w", err)
-	}
-	if Quota == nil {
-		return errs.ErrNotFound
-	}
+		quota.ScheduleID = request.ScheduleID
+		quota.ClassID = request.ClassID
+		quota.Quota = request.Capacity
+		quota.Capacity = request.Capacity
+		quota.Price = request.Price
 
-	Quota.ScheduleID = request.ScheduleID
-	Quota.ClassID = request.ClassID
-	Quota.Capacity = request.Capacity // Assuming Capacity is the same as Quota
-	Quota.Quota = request.Capacity
-	Quota.Price = request.Price
-
-	// Save updated Quota
-	if err := a.QuotaRepository.Update(tx, Quota); err != nil {
-		return fmt.Errorf("failed to update Quota: %w", err)
-	}
-
-	// Commit the transaction
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return nil
+		if err := uc.QuotaRepository.Update(ctx, tx, quota); err != nil {
+			return fmt.Errorf("failed to update quota: %w", err)
+		}
+		return nil
+	})
 }
 
-func (a *QuotaUsecase) DeleteQuota(ctx context.Context, id uint) error {
-	tx := a.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *QuotaUsecase) DeleteQuota(ctx context.Context, id uint) error {
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		quota, err := uc.QuotaRepository.FindByID(ctx, tx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get quota: %w", err)
 		}
-	}()
+		if quota == nil {
+			return errs.ErrNotFound
+		}
 
-	Quota, err := a.QuotaRepository.FindByID(tx, id)
-	if err != nil {
-		return fmt.Errorf("failed to get Quota: %w", err)
-	}
-	if Quota == nil {
-		return errs.ErrNotFound
-	}
-
-	if err := a.QuotaRepository.Delete(tx, Quota); err != nil {
-		return fmt.Errorf("failed to delete Quota: %w", err)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return nil
+		if err := uc.QuotaRepository.Delete(ctx, tx, quota); err != nil {
+			return fmt.Errorf("failed to delete quota: %w", err)
+		}
+		return nil
+	})
 }

@@ -1,54 +1,58 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"eticket-api/internal/domain"
+	"eticket-api/pkg/gotann"
 	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-type ClassRepository struct{}
-
-func NewClassRepository() *ClassRepository {
-	return &ClassRepository{}
+type ClassRepository struct {
+	DB *gorm.DB
 }
 
-func (cr *ClassRepository) Count(db *gorm.DB) (int64, error) {
+func NewClassRepository(db *gorm.DB) *ClassRepository {
+	return &ClassRepository{DB: db}
+}
+
+func (r *ClassRepository) Count(ctx context.Context, conn gotann.Connection) (int64, error) {
 	var total int64
-	result := db.Model(&domain.Class{}).Count(&total)
+	result := conn.Model(&domain.Class{}).Count(&total)
 	return total, result.Error
 }
 
-func (ar *ClassRepository) Insert(db *gorm.DB, class *domain.Class) error {
-	result := db.Create(class)
+func (r *ClassRepository) Insert(ctx context.Context, conn gotann.Connection, class *domain.Class) error {
+	result := conn.Create(class)
 	return result.Error
 }
 
-func (cr *ClassRepository) InsertBulk(db *gorm.DB, classes []*domain.Class) error {
-	result := db.Create(&classes)
+func (r *ClassRepository) InsertBulk(ctx context.Context, conn gotann.Connection, classes []*domain.Class) error {
+	result := conn.Create(&classes)
 	return result.Error
 }
 
-func (cr *ClassRepository) Update(db *gorm.DB, class *domain.Class) error {
-	result := db.Save(class)
+func (r *ClassRepository) Update(ctx context.Context, conn gotann.Connection, class *domain.Class) error {
+	result := conn.Save(class)
 	return result.Error
 }
 
-func (cr *ClassRepository) UpdateBulk(db *gorm.DB, classes []*domain.Class) error {
-	result := db.Save(&classes)
+func (r *ClassRepository) UpdateBulk(ctx context.Context, conn gotann.Connection, classes []*domain.Class) error {
+	result := conn.Save(&classes)
 	return result.Error
 }
 
-func (cr *ClassRepository) Delete(db *gorm.DB, class *domain.Class) error {
-	result := db.Select(clause.Associations).Delete(class)
+func (r *ClassRepository) Delete(ctx context.Context, conn gotann.Connection, class *domain.Class) error {
+	result := conn.Select(clause.Associations).Delete(class)
 	return result.Error
 }
 
-func (cr *ClassRepository) FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.Class, error) {
+func (r *ClassRepository) FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*domain.Class, error) {
 	classes := []*domain.Class{}
-	query := db
+	query := conn.Model(&domain.Class{})
 	if search != "" {
 		search = "%" + search + "%"
 		query = query.Where("class_name ILIKE ?", search)
@@ -62,9 +66,9 @@ func (cr *ClassRepository) FindAll(db *gorm.DB, limit, offset int, sort, search 
 	return classes, err
 }
 
-func (cr *ClassRepository) FindByID(db *gorm.DB, id uint) (*domain.Class, error) {
+func (r *ClassRepository) FindByID(ctx context.Context, conn gotann.Connection, id uint) (*domain.Class, error) {
 	class := new(domain.Class)
-	result := db.First(&class, id)
+	result := conn.First(&class, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}

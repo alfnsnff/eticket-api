@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"errors"
+	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/response"
@@ -26,40 +28,45 @@ func NewQuotaController(
 	quota_usecase *usecase.QuotaUsecase,
 
 ) {
-	ac := &QuotaController{
+	c := &QuotaController{
 		Log:          log,
 		Validate:     validate,
 		QuotaUsecase: quota_usecase,
 	}
 
-	router.GET("/quotas", ac.GetAllQuotas)
-	router.GET("/quota/:id", ac.GetQuotaByID)
+	router.GET("/quotas", c.GetAllQuotas)
+	router.GET("/quota/:id", c.GetQuotaByID)
 
-	protected.POST("/quota/create", ac.CreateQuota)
-	protected.POST("/quota/create/bulk", ac.CreateQuotaBulk)
-	protected.PUT("/quota/update/:id", ac.UpdateQuota)
-	protected.DELETE("/quota/:id", ac.DeleteQuota)
+	protected.POST("/quota/create", c.CreateQuota)
+	protected.POST("/quota/create/bulk", c.CreateQuotaBulk)
+	protected.PUT("/quota/update/:id", c.UpdateQuota)
+	protected.DELETE("/quota/:id", c.DeleteQuota)
 
 }
 
-func (mc *QuotaController) CreateQuota(ctx *gin.Context) {
+func (c *QuotaController) CreateQuota(ctx *gin.Context) {
 	request := new(model.WriteQuotaRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
-		mc.Log.WithError(err).Error("failed to bind JSON request body")
+		c.Log.WithError(err).Error("failed to bind JSON request body")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	if err := mc.Validate.Struct(request); err != nil {
-		mc.Log.WithError(err).Error("failed to validate request body")
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("failed to validate request body")
 		errors := validator.ParseErrors(err)
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
 
-	if err := mc.QuotaUsecase.CreateQuota(ctx, request); err != nil {
-		mc.Log.WithError(err).Error("failed to create Quota")
+	if err := c.QuotaUsecase.CreateQuota(ctx, request); err != nil {
+		if errors.Is(err, errs.ErrConflict) {
+			c.Log.WithError(err).Error("user already exists")
+			ctx.JSON(http.StatusConflict, response.NewErrorResponse("user already exists", nil))
+			return
+		}
+		c.Log.WithError(err).Error("failed to create Quota")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create Quota", err.Error()))
 		return
 	}
@@ -67,18 +74,18 @@ func (mc *QuotaController) CreateQuota(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Quota created successfully", nil))
 }
 
-func (mc *QuotaController) CreateQuotaBulk(ctx *gin.Context) {
+func (c *QuotaController) CreateQuotaBulk(ctx *gin.Context) {
 	requests := []*model.WriteQuotaRequest{}
 
 	if err := ctx.ShouldBindJSON(&requests); err != nil {
-		mc.Log.WithError(err).Error("failed to bind JSON request body for bulk create")
+		c.Log.WithError(err).Error("failed to bind JSON request body for bulk create")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
 	for i, req := range requests {
-		if err := mc.Validate.Struct(req); err != nil {
-			mc.Log.WithError(err).Error("failed to validate request body at index %d", i)
+		if err := c.Validate.Struct(req); err != nil {
+			c.Log.WithError(err).Error("failed to validate request body at index %d", i)
 			errors := validator.ParseErrors(err)
 			ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", map[string]interface{}{
 				"index":  i,
@@ -88,8 +95,8 @@ func (mc *QuotaController) CreateQuotaBulk(ctx *gin.Context) {
 		}
 	}
 
-	if err := mc.QuotaUsecase.CreateQuotaBulk(ctx, requests); err != nil {
-		mc.Log.WithError(err).Error("failed to create Quotas in bulk")
+	if err := c.QuotaUsecase.CreateQuotaBulk(ctx, requests); err != nil {
+		c.Log.WithError(err).Error("failed to create Quotas in bulk")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create Quotas in bulk", err.Error()))
 		return
 	}
@@ -97,13 +104,13 @@ func (mc *QuotaController) CreateQuotaBulk(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "Quotas created successfully", nil))
 }
 
-func (mc *QuotaController) GetAllQuotas(ctx *gin.Context) {
+func (c *QuotaController) GetAllQuotas(ctx *gin.Context) {
 	params := response.GetParams(ctx)
 
-	datas, total, err := mc.QuotaUsecase.ListQuotas(ctx, params.Limit, params.Offset, params.Sort, params.Search)
+	datas, total, err := c.QuotaUsecase.ListQuotas(ctx, params.Limit, params.Offset, params.Sort, params.Search)
 
 	if err != nil {
-		mc.Log.WithError(err).Error("failed to retrieve Quotas")
+		c.Log.WithError(err).Error("failed to retrieve Quotas")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve Quotas", err.Error()))
 		return
 	}
@@ -120,26 +127,26 @@ func (mc *QuotaController) GetAllQuotas(ctx *gin.Context) {
 	))
 }
 
-func (mc *QuotaController) GetQuotaByID(ctx *gin.Context) {
+func (c *QuotaController) GetQuotaByID(ctx *gin.Context) {
 
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
-		mc.Log.WithError(err).WithField("id", ctx.Param("id")).Error("invalid Quota ID")
+		c.Log.WithError(err).WithField("id", ctx.Param("id")).Error("invalid Quota ID")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid Quota ID", err.Error()))
 		return
 	}
 
-	data, err := mc.QuotaUsecase.GetQuotaByID(ctx, uint(id))
+	data, err := c.QuotaUsecase.GetQuotaByID(ctx, uint(id))
 
 	if err != nil {
-		mc.Log.WithError(err).WithField("id", id).Error("failed to retrieve Quota")
+		c.Log.WithError(err).WithField("id", id).Error("failed to retrieve Quota")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve Quota", err.Error()))
 		return
 	}
 
 	if data == nil {
-		mc.Log.WithField("id", id).Warn("Quota not found")
+		c.Log.WithField("id", id).Warn("Quota not found")
 		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Quota not found", nil))
 		return
 	}
@@ -147,31 +154,42 @@ func (mc *QuotaController) GetQuotaByID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Quota retrieved successfully", nil))
 }
 
-func (mc *QuotaController) UpdateQuota(ctx *gin.Context) {
+func (c *QuotaController) UpdateQuota(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil || id == 0 {
-		mc.Log.WithError(err).WithField("id", ctx.Param("id")).Error("invalid or missing Quota ID")
+		c.Log.WithError(err).WithField("id", ctx.Param("id")).Error("invalid or missing Quota ID")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid or missing Quota ID", nil))
 		return
 	}
 
 	request := new(model.UpdateQuotaRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
-		mc.Log.WithError(err).Error("failed to bind JSON request body")
+		c.Log.WithError(err).Error("failed to bind JSON request body")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
 	request.ID = uint(id)
-	if err := mc.Validate.Struct(request); err != nil {
-		mc.Log.WithError(err).Error("failed to validate request body")
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("failed to validate request body")
 		errors := validator.ParseErrors(err)
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
 
-	if err := mc.QuotaUsecase.UpdateQuota(ctx, request); err != nil {
-		mc.Log.WithError(err).WithField("id", id).Error("failed to update Quota")
+	if err := c.QuotaUsecase.UpdateQuota(ctx, request); err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			c.Log.WithField("id", id).Warn("Quota not found")
+			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Quota not found", nil))
+			return
+		}
+
+		if errors.Is(err, errs.ErrConflict) {
+			c.Log.WithError(err).Error("Quota already exists")
+			ctx.JSON(http.StatusConflict, response.NewErrorResponse("Quota already exists", nil))
+			return
+		}
+		c.Log.WithError(err).WithField("id", id).Error("failed to update Quota")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update Quota", err.Error()))
 		return
 	}
@@ -179,18 +197,18 @@ func (mc *QuotaController) UpdateQuota(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Quota updated successfully", nil))
 }
 
-func (mc *QuotaController) DeleteQuota(ctx *gin.Context) {
+func (c *QuotaController) DeleteQuota(ctx *gin.Context) {
 
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
-		mc.Log.WithError(err).WithField("id", ctx.Param("id")).Error("invalid Quota ID")
+		c.Log.WithError(err).WithField("id", ctx.Param("id")).Error("invalid Quota ID")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid Quota ID", err.Error()))
 		return
 	}
 
-	if err := mc.QuotaUsecase.DeleteQuota(ctx, uint(id)); err != nil {
-		mc.Log.WithError(err).WithField("id", id).Error("failed to delete Quota")
+	if err := c.QuotaUsecase.DeleteQuota(ctx, uint(id)); err != nil {
+		c.Log.WithError(err).WithField("id", id).Error("failed to delete Quota")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete Quota", err.Error()))
 		return
 	}

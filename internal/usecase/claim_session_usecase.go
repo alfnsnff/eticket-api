@@ -5,19 +5,20 @@ import (
 	"errors"
 	enum "eticket-api/internal/common/enums"
 	errs "eticket-api/internal/common/errors"
+	"eticket-api/internal/common/transact"
 	"eticket-api/internal/common/utils"
 	"eticket-api/internal/domain"
 	"eticket-api/internal/mapper"
 	"eticket-api/internal/model"
+	"eticket-api/pkg/gotann"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type ClaimSessionUsecase struct {
-	DB                     *gorm.DB
+	Transactor             *transact.Transactor
 	ClaimSessionRepository domain.ClaimSessionRepository
 	ClaimItemRepository    domain.ClaimItemRepository // Assuming you have a ClaimItemRepository
 	TicketRepository       domain.TicketRepository
@@ -28,7 +29,7 @@ type ClaimSessionUsecase struct {
 }
 
 func NewClaimSessionUsecase(
-	db *gorm.DB,
+	transactor *transact.Transactor,
 	claim_session_repository domain.ClaimSessionRepository,
 	claim_item_repository domain.ClaimItemRepository, // Assuming you have a ClaimItemRepository
 	ticket_repository domain.TicketRepository,
@@ -38,9 +39,9 @@ func NewClaimSessionUsecase(
 	tripay_client domain.TripayClient,
 ) *ClaimSessionUsecase {
 	return &ClaimSessionUsecase{
-		DB:                     db,
+		Transactor:             transactor,
 		ClaimSessionRepository: claim_session_repository,
-		ClaimItemRepository:    claim_item_repository, // Assuming you have a ClaimItemRepository
+		ClaimItemRepository:    claim_item_repository,
 		TicketRepository:       ticket_repository,
 		ScheduleRepository:     schedule_repository,
 		BookingRepository:      booking_repository,
@@ -49,99 +50,94 @@ func NewClaimSessionUsecase(
 	}
 }
 
-func (cs *ClaimSessionUsecase) TESTCreateClaimSession(
+func (uc *ClaimSessionUsecase) LockClaimSession(
 	ctx context.Context,
 	request *model.TESTWriteClaimSessionRequest,
 ) (*model.TESTReadClaimSessionLockResponse, error) {
-	tx := cs.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+
+	var claimSession *domain.ClaimSession
+
+	if err := uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		// Step 1: Validate schedule existence
+		schedule, err := uc.ScheduleRepository.FindByID(ctx, tx, request.ScheduleID)
+		if err != nil {
+			return fmt.Errorf("retrieve schedule: %w", err)
 		}
-	}()
-
-	// Step 1: Validate schedule existence
-	schedule, err := cs.ScheduleRepository.FindByID(tx, request.ScheduleID)
-	if err != nil {
-		return nil, fmt.Errorf("retrieve schedule: %w", err)
-	}
-	if schedule == nil {
-		return nil, errs.ErrNotFound
-	}
-
-	// Step 2: Fetch and map quotas
-	quotas, err := cs.QuotaRepository.FindByScheduleID(tx, request.ScheduleID)
-	if err != nil {
-
-		return nil, fmt.Errorf("fetch quotas: %w", err)
-	}
-	quotaByClass := make(map[uint]*domain.Quota, len(quotas))
-	for i := range quotas {
-		quotaByClass[quotas[i].ClassID] = quotas[i]
-	}
-
-	// Step 3: Fetch active claim sessions and accumulate usage
-	sessions, err := cs.ClaimSessionRepository.FindByScheduleID(tx, request.ScheduleID)
-	if err != nil {
-
-		return nil, fmt.Errorf("load active sessions: %w", err)
-	}
-	usedByClass := make(map[uint]int64)
-	for i := range sessions {
-		for j := range sessions[i].ClaimItems {
-			item := sessions[i].ClaimItems[j]
-			usedByClass[item.ClassID] += int64(item.Quantity)
+		if schedule == nil {
+			return errs.ErrNotFound
 		}
-	}
 
-	// Step 4: Validate quota availability
-	for i := range request.Items {
-		classID := request.Items[i].ClassID
-		quota, exists := quotaByClass[classID]
-		if !exists {
-			tx.Rollback()
-			return nil, fmt.Errorf("quota not found for class %d", classID)
-		}
-		used := usedByClass[classID]
-		requested := int64(request.Items[i].Quantity)
-		if used+requested > int64(quota.Quota) {
-			tx.Rollback()
-			return nil, fmt.Errorf("quota exceeded for class %d", classID)
-		}
-	}
+		// Step 2: Fetch and map quotas
+		quotas, err := uc.QuotaRepository.FindByScheduleID(ctx, tx, request.ScheduleID)
+		if err != nil {
 
-	claimItems := make([]domain.ClaimItem, len(request.Items))
-	for i, item := range request.Items {
-		quota, exists := quotaByClass[item.ClassID]
-		if !exists {
-			tx.Rollback()
-			return nil, fmt.Errorf("quota not found for class %d", item.ClassID)
+			return fmt.Errorf("fetch quotas: %w", err)
 		}
-		subtotal := float64(item.Quantity) * quota.Price
-		claimItems[i] = domain.ClaimItem{
-			ClassID:  item.ClassID,
-			Quantity: item.Quantity,
-			Subtotal: subtotal, // <-- set subtotal by quota price
+		quotaByClass := make(map[uint]*domain.Quota, len(quotas))
+		for i := range quotas {
+			quotaByClass[quotas[i].ClassID] = quotas[i]
 		}
-	}
 
-	// Step 5: Create claim session
-	claimSession := &domain.ClaimSession{
-		SessionID:  uuid.NewString(),
-		ScheduleID: request.ScheduleID,
-		Status:     enum.ClaimSessionPendingData.String(),
-		ExpiresAt:  time.Now().Add(16 * time.Minute),
-		ClaimItems: claimItems, // attach here
-	}
-	if err := cs.ClaimSessionRepository.Insert(tx, claimSession); err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("create session: %w", err)
-	}
+		// Step 3: Fetch active claim sessions and accumulate usage
+		sessions, err := uc.ClaimSessionRepository.FindByScheduleID(ctx, tx, request.ScheduleID)
+		if err != nil {
 
-	// Step 7: Commit
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("commit transaction: %w", err)
+			return fmt.Errorf("load active sessions: %w", err)
+		}
+		usedByClass := make(map[uint]int64)
+		for i := range sessions {
+			for j := range sessions[i].ClaimItems {
+				item := sessions[i].ClaimItems[j]
+				usedByClass[item.ClassID] += int64(item.Quantity)
+			}
+		}
+
+		// Step 4: Validate quota availability
+		for i := range request.Items {
+			classID := request.Items[i].ClassID
+			quota, exists := quotaByClass[classID]
+			if !exists {
+				return fmt.Errorf("quota not found for class %d", classID)
+			}
+			used := usedByClass[classID]
+			requested := int64(request.Items[i].Quantity)
+			if used+requested > int64(quota.Quota) {
+				return fmt.Errorf("quota exceeded for class %d", classID)
+			}
+		}
+
+		claimItems := make([]domain.ClaimItem, len(request.Items))
+		for i, item := range request.Items {
+			quota, exists := quotaByClass[item.ClassID]
+			if !exists {
+				return fmt.Errorf("quota not found for class %d", item.ClassID)
+			}
+			subtotal := float64(item.Quantity) * quota.Price
+			claimItems[i] = domain.ClaimItem{
+				ClassID:  item.ClassID,
+				Quantity: item.Quantity,
+				Subtotal: subtotal, // <-- set subtotal by quota price
+			}
+		}
+
+		// Step 5: Create claim session
+		claimSession = &domain.ClaimSession{
+			SessionID:  uuid.NewString(),
+			ScheduleID: request.ScheduleID,
+			Status:     enum.ClaimSessionPendingData.String(),
+			ExpiresAt:  time.Now().Add(16 * time.Minute),
+			ClaimItems: claimItems, // attach here
+		}
+		if err := uc.ClaimSessionRepository.Insert(ctx, tx, claimSession); err != nil {
+			if errs.IsUniqueConstraintError(err) {
+				return errs.ErrConflict
+			}
+			return fmt.Errorf("create session: %w", err)
+		}
+
+		return nil
+	}); err != nil {
+		return nil, fmt.Errorf("execute transaction: %w", err)
 	}
 
 	// Step 8: Response
@@ -151,202 +147,194 @@ func (cs *ClaimSessionUsecase) TESTCreateClaimSession(
 	}, nil
 }
 
-func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
+func (cd *ClaimSessionUsecase) EntryClaimSession(
 	ctx context.Context,
 	request *model.TESTWriteClaimSessionDataEntryRequest,
 	sessionID string,
 ) (*model.TESTReadClaimSessionDataEntryResponse, error) {
-	tx := cd.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+
+	var booking *domain.Booking
+	if err := cd.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		session, err := cd.ClaimSessionRepository.FindBySessionID(ctx, tx, sessionID)
+		if err != nil {
+
+			return fmt.Errorf("get claim session failed: %w", err)
 		}
-	}()
+		if session == nil {
 
-	// Load session
-	session, err := cd.ClaimSessionRepository.FindBySessionID(tx, sessionID)
-	if err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("get claim session failed: %w", err)
-	}
-	if session == nil {
-		tx.Rollback()
-		return nil, errs.ErrNotFound
-	}
-	if session.ExpiresAt.Before(time.Now()) {
-		tx.Rollback()
-		return nil, errors.New("claim session expired")
-	}
-	if session.Status == "LOCKED" {
-		tx.Rollback()
-		return nil, fmt.Errorf("claim session has invalid status: %s", session.Status)
-	}
+			return errs.ErrNotFound
+		}
+		if session.ExpiresAt.Before(time.Now()) {
 
-	// Generate order ID
-	orderID := utils.GenerateOrderID(
-		session.Schedule.DepartureHarbor.HarborAlias,
-		session.Schedule.ArrivalHarbor.HarborAlias,
-		session.Schedule.Ship.ShipAlias,
-	)
+			return errors.New("claim session expired")
+		}
+		if session.Status == "LOCKED" {
 
-	// Create booking
-	booking := &domain.Booking{
-		OrderID:      orderID,
-		ScheduleID:   session.ScheduleID,
-		IDType:       request.IDType,
-		IDNumber:     request.IDNumber,
-		PhoneNumber:  request.PhoneNumber,
-		CustomerName: request.CustomerName,
-		Email:        request.Email,
-		Status:       "PENDING_PAYMENT",
-		ExpiresAt:    time.Now().Add(13 * time.Minute), // Set expiration for 13 minutes
-	}
-	if err := cd.BookingRepository.Insert(tx, booking); err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("create booking failed: %w", err)
-	}
-
-	// Fetch quota and map by ClassID
-	quotas, err := cd.QuotaRepository.FindByScheduleID(tx, session.ScheduleID)
-	if err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("fetch quotas failed: %w", err)
-	}
-	quotaByClass := make(map[uint]*domain.Quota, len(quotas))
-	for _, q := range quotas {
-		quotaByClass[q.ClassID] = q
-	}
-
-	// Organize passenger data by ClassID
-	dataQueue := make(map[uint][]model.TESTClaimSessionTicketDataEntry)
-	for _, d := range request.TicketData {
-		dataQueue[d.ClassID] = append(dataQueue[d.ClassID], d)
-	}
-
-	// Build ticket list
-	var tickets []*domain.Ticket
-	var amounts float64
-	for _, item := range session.ClaimItems {
-		quota, ok := quotaByClass[item.ClassID]
-		if !ok {
-			tx.Rollback()
-			return nil, fmt.Errorf("quota not found for class %d", item.ClassID)
+			return fmt.Errorf("claim session has invalid status: %s", session.Status)
 		}
 
-		classData := dataQueue[item.ClassID]
-		if len(classData) < item.Quantity {
-			tx.Rollback()
-			return nil, fmt.Errorf("not enough ticket data for class %d", item.ClassID)
-		}
+		// Generate order ID
+		orderID := utils.GenerateOrderID(
+			session.Schedule.DepartureHarbor.HarborAlias,
+			session.Schedule.ArrivalHarbor.HarborAlias,
+			session.Schedule.Ship.ShipAlias,
+		)
 
-		for i := 0; i < item.Quantity; i++ {
-			data := classData[i]
-			switch quota.Class.Type {
-			case "passenger":
-				if data.PassengerName == "" || data.IDType == "" || data.IDNumber == "" {
-					tx.Rollback()
-					return nil, fmt.Errorf("missing passenger info for class %d", item.ClassID)
-				}
-				seat := fmt.Sprintf("%s%d", quota.Class.ClassAlias, quota.Capacity-quota.Quota+1)
-				data.SeatNumber = &seat
-			case "vehicle":
-				if data.LicensePlate == nil || *data.LicensePlate == "" {
-					tx.Rollback()
-					return nil, fmt.Errorf("missing license plate for vehicle class %d", item.ClassID)
-				}
-			default:
-				tx.Rollback()
-				return nil, fmt.Errorf("unsupported ticket type or missing required fields for class %d", item.ClassID)
+		// Create booking
+		booking = &domain.Booking{
+			OrderID:      orderID,
+			ScheduleID:   session.ScheduleID,
+			IDType:       request.IDType,
+			IDNumber:     request.IDNumber,
+			PhoneNumber:  request.PhoneNumber,
+			CustomerName: request.CustomerName,
+			Email:        request.Email,
+			Status:       "PENDING_PAYMENT",
+			ExpiresAt:    time.Now().Add(13 * time.Minute), // Set expiration for 13 minutes
+		}
+		if err := cd.BookingRepository.Insert(ctx, tx, booking); err != nil {
+			if errs.IsUniqueConstraintError(err) {
+				return errs.ErrConflict
 			}
-			tickets = append(tickets, &domain.Ticket{
-				TicketCode:      utils.GenerateTicketReferenceID(), // Unique ticket code
-				BookingID:       &booking.ID,
-				ClassID:         item.ClassID,
-				Price:           quota.Price,
-				Type:            quota.Class.Type,
-				PassengerName:   data.PassengerName,
-				PassengerAge:    data.PassengerAge,
-				Address:         data.Address,
-				PassengerGender: &data.PassengerGender,
-				IDType:          &data.IDType,
-				IDNumber:        &data.IDNumber,
-				SeatNumber:      data.SeatNumber,
-				LicensePlate:    data.LicensePlate,
-				ScheduleID:      session.ScheduleID,
-			})
-			amounts += quota.Price
+			return fmt.Errorf("create booking failed: %w", err)
 		}
 
-		// Trim used data
-		dataQueue[item.ClassID] = classData[item.Quantity:]
-	}
+		// Fetch quota and map by ClassID
+		quotas, err := cd.QuotaRepository.FindByScheduleID(ctx, tx, session.ScheduleID)
+		if err != nil {
 
-	// Insert tickets
-	if err := cd.TicketRepository.InsertBulk(tx, tickets); err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("failed to create tickets: %w", err)
-	}
-
-	orderItems := make([]model.OrderItem, len(tickets))
-	for i, ticket := range tickets {
-		orderItems[i] = mapper.TicketToItem(ticket)
-	}
-
-	payload := &model.WriteTransactionRequest{
-		Method:        request.PaymentMethod,
-		Amount:        int(amounts), // Convert to integer cents
-		CustomerName:  booking.CustomerName,
-		CustomerEmail: booking.Email,
-		CustomerPhone: booking.PhoneNumber,
-		MerchantRef:   booking.OrderID,
-		OrderItems:    orderItems,
-		CallbackUrl:   "https://example.com/callback",
-		ReturnUrl:     "https://example.com/callback",
-		ExpiredTime:   int(time.Now().Add(30 * time.Minute).Unix()),
-	}
-
-	payment, err := cd.TripayClient.CreatePayment(payload)
-	if err != nil {
-		return nil, fmt.Errorf("create Tripay payment failed: %w", err)
-	}
-
-	booking.ReferenceNumber = &payment.Reference
-	if err := cd.BookingRepository.Update(tx, booking); err != nil {
-		return nil, fmt.Errorf("failed to update booking with reference number: %w", err)
-	}
-
-	// Decrement quota usage
-	for _, item := range session.ClaimItems {
-		quota, ok := quotaByClass[item.ClassID]
-		if !ok {
-			tx.Rollback()
-			return nil, fmt.Errorf("quota not found for class %d", item.ClassID)
+			return fmt.Errorf("fetch quotas failed: %w", err)
+		}
+		quotaByClass := make(map[uint]*domain.Quota, len(quotas))
+		for _, q := range quotas {
+			quotaByClass[q.ClassID] = q
 		}
 
-		if quota.Quota < item.Quantity {
-			tx.Rollback()
-			return nil, fmt.Errorf("not enough quota for class %d", item.ClassID)
+		// Organize passenger data by ClassID
+		dataQueue := make(map[uint][]model.TESTClaimSessionTicketDataEntry)
+		for _, d := range request.TicketData {
+			dataQueue[d.ClassID] = append(dataQueue[d.ClassID], d)
 		}
 
-		quota.Quota -= item.Quantity
+		// Build ticket list
+		var tickets []*domain.Ticket
+		var amounts float64
+		for _, item := range session.ClaimItems {
+			quota, ok := quotaByClass[item.ClassID]
+			if !ok {
+				return fmt.Errorf("quota not found for class %d", item.ClassID)
+			}
 
-		if err := cd.QuotaRepository.Update(tx, quota); err != nil {
-			tx.Rollback()
-			return nil, fmt.Errorf("failed to update quota usage: %w", err)
+			classData := dataQueue[item.ClassID]
+			if len(classData) < item.Quantity {
+				return fmt.Errorf("not enough ticket data for class %d", item.ClassID)
+			}
+
+			for i := 0; i < item.Quantity; i++ {
+				data := classData[i]
+				switch quota.Class.Type {
+				case "passenger":
+					if data.PassengerName == "" || data.IDType == "" || data.IDNumber == "" {
+
+						return fmt.Errorf("missing passenger info for class %d", item.ClassID)
+					}
+					seat := fmt.Sprintf("%s%d", quota.Class.ClassAlias, quota.Capacity-quota.Quota+1)
+					data.SeatNumber = &seat
+				case "vehicle":
+					if data.LicensePlate == nil || *data.LicensePlate == "" {
+
+						return fmt.Errorf("missing license plate for vehicle class %d", item.ClassID)
+					}
+				default:
+
+					return fmt.Errorf("unsupported ticket type or missing required fields for class %d", item.ClassID)
+				}
+				tickets = append(tickets, &domain.Ticket{
+					TicketCode:      utils.GenerateTicketReferenceID(), // Unique ticket code
+					BookingID:       &booking.ID,
+					ClassID:         item.ClassID,
+					Price:           quota.Price,
+					Type:            quota.Class.Type,
+					PassengerName:   data.PassengerName,
+					PassengerAge:    data.PassengerAge,
+					Address:         data.Address,
+					PassengerGender: &data.PassengerGender,
+					IDType:          &data.IDType,
+					IDNumber:        &data.IDNumber,
+					SeatNumber:      data.SeatNumber,
+					LicensePlate:    data.LicensePlate,
+					ScheduleID:      session.ScheduleID,
+				})
+				amounts += quota.Price
+			}
+
+			// Trim used data
+			dataQueue[item.ClassID] = classData[item.Quantity:]
 		}
-	}
 
-	// Mark session completed
-	session.Status = "LOCKED"
-	if err := cd.ClaimSessionRepository.Update(tx, session); err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("failed to update session: %w", err)
-	}
+		// Insert tickets
+		if err := cd.TicketRepository.InsertBulk(ctx, tx, tickets); err != nil {
+			if errs.IsUniqueConstraintError(err) {
+				return errs.ErrConflict
+			}
+			return fmt.Errorf("failed to create tickets: %w", err)
+		}
 
-	// Commit
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("commit transaction failed: %w", err)
+		orderItems := make([]model.OrderItem, len(tickets))
+		for i, ticket := range tickets {
+			orderItems[i] = mapper.TicketToItem(ticket)
+		}
+
+		payload := &model.WriteTransactionRequest{
+			Method:        request.PaymentMethod,
+			Amount:        int(amounts), // Convert to integer cents
+			CustomerName:  booking.CustomerName,
+			CustomerEmail: booking.Email,
+			CustomerPhone: booking.PhoneNumber,
+			MerchantRef:   booking.OrderID,
+			OrderItems:    orderItems,
+			CallbackUrl:   "https://example.com/callback",
+			ReturnUrl:     "https://example.com/callback",
+			ExpiredTime:   int(time.Now().Add(30 * time.Minute).Unix()),
+		}
+
+		payment, err := cd.TripayClient.CreatePayment(payload)
+		if err != nil {
+			return fmt.Errorf("create Tripay payment failed: %w", err)
+		}
+
+		booking.ReferenceNumber = &payment.Reference
+		if err := cd.BookingRepository.Update(ctx, tx, booking); err != nil {
+			return fmt.Errorf("failed to update booking with reference number: %w", err)
+		}
+
+		// Decrement quota usage
+		for _, item := range session.ClaimItems {
+			quota, ok := quotaByClass[item.ClassID]
+			if !ok {
+				return fmt.Errorf("quota not found for class %d", item.ClassID)
+			}
+
+			if quota.Quota < item.Quantity {
+				return fmt.Errorf("not enough quota for class %d", item.ClassID)
+			}
+
+			quota.Quota -= item.Quantity
+
+			if err := cd.QuotaRepository.Update(ctx, tx, quota); err != nil {
+				return fmt.Errorf("failed to update quota usage: %w", err)
+			}
+		}
+
+		session.Status = "LOCKED"
+		if err := cd.ClaimSessionRepository.Update(ctx, tx, session); err != nil {
+
+			return fmt.Errorf("failed to update session: %w", err)
+		}
+
+		return nil
+	}); err != nil {
+		return nil, fmt.Errorf("execute transaction: %w", err)
 	}
 
 	return &model.TESTReadClaimSessionDataEntryResponse{
@@ -355,354 +343,159 @@ func (cd *ClaimSessionUsecase) TESTUpdateClaimSession(
 	}, nil
 }
 
-func (cs *ClaimSessionUsecase) CreateClaimSession(ctx context.Context, request *model.WriteClaimSessionLockTicketsRequest) (*model.ReadClaimSessionLockTicketsResponse, error) {
-	tx := cs.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *ClaimSessionUsecase) CreateClaimSession(ctx context.Context, request *model.TESTWriteClaimSessionRequest) error {
+
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		claimSession := &domain.ClaimSession{
+			SessionID:  uuid.NewString(),
+			ScheduleID: request.ScheduleID,
+			Status:     enum.ClaimSessionPendingData.String(),
+			ExpiresAt:  time.Now().Add(16 * time.Minute),
+			ClaimItems: make([]domain.ClaimItem, len(request.Items)),
 		}
-	}()
-
-	schedule, err := cs.ScheduleRepository.FindByID(tx, request.ScheduleID)
-	if err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("failed to retrieve schedule: %w", err)
-	}
-	if schedule == nil {
-		tx.Rollback()
-		return nil, errs.ErrNotFound
-	}
-
-	uuid, err := uuid.NewRandom()
-	if err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("failed to generate session UUID: %w", err)
-	}
-
-	claimSession := &domain.ClaimSession{
-		SessionID:  uuid.String(),
-		ScheduleID: request.ScheduleID,
-		Status:     enum.ClaimSessionPendingData.String(),
-		ExpiresAt:  time.Now().Add(13 * time.Minute),
-	}
-
-	// ⬇️ Insert the ClaimSession first so we get claimSession.ID populated
-	if err := cs.ClaimSessionRepository.Insert(tx, claimSession); err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("failed to create claim session: %w", err)
-	}
-
-	var ticketsToBuild []*domain.Ticket
-	for _, item := range request.Items {
-		if item.ClassID == 0 {
-			tx.Rollback()
-			return nil, fmt.Errorf("class is zero value in request item")
+		for i, item := range request.Items {
+			claimSession.ClaimItems[i] = domain.ClaimItem{
+				ClassID:  item.ClassID,
+				Quantity: item.Quantity,
+				Subtotal: item.Subtotal, // Assuming subtotal is provided in the request
+			}
 		}
-		quota, err := cs.QuotaRepository.FindByScheduleIDAndClassID(tx, request.ScheduleID, item.ClassID)
-		if err != nil {
-			tx.Rollback()
-			return nil, fmt.Errorf("failed to get quota capacity: %w", err)
-		}
-		if quota == nil {
-			tx.Rollback()
-			return nil, fmt.Errorf("quota not found for class %d", item.ClassID)
-		}
-		occupied, err := cs.TicketRepository.CountByScheduleIDAndClassIDWithStatus(tx, request.ScheduleID, item.ClassID)
-		if err != nil {
-			tx.Rollback()
-			return nil, fmt.Errorf("failed to count tickets: %w", err)
+		if err := uc.ClaimSessionRepository.Insert(ctx, tx, claimSession); err != nil {
+			if errs.IsUniqueConstraintError(err) {
+				return errs.ErrConflict
+			}
+			return fmt.Errorf("failed to create claim session: %w", err)
 		}
 
-		available := int64(quota.Quota) - occupied
-		if available < int64(item.Quantity) {
-			tx.Rollback()
-			return nil, fmt.Errorf("not enough slots for class %d (Available: %d, Requested: %d)", item.ClassID, available, item.Quantity)
-		}
-
-		for i := 0; i < int(item.Quantity); i++ {
-			ticketsToBuild = append(ticketsToBuild, &domain.Ticket{
-				ScheduleID:  request.ScheduleID,
-				ClassID:     item.ClassID,
-				Price:       quota.Price,
-				Type:        quota.Class.Type,
-				IsCheckedIn: false,
-			})
-		}
-	}
-
-	if err := cs.TicketRepository.InsertBulk(tx, ticketsToBuild); err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("failed to create tickets: %w", err)
-	}
-
-	var claimedTicketIDs []uint
-	for _, ticket := range ticketsToBuild {
-		claimedTicketIDs = append(claimedTicketIDs, ticket.ID)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return &model.ReadClaimSessionLockTicketsResponse{
-		ClaimedTicketIDs: claimedTicketIDs,
-		ExpiresAt:        claimSession.ExpiresAt,
-		SessionID:        claimSession.SessionID,
-	}, nil
+		return nil
+	})
 }
 
-func (cs *ClaimSessionUsecase) ListClaimSessions(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadClaimSessionResponse, int, error) {
-	tx := cs.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *ClaimSessionUsecase) UpdateClaimSession(ctx context.Context, request *model.UpdateClaimSessionRequest) error {
+
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		claimSession, err := uc.ClaimSessionRepository.FindByID(ctx, tx, request.ID)
+		if err != nil {
+			return fmt.Errorf("failed to find quota: %w", err)
 		}
-	}()
+		if claimSession == nil {
+			return errs.ErrNotFound
+		}
 
-	// Count total claim sessions
-	total, err := cs.ClaimSessionRepository.Count(tx)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count claim sessions: %w", err)
+		claimSession.ScheduleID = request.ScheduleID
+		claimSession.Status = request.Status
+		claimSession.ExpiresAt = request.ExpiresAt
+		claimSession.ClaimItems = make([]domain.ClaimItem, len(request.ClaimItems))
+		for i, item := range request.ClaimItems {
+			claimSession.ClaimItems[i] = domain.ClaimItem{
+				ClassID:  item.ClassID,
+				Quantity: item.Quantity,
+				Subtotal: item.Subtotal, // Assuming subtotal is provided in the request
+			}
+		}
+
+		if err := uc.ClaimSessionRepository.Update(ctx, tx, claimSession); err != nil {
+			return fmt.Errorf("failed to create claim session: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (uc *ClaimSessionUsecase) ListClaimSessions(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadClaimSessionResponse, int, error) {
+	var err error
+	var total int64
+	var claimSessions []*domain.ClaimSession
+	if err := uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		total, err = uc.ClaimSessionRepository.Count(ctx, tx)
+		if err != nil {
+			return fmt.Errorf("failed to count claim sessions: %w", err)
+		}
+
+		claimSessions, err = uc.ClaimSessionRepository.FindAll(ctx, tx, limit, offset, sort, search)
+		if err != nil {
+			return fmt.Errorf("failed to get all claim sessions: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return nil, 0, fmt.Errorf("execute transaction: %w", err)
 	}
-
-	// Retrieve claim sessions
-	claimSessions, err := cs.ClaimSessionRepository.FindAll(tx, limit, offset, sort, search)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get all claim sessions: %w", err)
-	}
-
 	responses := make([]*model.ReadClaimSessionResponse, len(claimSessions))
 	for i, claimSession := range claimSessions {
 		responses[i] = mapper.ClaimSessionToResponse(claimSession)
 	}
-
-	if err := tx.Commit().Error; err != nil {
-		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
 	return responses, int(total), nil
 }
 
-func (cs *ClaimSessionUsecase) GetClaimSessionByID(ctx context.Context, id uint) (*model.TESTReadClaimSessionResponse, error) {
-	tx := cs.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *ClaimSessionUsecase) GetClaimSessionByID(ctx context.Context, id uint) (*model.TESTReadClaimSessionResponse, error) {
+	var err error
+	var claimSession *domain.ClaimSession
+	if err := uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		claimSession, err = uc.ClaimSessionRepository.FindByID(ctx, tx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get session: %w", err)
 		}
-	}()
-
-	session, err := cs.ClaimSessionRepository.FindByID(tx, id)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get session: %w", err)
-	}
-	if session == nil {
-		return nil, errs.ErrNotFound
+		if claimSession == nil {
+			return errs.ErrNotFound
+		}
+		return nil
+	}); err != nil {
+		return nil, fmt.Errorf("failed to get claim session by id: %w", err)
 	}
 
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return mapper.TESTClaimSessionToResponse(session), nil
+	return mapper.TESTClaimSessionToResponse(claimSession), nil
 }
 
-func (cs *ClaimSessionUsecase) GetBySessionID(ctx context.Context, sessionUUID string) (*model.TESTReadClaimSessionResponse, error) {
-	tx := cs.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *ClaimSessionUsecase) GetBySessionID(ctx context.Context, sessionUUID string) (*model.TESTReadClaimSessionResponse, error) {
+	var err error
+	var claimSession *domain.ClaimSession
+	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		claimSession, err = uc.ClaimSessionRepository.FindBySessionID(ctx, tx, sessionUUID)
+		if err != nil {
+			return fmt.Errorf("failed to get session: %w", err)
 		}
-	}()
-
-	session, err := cs.ClaimSessionRepository.FindBySessionID(tx, sessionUUID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get session: %w", err)
+		if claimSession == nil {
+			return errs.ErrNotFound
+		}
+		return nil
+	}); err != nil {
+		return nil, fmt.Errorf("failed to get claim session by session ID: %w", err)
 	}
-	if session == nil {
-		return nil, errs.ErrNotFound
-	}
-	fmt.Printf("Fetched %d claim items", len(session.ClaimItems))
-
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return mapper.TESTClaimSessionToResponse(session), nil
+	return mapper.TESTClaimSessionToResponse(claimSession), nil
 }
 
-func (cs *ClaimSessionUsecase) UpdateClaimSession(ctx context.Context, request *model.WriteClaimSessionDataEntryRequest, sessionID string) (*model.ReadClaimSessionDataEntryResponse, error) {
-	tx := cs.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *ClaimSessionUsecase) DeleteClaimSession(ctx context.Context, id uint) error {
+
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+
+		claimSession, err := uc.ClaimSessionRepository.FindByID(ctx, tx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get session: %w", err)
 		}
-	}()
-
-	session, err := cs.ClaimSessionRepository.FindBySessionID(tx, sessionID)
-	if err != nil {
-		return nil, fmt.Errorf("get claim session failed: %w", err)
-	}
-
-	if session.ExpiresAt.Before(time.Now()) {
-		return nil, errors.New("claim session expired")
-	}
-	if session == nil {
-		return nil, errs.ErrNotFound
-	}
-
-	if session.Status != enum.ClaimSessionPendingData.String() {
-		return nil, fmt.Errorf("claim session has invalid status: %s", session.Status)
-	}
-
-	// Build passenger map
-	datas := make(map[uint]model.ClaimSessionTicketDataEntry)
-	for _, data := range request.TicketData {
-		datas[data.TicketID] = data
-	}
-
-	tickets, err := cs.TicketRepository.FindByClaimSessionID(tx, session.ID)
-	if err != nil {
-		return nil, fmt.Errorf("retrieve tickets failed: %w", err)
-	}
-
-	schedule, err := cs.ScheduleRepository.FindByID(tx, session.ScheduleID)
-	if err != nil {
-		return nil, fmt.Errorf("retrieve schedule failed: %w", err)
-	}
-
-	orderID := utils.GenerateOrderID(
-		schedule.DepartureHarbor.HarborAlias,
-		schedule.ArrivalHarbor.HarborAlias,
-		schedule.Ship.ShipAlias,
-	)
-
-	booking := &domain.Booking{
-		OrderID:      orderID,
-		ScheduleID:   session.ScheduleID,
-		IDType:       request.IDType,
-		IDNumber:     request.IDNumber,
-		PhoneNumber:  request.PhoneNumber,
-		CustomerName: request.CustomerName,
-		Email:        request.Email,
-	}
-
-	if err := cs.BookingRepository.Insert(tx, booking); err != nil {
-		return nil, fmt.Errorf("create booking failed: %w", err)
-	}
-
-	ticketsIds := make(map[uint]*domain.Ticket)
-	for _, t := range tickets {
-		if t.ID == 0 {
-			continue
-		}
-		ticketsIds[t.ID] = t
-	}
-
-	var ticketToUpdate []*domain.Ticket
-	var updatedTicketIDs []uint
-	var total float64
-	for id, data := range datas {
-		ticket, ok := ticketsIds[id]
-		if !ok {
-			return nil, fmt.Errorf("ticket %d not found in session", id)
+		if claimSession == nil {
+			return errs.ErrNotFound
 		}
 
-		ticket.PassengerName = data.PassengerName
-		ticket.PassengerAge = data.PassengerAge
-		ticket.Address = data.Address
-
-		switch ticket.Type {
-		case "Passenger":
-			if data.IDType == "" || data.IDNumber == "" {
-				return nil, fmt.Errorf("missing ID info for passenger ticket %d", id)
-			}
-			ticket.IDType = &data.IDType
-			ticket.IDNumber = &data.IDNumber
-			ticket.PassengerGender = &data.PassengerGender
-
-			count, err := cs.TicketRepository.CountByScheduleIDAndClassIDWithStatus(
-				tx, ticket.ScheduleID, ticket.ClassID,
-			)
-			if err != nil {
-				return nil, fmt.Errorf("seat number generation failed: %w", err)
-			}
-			seat := fmt.Sprintf("%s%d", ticket.Class.ClassAlias, count+1)
-			ticket.SeatNumber = &seat
-
-		case "Vehicle":
-			if data.LicensePlate == nil || *data.LicensePlate == "" {
-				return nil, fmt.Errorf("missing license plate for vehicle ticket %d", id)
-			}
-			ticket.LicensePlate = data.LicensePlate
-			ticket.SeatNumber = nil
-
-		default:
-			return nil, fmt.Errorf("unsupported ticket type for ticket %d - %s", id, ticket.Type)
+		if err := uc.ClaimSessionRepository.Delete(ctx, tx, claimSession); err != nil {
+			return fmt.Errorf("failed to delete fare: %w", err)
 		}
-
-		total += ticket.Price
-		ticketToUpdate = append(ticketToUpdate, ticket)
-		updatedTicketIDs = append(updatedTicketIDs, ticket.ID)
-	}
-
-	if len(ticketToUpdate) == len(tickets) {
-		if err := cs.TicketRepository.UpdateBulk(tx, ticketToUpdate); err != nil {
-			return nil, fmt.Errorf("update tickets failed: %w", err)
-		}
-	}
-
-	session = &domain.ClaimSession{
-		ID:         session.ID,
-		SessionID:  session.SessionID,
-		ScheduleID: session.ScheduleID,
-		Status:     enum.ClaimSessionPendingPayment.String(),
-		ExpiresAt:  session.ExpiresAt.Add(8 * time.Minute), // Extend expiration for payment
-	}
-
-	if err := cs.ClaimSessionRepository.Update(tx, session); err != nil {
-		return nil, fmt.Errorf("update claim session failed: %w", err)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return &model.ReadClaimSessionDataEntryResponse{
-		BookingID:        booking.ID,
-		OrderID:          orderID,
-		UpdatedTicketIDs: updatedTicketIDs,
-	}, nil
+		return nil
+	})
 }
 
-func (cs *ClaimSessionUsecase) DeleteClaimSession(ctx context.Context, id uint) error {
-	tx := cs.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *ClaimSessionUsecase) DeleteExpiredClaimSession(ctx context.Context) error {
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		expiredSessions, err := uc.ClaimSessionRepository.FindExpired(ctx, tx, time.Now(), 50)
+		if err != nil {
+			return fmt.Errorf("failed to find expired sessions: %w", err)
 		}
-	}()
+		if len(expiredSessions) == 0 {
+			return nil
+		}
 
-	session, err := cs.ClaimSessionRepository.FindByID(tx, id)
-	if err != nil {
-		return fmt.Errorf("failed to get session: %w", err)
-	}
-	if session == nil {
-		return errs.ErrNotFound
-	}
-
-	if err := cs.ClaimSessionRepository.Delete(tx, session); err != nil {
-		return fmt.Errorf("failed to delete fare: %w", err)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return nil
+		if err := uc.ClaimSessionRepository.DeleteBulk(ctx, tx, expiredSessions); err != nil {
+			return fmt.Errorf("failed to delete expired sessions: %w", err)
+		}
+		return nil
+	})
 }

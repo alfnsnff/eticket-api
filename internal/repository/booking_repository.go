@@ -1,54 +1,58 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"eticket-api/internal/domain"
+	"eticket-api/pkg/gotann"
 	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-type BookingRepository struct{}
-
-func NewBookingRepository() *BookingRepository {
-	return &BookingRepository{}
+type BookingRepository struct {
+	DB *gorm.DB
 }
 
-func (br *BookingRepository) Count(db *gorm.DB) (int64, error) {
+func NewBookingRepository(db *gorm.DB) *BookingRepository {
+	return &BookingRepository{DB: db}
+}
+
+func (r *BookingRepository) Count(ctx context.Context, conn gotann.Connection) (int64, error) {
 	var total int64
-	result := db.Model(&domain.Booking{}).Count(&total)
+	result := conn.Model(&domain.Booking{}).Count(&total)
 	return total, result.Error
 }
 
-func (ar *BookingRepository) Insert(db *gorm.DB, booking *domain.Booking) error {
-	result := db.Create(booking)
+func (r *BookingRepository) Insert(ctx context.Context, conn gotann.Connection, booking *domain.Booking) error {
+	result := conn.Create(booking)
 	return result.Error
 }
 
-func (br *BookingRepository) InsertBulk(db *gorm.DB, bookings []*domain.Booking) error {
-	result := db.Create(&bookings)
+func (r *BookingRepository) InsertBulk(ctx context.Context, conn gotann.Connection, bookings []*domain.Booking) error {
+	result := conn.Create(&bookings)
 	return result.Error
 }
 
-func (br *BookingRepository) Update(db *gorm.DB, booking *domain.Booking) error {
-	result := db.Save(booking)
+func (r *BookingRepository) Update(ctx context.Context, conn gotann.Connection, booking *domain.Booking) error {
+	result := conn.Save(booking)
 	return result.Error
 }
 
-func (br *BookingRepository) UpdateBulk(db *gorm.DB, bookings []*domain.Booking) error {
-	result := db.Save(&bookings)
+func (r *BookingRepository) UpdateBulk(ctx context.Context, conn gotann.Connection, bookings []*domain.Booking) error {
+	result := conn.Save(&bookings)
 	return result.Error
 }
 
-func (br *BookingRepository) Delete(db *gorm.DB, booking *domain.Booking) error {
-	result := db.Select(clause.Associations).Delete(booking)
+func (r *BookingRepository) Delete(ctx context.Context, conn gotann.Connection, booking *domain.Booking) error {
+	result := conn.Select(clause.Associations).Delete(booking)
 	return result.Error
 }
 
-func (br *BookingRepository) FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.Booking, error) {
+func (r *BookingRepository) FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*domain.Booking, error) {
 	bookings := []*domain.Booking{}
-	query := db.Preload("Tickets").
+	query := conn.Model(&domain.Booking{}).Preload("Tickets").
 		Preload("Tickets.Class").
 		Preload("Schedule").
 		Preload("Schedule.Ship").
@@ -67,9 +71,9 @@ func (br *BookingRepository) FindAll(db *gorm.DB, limit, offset int, sort, searc
 	return bookings, err
 }
 
-func (br *BookingRepository) FindByID(db *gorm.DB, id uint) (*domain.Booking, error) {
+func (r *BookingRepository) FindByID(ctx context.Context, conn gotann.Connection, id uint) (*domain.Booking, error) {
 	booking := new(domain.Booking)
-	result := db.Preload("Tickets").
+	result := conn.Preload("Tickets").
 		Preload("Tickets.Class").
 		Preload("Schedule").
 		Preload("Schedule.Ship").
@@ -82,9 +86,9 @@ func (br *BookingRepository) FindByID(db *gorm.DB, id uint) (*domain.Booking, er
 	return booking, result.Error
 }
 
-func (br *BookingRepository) FindByOrderID(db *gorm.DB, id string) (*domain.Booking, error) {
+func (r *BookingRepository) FindByOrderID(ctx context.Context, conn gotann.Connection, id string) (*domain.Booking, error) {
 	booking := new(domain.Booking)
-	result := db.Preload("Tickets").
+	result := conn.Preload("Tickets").
 		Preload("Tickets.Class").
 		Preload("Schedule").
 		Preload("Schedule.Ship").

@@ -1,10 +1,11 @@
 package domain
 
 import (
+	"context"
+	"eticket-api/pkg/gotann"
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type RefreshToken struct {
@@ -28,28 +29,28 @@ type PasswordReset struct {
 
 type AuthRepository interface {
 	// RefreshToken CRUD operations
-	CountRefreshToken(db *gorm.DB) (int64, error)
-	InsertRefreshToken(db *gorm.DB, refreshToken *RefreshToken) error
-	InsertRefreshTokenBulk(db *gorm.DB, refreshTokens []*RefreshToken) error
-	UpdateRefreshToken(db *gorm.DB, refreshToken *RefreshToken) error
-	UpdateRefreshTokenBulk(db *gorm.DB, refreshTokens []*RefreshToken) error
-	DeleteRefreshToken(db *gorm.DB, id string) error
-	FindAllRefreshToken(db *gorm.DB, limit, offset int, sort, search string) ([]*RefreshToken, error)
-	FindRefreshTokenByID(db *gorm.DB, id string) (*RefreshToken, error)
-	FindRefreshTokenByIDAndStatus(db *gorm.DB, id string, status bool) (*RefreshToken, error)
-	RevokeRefreshTokenByID(db *gorm.DB, id uuid.UUID) error
+	CountRefreshToken(ctx context.Context, conn gotann.Connection) (int64, error)
+	InsertRefreshToken(ctx context.Context, conn gotann.Connection, refreshToken *RefreshToken) error
+	InsertRefreshTokenBulk(ctx context.Context, conn gotann.Connection, refreshTokens []*RefreshToken) error
+	UpdateRefreshToken(ctx context.Context, conn gotann.Connection, refreshToken *RefreshToken) error
+	UpdateRefreshTokenBulk(ctx context.Context, conn gotann.Connection, refreshTokens []*RefreshToken) error
+	DeleteRefreshToken(ctx context.Context, conn gotann.Connection, id string) error
+	FindAllRefreshToken(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*RefreshToken, error)
+	FindRefreshTokenByID(ctx context.Context, conn gotann.Connection, id string) (*RefreshToken, error)
+	FindRefreshTokenByIDAndStatus(ctx context.Context, conn gotann.Connection, id string, status bool) (*RefreshToken, error)
+	RevokeRefreshTokenByID(ctx context.Context, conn gotann.Connection, id uuid.UUID) error
 
 	// PasswordReset CRUD operations
-	CountPasswordResets(db *gorm.DB) (int64, error)
-	InsertPasswordReset(db *gorm.DB, passwordReset *PasswordReset) error
-	InsertPasswordResetBulk(db *gorm.DB, passwordResets []*PasswordReset) error
-	UpdatePasswordReset(db *gorm.DB, passwordReset *PasswordReset) error
-	UpdatePasswordResetBulk(db *gorm.DB, passwordResets []*PasswordReset) error
-	DeletePasswordReset(db *gorm.DB, id string) error
-	FindAllPasswordResets(db *gorm.DB, limit, offset int, sort, search string) ([]*PasswordReset, error)
-	FindPasswordResetByID(db *gorm.DB, id string) (*PasswordReset, error) // Note: This should probably return *PasswordReset
-	FindPasswordResetByTokenAndStatus(db *gorm.DB, token string, status bool) (*PasswordReset, error)
-	RevokePasswordResetByToken(db *gorm.DB, token string) error
+	CountPasswordResets(ctx context.Context, conn gotann.Connection) (int64, error)
+	InsertPasswordReset(ctx context.Context, conn gotann.Connection, passwordReset *PasswordReset) error
+	InsertPasswordResetBulk(ctx context.Context, conn gotann.Connection, passwordResets []*PasswordReset) error
+	UpdatePasswordReset(ctx context.Context, conn gotann.Connection, passwordReset *PasswordReset) error
+	UpdatePasswordResetBulk(ctx context.Context, conn gotann.Connection, passwordResets []*PasswordReset) error
+	DeletePasswordReset(ctx context.Context, conn gotann.Connection, id string) error
+	FindAllPasswordResets(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*PasswordReset, error)
+	FindPasswordResetByID(ctx context.Context, conn gotann.Connection, id string) (*PasswordReset, error) // Note: This should probably return *PasswordReset
+	FindPasswordResetByTokenAndStatus(ctx context.Context, conn gotann.Connection, token string, status bool) (*PasswordReset, error)
+	RevokePasswordResetByToken(ctx context.Context, conn gotann.Connection, token string) error
 }
 
 type AuthUsecase interface {

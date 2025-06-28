@@ -1,53 +1,57 @@
 package repository
 
 import (
+	"context"
 	"eticket-api/internal/domain"
+	"eticket-api/pkg/gotann"
 	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-type RoleRepository struct{}
-
-func NewRoleRepository() *RoleRepository {
-	return &RoleRepository{}
+type RoleRepository struct {
+	DB *gorm.DB
 }
 
-func (rr *RoleRepository) Count(db *gorm.DB) (int64, error) {
+func NewRoleRepository(db *gorm.DB) *RoleRepository {
+	return &RoleRepository{DB: db}
+}
+
+func (r *RoleRepository) Count(ctx context.Context, conn gotann.Connection) (int64, error) {
 	var total int64
-	result := db.Model(&domain.Role{}).Count(&total)
+	result := conn.Model(&domain.Role{}).Count(&total)
 	return total, result.Error
 }
 
-func (rr *RoleRepository) Insert(db *gorm.DB, role *domain.Role) error {
-	result := db.Create(role)
+func (r *RoleRepository) Insert(ctx context.Context, conn gotann.Connection, role *domain.Role) error {
+	result := conn.Create(role)
 	return result.Error
 }
 
-func (rr *RoleRepository) InsertBulk(db *gorm.DB, roles []*domain.Role) error {
-	result := db.Create(&roles)
+func (r *RoleRepository) InsertBulk(ctx context.Context, conn gotann.Connection, roles []*domain.Role) error {
+	result := conn.Create(&roles)
 	return result.Error
 }
 
-func (ar *RoleRepository) Update(db *gorm.DB, role *domain.Role) error {
-	result := db.Save(role)
+func (r *RoleRepository) Update(ctx context.Context, conn gotann.Connection, role *domain.Role) error {
+	result := conn.Save(role)
 	return result.Error
 }
 
-func (rr *RoleRepository) UpdateBulk(db *gorm.DB, roles []*domain.Role) error {
-	result := db.Save(&roles)
+func (r *RoleRepository) UpdateBulk(ctx context.Context, conn gotann.Connection, roles []*domain.Role) error {
+	result := conn.Save(&roles)
 	return result.Error
 }
 
-func (ar *RoleRepository) Delete(db *gorm.DB, role *domain.Role) error {
-	result := db.Select(clause.Associations).Delete(role)
+func (r *RoleRepository) Delete(ctx context.Context, conn gotann.Connection, role *domain.Role) error {
+	result := conn.Select(clause.Associations).Delete(role)
 	return result.Error
 }
 
-func (rr *RoleRepository) FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.Role, error) {
+func (r *RoleRepository) FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*domain.Role, error) {
 	roles := []*domain.Role{}
-	query := db
+	query := conn.Model(&domain.Ship{})
 	if search != "" {
 		search = "%" + search + "%"
 		query = query.Where("role_name ILIKE ?", search)
@@ -60,9 +64,9 @@ func (rr *RoleRepository) FindAll(db *gorm.DB, limit, offset int, sort, search s
 	err := query.Order(sort).Limit(limit).Offset(offset).Find(&roles).Error
 	return roles, err
 }
-func (rr *RoleRepository) FindByID(db *gorm.DB, id uint) (*domain.Role, error) {
+func (r *RoleRepository) FindByID(ctx context.Context, conn gotann.Connection, id uint) (*domain.Role, error) {
 	role := new(domain.Role)
-	result := db.First(&role, id)
+	result := conn.First(&role, id)
 	if result.Error != nil {
 		return nil, result.Error
 	}

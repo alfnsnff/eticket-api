@@ -78,11 +78,13 @@ type WriteClaimSessionRequest struct {
 }
 
 type UpdateClaimSessionRequest struct {
-	ID          uint      `json:"id"`
-	SessionID   string    `json:"session_id"`
-	ClaimAt     time.Time `json:"claim_at"`
-	ExpiresAt   time.Time `json:"expires_at"`
-	TotalAmount float32   `json:"total_amount"`
+	ID          uint               `json:"id"`
+	ScheduleID  uint               `json:"schedule_id"` // The schedule the user wants tickets for
+	SessionID   string             `json:"session_id"`
+	Status      string             `json:"status"`      // e.g., 'active', 'inactive', 'cancelled'
+	ClaimItems  []ClaimSessionItem `json:"claim_items"` // List of classes and quantities requested
+	ExpiresAt   time.Time          `json:"expires_at"`
+	TotalAmount float32            `json:"total_amount"`
 }
 
 // =========================

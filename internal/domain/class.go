@@ -1,9 +1,9 @@
 package domain
 
 import (
+	"context"
+	"eticket-api/pkg/gotann"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type Class struct {
@@ -20,12 +20,12 @@ func (c *Class) TableName() string {
 }
 
 type ClassRepository interface {
-	Count(db *gorm.DB) (int64, error)
-	Insert(db *gorm.DB, entity *Class) error
-	InsertBulk(db *gorm.DB, classes []*Class) error
-	Update(db *gorm.DB, entity *Class) error
-	UpdateBulk(db *gorm.DB, classes []*Class) error
-	Delete(db *gorm.DB, entity *Class) error
-	FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*Class, error)
-	FindByID(db *gorm.DB, id uint) (*Class, error)
+	Count(ctx context.Context, conn gotann.Connection) (int64, error)
+	Insert(ctx context.Context, conn gotann.Connection, entity *Class) error
+	InsertBulk(ctx context.Context, conn gotann.Connection, classes []*Class) error
+	Update(ctx context.Context, conn gotann.Connection, entity *Class) error
+	UpdateBulk(ctx context.Context, conn gotann.Connection, classes []*Class) error
+	Delete(ctx context.Context, conn gotann.Connection, entity *Class) error
+	FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*Class, error)
+	FindByID(ctx context.Context, conn gotann.Connection, id uint) (*Class, error)
 }

@@ -1,11 +1,13 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"strings"
 
 	enum "eticket-api/internal/common/enums"
 	"eticket-api/internal/domain"
+	"eticket-api/pkg/gotann"
 	"fmt"
 	"time"
 
@@ -13,46 +15,53 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type ClaimSessionRepository struct{}
-
-func NewClaimSessionRepository() *ClaimSessionRepository {
-	return &ClaimSessionRepository{}
+type ClaimSessionRepository struct {
+	DB *gorm.DB
 }
 
-func (csr *ClaimSessionRepository) Count(db *gorm.DB) (int64, error) {
+func NewClaimSessionRepository(db *gorm.DB) *ClaimSessionRepository {
+	return &ClaimSessionRepository{DB: db}
+}
+
+func (r *ClaimSessionRepository) Count(ctx context.Context, conn gotann.Connection) (int64, error) {
 	var total int64
-	result := db.Model(&domain.ClaimSession{}).Count(&total)
+	result := conn.Model(&domain.ClaimSession{}).Count(&total)
 	return total, result.Error
 }
 
-func (csr *ClaimSessionRepository) Insert(db *gorm.DB, claim_session *domain.ClaimSession) error {
-	result := db.Create(claim_session)
+func (r *ClaimSessionRepository) Insert(ctx context.Context, conn gotann.Connection, claim_session *domain.ClaimSession) error {
+	result := conn.Create(claim_session)
 	return result.Error
 }
 
-func (csr *ClaimSessionRepository) InsertBulk(db *gorm.DB, sessions []*domain.ClaimSession) error {
-	result := db.Create(sessions)
+func (r *ClaimSessionRepository) InsertBulk(ctx context.Context, conn gotann.Connection, sessions []*domain.ClaimSession) error {
+	result := conn.Create(sessions)
 	return result.Error
 }
 
-func (csr *ClaimSessionRepository) Update(db *gorm.DB, claim_session *domain.ClaimSession) error {
-	result := db.Save(claim_session)
+func (r *ClaimSessionRepository) Update(ctx context.Context, conn gotann.Connection, claim_session *domain.ClaimSession) error {
+	result := conn.Save(claim_session)
 	return result.Error
 }
 
-func (csr *ClaimSessionRepository) UpdateBulk(db *gorm.DB, sessions []*domain.ClaimSession) error {
-	result := db.Save(&sessions)
+func (r *ClaimSessionRepository) UpdateBulk(ctx context.Context, conn gotann.Connection, sessions []*domain.ClaimSession) error {
+	result := conn.Save(&sessions)
 	return result.Error
 }
 
-func (csr *ClaimSessionRepository) Delete(db *gorm.DB, claim_session *domain.ClaimSession) error {
-	result := db.Select(clause.Associations).Delete(claim_session)
+func (r *ClaimSessionRepository) Delete(ctx context.Context, conn gotann.Connection, claim_session *domain.ClaimSession) error {
+	result := conn.Select(clause.Associations).Delete(claim_session)
 	return result.Error
 }
 
-func (csr *ClaimSessionRepository) FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.ClaimSession, error) {
+func (r *ClaimSessionRepository) DeleteBulk(ctx context.Context, conn gotann.Connection, claim_sessions []*domain.ClaimSession) error {
+	result := conn.Select(clause.Associations).Delete(claim_sessions)
+	return result.Error
+}
+
+func (r *ClaimSessionRepository) FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*domain.ClaimSession, error) {
 	sessions := []*domain.ClaimSession{}
-	query := db.Preload("Schedule").
+	query := conn.Model(&domain.ClaimSession{}).Preload("Schedule").
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
 		Preload("Schedule.Ship").
@@ -71,9 +80,9 @@ func (csr *ClaimSessionRepository) FindAll(db *gorm.DB, limit, offset int, sort,
 	return sessions, err
 }
 
-func (csr *ClaimSessionRepository) FindByID(db *gorm.DB, id uint) (*domain.ClaimSession, error) {
+func (r *ClaimSessionRepository) FindByID(ctx context.Context, conn gotann.Connection, id uint) (*domain.ClaimSession, error) {
 	session := new(domain.ClaimSession)
-	result := db.Preload("Schedule").
+	result := conn.Preload("Schedule").
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
 		Preload("Schedule.Ship").
@@ -87,9 +96,9 @@ func (csr *ClaimSessionRepository) FindByID(db *gorm.DB, id uint) (*domain.Claim
 }
 
 // FindByUUID retrieves a ClaimSession domain by its SessionUUID.
-func (csr *ClaimSessionRepository) FindBySessionID(db *gorm.DB, uuid string) (*domain.ClaimSession, error) {
+func (r *ClaimSessionRepository) FindBySessionID(ctx context.Context, conn gotann.Connection, uuid string) (*domain.ClaimSession, error) {
 	session := new(domain.ClaimSession)
-	result := db.Preload("Schedule").
+	result := conn.Preload("Schedule").
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
 		Preload("Schedule.Ship").
@@ -102,9 +111,9 @@ func (csr *ClaimSessionRepository) FindBySessionID(db *gorm.DB, uuid string) (*d
 	return session, result.Error
 }
 
-func (r *ClaimSessionRepository) FindByScheduleID(tx *gorm.DB, scheduleID uint) ([]*domain.ClaimSession, error) {
+func (r *ClaimSessionRepository) FindByScheduleID(ctx context.Context, conn gotann.Connection, scheduleID uint) ([]*domain.ClaimSession, error) {
 	sessions := []*domain.ClaimSession{}
-	result := tx.Preload("Schedule").
+	result := conn.Preload("Schedule").
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
 		Preload("Schedule.Ship").
@@ -119,9 +128,9 @@ func (r *ClaimSessionRepository) FindByScheduleID(tx *gorm.DB, scheduleID uint) 
 	return sessions, result.Error
 }
 
-func (csr *ClaimSessionRepository) FindExpired(db *gorm.DB, expiryTime time.Time, limit int) ([]*domain.ClaimSession, error) {
+func (r *ClaimSessionRepository) FindExpired(ctx context.Context, conn gotann.Connection, expiryTime time.Time, limit int) ([]*domain.ClaimSession, error) {
 	var sessions []*domain.ClaimSession
-	result := db.Where(
+	result := conn.Where(
 		"(expires_at <= ? AND status NOT IN ?) OR status IN ?",
 		expiryTime,
 		enum.GetSuccessClaimSessionStatuses(),

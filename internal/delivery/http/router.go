@@ -62,11 +62,6 @@ func NewRouter(
 	v1.NewTicketController(v1Group, v1Protected, log, validate, ticket)
 	v1.NewUserController(v1Group, v1Protected, log, validate, user)
 
-	// API v2
-	v2Group := router.Group("/v2")
-	v2Protected := Protected(v2Group, authMiddleware)
-
-	v1.NewClaimSessionController(v2Group, v2Protected, log, validate, claim_session)
 }
 
 func Protected(rg *gin.RouterGroup, middleware ...gin.HandlerFunc) *gin.RouterGroup {

@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"errors"
+	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/token"
 	"eticket-api/internal/common/validator"
@@ -28,39 +30,45 @@ func NewAuthController(
 	auth_usecase *usecase.AuthUsecase,
 
 ) {
-	ac := &AuthController{
+	c := &AuthController{
 		Log:         log,
 		Validate:    validate,
 		AuthUsecase: auth_usecase,
 	}
 
-	router.GET("/auth/me", ac.Me)
-	router.POST("/auth/login", ac.Login)
-	router.POST("/auth/refresh", ac.RefreshToken)
-	router.POST("/auth/forget-password", ac.ForgetPassword)
+	router.GET("/auth/me", c.Me)
+	router.POST("/auth/login", c.Login)
+	router.POST("/auth/refresh", c.RefreshToken)
+	router.POST("/auth/forget-password", c.ForgetPassword)
 
-	protected.POST("/auth/logout", ac.Logout)
+	protected.POST("/auth/logout", c.Logout)
 }
 
-func (auc *AuthController) Login(ctx *gin.Context) {
+func (c *AuthController) Login(ctx *gin.Context) {
 	request := new(model.WriteLoginRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
-		auc.Log.WithError(err).Error("failed to bind JSON login request")
+		c.Log.WithError(err).Error("failed to bind JSON login request")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	if err := auc.Validate.Struct(request); err != nil {
-		auc.Log.WithError(err).Error("failed to validate login request body")
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("failed to validate login request body")
 		errors := validator.ParseErrors(err)
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
 
-	datas, accessToken, refreshToken, err := auc.AuthUsecase.Login(ctx, request)
+	datas, accessToken, refreshToken, err := c.AuthUsecase.Login(ctx, request)
 	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Invalid credentials", err.Error()))
+		if errors.Is(err, errs.ErrNotFound) {
+			c.Log.WithError(err).Warn("Invalid credentials")
+			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Invalid credentials", nil))
+			return
+		}
+		c.Log.WithError(err).Error("failed to authenticate user")
+		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Invalid credentials", err.Error()))
 		return
 	}
 
@@ -73,18 +81,18 @@ func (auc *AuthController) Login(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Login successful", nil))
 }
 
-func (auc *AuthController) Logout(ctx *gin.Context) {
+func (c *AuthController) Logout(ctx *gin.Context) {
 	refreshToken, err := ctx.Cookie("refresh_token")
 	if err != nil {
-		auc.Log.WithError(err).Error("missing refresh token in logout request")
+		c.Log.WithError(err).Error("missing refresh token in logout request")
 		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Missing refresh token", err.Error()))
 		return
 	}
 
 	// Revoke the token in DB
-	err = auc.AuthUsecase.Logout(ctx, refreshToken)
+	err = c.AuthUsecase.Logout(ctx, refreshToken)
 	if err != nil {
-		auc.Log.WithError(err).Error("failed to revoke refresh token")
+		c.Log.WithError(err).Error("failed to revoke refresh token")
 		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Failed to revoke token", err.Error()))
 		return
 	}
@@ -97,18 +105,18 @@ func (auc *AuthController) Logout(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Logout successful", nil))
 }
 
-func (auc *AuthController) RefreshToken(ctx *gin.Context) {
-	auc.Log.Info("Processing token refresh request")
+func (c *AuthController) RefreshToken(ctx *gin.Context) {
+	c.Log.Info("Processing token refresh request")
 	refreshToken, err := ctx.Cookie("refresh_token")
 	if err != nil {
-		auc.Log.WithError(err).Error("missing refresh token in refresh request")
+		c.Log.WithError(err).Error("missing refresh token in refresh request")
 		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Missing refresh token", err.Error()))
 		return
 	}
 
-	newAccessToken, err := auc.AuthUsecase.RefreshToken(ctx, refreshToken)
+	newAccessToken, err := c.AuthUsecase.RefreshToken(ctx, refreshToken)
 	if err != nil {
-		auc.Log.WithError(err).Error("failed to refresh token")
+		c.Log.WithError(err).Error("failed to refresh token")
 		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Invalid session", err.Error()))
 		return
 	}
@@ -119,43 +127,43 @@ func (auc *AuthController) RefreshToken(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Token refreshed successfully", nil))
 }
 
-func (auc *AuthController) ForgetPassword(ctx *gin.Context) {
-	auc.Log.Info("Processing forget password request")
+func (c *AuthController) ForgetPassword(ctx *gin.Context) {
+	c.Log.Info("Processing forget password request")
 	request := new(model.WriteForgetPasswordRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
-		auc.Log.WithError(err).Error("failed to bind JSON forget password request")
+		c.Log.WithError(err).Error("failed to bind JSON forget password request")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	if err := auc.Validate.Struct(request); err != nil {
-		auc.Log.WithError(err).Error("failed to validate forget password request body")
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("failed to validate forget password request body")
 		errors := validator.ParseErrors(err)
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
 
-	if err := auc.AuthUsecase.RequestPasswordReset(ctx, request.Email); err != nil {
-		auc.Log.WithError(err).WithField("email", request.Email).Error("failed to process password reset request")
+	if err := c.AuthUsecase.RequestPasswordReset(ctx, request.Email); err != nil {
+		c.Log.WithError(err).WithField("email", request.Email).Error("failed to process password reset request")
 		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Reset password failed", err.Error()))
 		return
 	}
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "We will send reset password email if it matched to our system", nil))
 }
 
-func (auc *AuthController) Me(ctx *gin.Context) {
-	auc.Log.Info("Retrieving user profile information")
+func (c *AuthController) Me(ctx *gin.Context) {
+	c.Log.Info("Retrieving user profile information")
 	accessToken, err := ctx.Cookie("access_token")
 	if err != nil {
-		auc.Log.WithError(err).Error("missing access token in profile request")
+		c.Log.WithError(err).Error("missing access token in profile request")
 		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Missing access token", err.Error()))
 		return
 	}
 
-	user, err := auc.AuthUsecase.Me(ctx, accessToken)
+	user, err := c.AuthUsecase.Me(ctx, accessToken)
 	if err != nil {
-		auc.Log.WithError(err).Error("failed to retrieve user profile")
+		c.Log.WithError(err).Error("failed to retrieve user profile")
 		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Unauthorized", err.Error()))
 		return
 	}

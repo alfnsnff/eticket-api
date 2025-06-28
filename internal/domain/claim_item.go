@@ -1,9 +1,9 @@
 package domain
 
 import (
+	"context"
+	"eticket-api/pkg/gotann"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type ClaimItem struct {
@@ -23,12 +23,12 @@ func (ci *ClaimItem) TableName() string {
 }
 
 type ClaimItemRepository interface {
-	Count(db *gorm.DB) (int64, error)
-	Insert(db *gorm.DB, entity *ClaimItem) error
-	InsertBulk(db *gorm.DB, ClaimItemes []*ClaimItem) error
-	Update(db *gorm.DB, entity *ClaimItem) error
-	UpdateBulk(db *gorm.DB, ClaimItemes []*ClaimItem) error
-	Delete(db *gorm.DB, entity *ClaimItem) error
-	FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*ClaimItem, error)
-	FindByID(db *gorm.DB, id uint) (*ClaimItem, error)
+	Count(ctx context.Context, conn gotann.Connection) (int64, error)
+	Insert(ctx context.Context, conn gotann.Connection, entity *ClaimItem) error
+	InsertBulk(ctx context.Context, conn gotann.Connection, ClaimItemes []*ClaimItem) error
+	Update(ctx context.Context, conn gotann.Connection, entity *ClaimItem) error
+	UpdateBulk(ctx context.Context, conn gotann.Connection, ClaimItemes []*ClaimItem) error
+	Delete(ctx context.Context, conn gotann.Connection, entity *ClaimItem) error
+	FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*ClaimItem, error)
+	FindByID(ctx context.Context, conn gotann.Connection, id uint) (*ClaimItem, error)
 }

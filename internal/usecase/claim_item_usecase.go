@@ -3,166 +3,127 @@ package usecase
 import (
 	"context"
 	errs "eticket-api/internal/common/errors"
+	"eticket-api/internal/common/transact"
 	"eticket-api/internal/domain"
 	"eticket-api/internal/mapper"
 	"eticket-api/internal/model"
+	"eticket-api/pkg/gotann"
 	"fmt"
-
-	"gorm.io/gorm"
 )
 
 type ClaimItemUsecase struct {
-	DB                  *gorm.DB
+	Conn                gotann.Connection
+	Transactor          *transact.Transactor
 	ClaimItemRepository domain.ClaimItemRepository
 }
 
 func NewClaimItemUsecase(
-	db *gorm.DB,
+	transactor *transact.Transactor,
 	claim_item_repository domain.ClaimItemRepository,
 ) *ClaimItemUsecase {
 	return &ClaimItemUsecase{
-		DB:                  db,
+		Transactor:          transactor,
 		ClaimItemRepository: claim_item_repository,
 	}
 }
 
-func (c *ClaimItemUsecase) CreateClaimItem(ctx context.Context, request *model.WriteClaimItemRequest) error {
-	tx := c.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *ClaimItemUsecase) CreateClaimItem(ctx context.Context, request *model.WriteClaimItemRequest) error {
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		claimItem := &domain.ClaimItem{
+			ClaimSessionID: request.ClaimSessionID,
+			ClassID:        request.ClassID,
+			Quantity:       request.Quantity,
 		}
-	}()
-
-	claimItem := &domain.ClaimItem{
-		ClaimSessionID: request.ClaimSessionID,
-		ClassID:        request.ClassID,
-		Quantity:       request.Quantity,
-	}
-
-	if err := c.ClaimItemRepository.Insert(tx, claimItem); err != nil {
-		return fmt.Errorf("failed to create claim item: %w", err)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return nil
+		if err := uc.ClaimItemRepository.Insert(ctx, tx, claimItem); err != nil {
+			if errs.IsUniqueConstraintError(err) {
+				return errs.ErrConflict
+			}
+			return fmt.Errorf("failed to create claim item: %w", err)
+		}
+		return nil
+	})
 }
 
-func (c *ClaimItemUsecase) ListClaimItemes(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadClaimItemResponse, int, error) {
-	tx := c.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *ClaimItemUsecase) ListClaimItemes(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadClaimItemResponse, int, error) {
+
+	var err error
+	var total int64
+	var claimItems []*domain.ClaimItem
+	if err := uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		total, err = uc.ClaimItemRepository.Count(ctx, tx)
+		if err != nil {
+			return fmt.Errorf("failed to count ClaimItemes: %w", err)
 		}
-	}()
 
-	total, err := c.ClaimItemRepository.Count(tx)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count ClaimItemes: %w", err)
+		claimItems, err = uc.ClaimItemRepository.FindAll(ctx, tx, limit, offset, sort, search)
+		if err != nil {
+			return fmt.Errorf("failed to get all ClaimItemes: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return nil, 0, fmt.Errorf("failed to list claim items: %w", err)
 	}
 
-	ClaimItemes, err := c.ClaimItemRepository.FindAll(tx, limit, offset, sort, search)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get all ClaimItemes: %w", err)
-	}
-
-	responses := make([]*model.ReadClaimItemResponse, len(ClaimItemes))
-	for i, ClaimItem := range ClaimItemes {
+	responses := make([]*model.ReadClaimItemResponse, len(claimItems))
+	for i, ClaimItem := range claimItems {
 		responses[i] = mapper.ClaimItemToResponse(ClaimItem)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return responses, int(total), nil
 }
 
-func (c *ClaimItemUsecase) GetClaimItemByID(ctx context.Context, id uint) (*model.ReadClaimItemResponse, error) {
-	tx := c.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *ClaimItemUsecase) GetClaimItemByID(ctx context.Context, id uint) (*model.ReadClaimItemResponse, error) {
+	var err error
+	var claimItem *domain.ClaimItem
+	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		claimItem, err = uc.ClaimItemRepository.FindByID(ctx, tx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get claim item: %w", err)
 		}
-	}()
-
-	ClaimItem, err := c.ClaimItemRepository.FindByID(tx, id)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get claim item: %w", err)
+		if claimItem == nil {
+			return errs.ErrNotFound
+		}
+		return nil
+	}); err != nil {
+		return nil, fmt.Errorf("failed to get claim item by ID: %w", err)
 	}
-	if ClaimItem == nil {
-		return nil, errs.ErrNotFound
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return mapper.ClaimItemToResponse(ClaimItem), nil
+	return mapper.ClaimItemToResponse(claimItem), nil
 }
 
-func (c *ClaimItemUsecase) UpdateClaimItem(ctx context.Context, request *model.UpdateClaimItemRequest) error {
-	tx := c.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *ClaimItemUsecase) UpdateClaimItem(ctx context.Context, request *model.UpdateClaimItemRequest) error {
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		claimItem, err := uc.ClaimItemRepository.FindByID(ctx, tx, request.ID)
+		if err != nil {
+			return fmt.Errorf("failed to find claim item: %w", err)
 		}
-	}()
+		if claimItem == nil {
+			return errs.ErrNotFound
+		}
 
-	claimItem, err := c.ClaimItemRepository.FindByID(tx, request.ID)
-	if err != nil {
-		return fmt.Errorf("failed to find claim item: %w", err)
-	}
-	if claimItem == nil {
-		return errs.ErrNotFound
-	}
+		claimItem.ClaimSessionID = request.ClaimSessionID
+		claimItem.ClassID = request.ClassID
+		claimItem.Quantity = request.Quantity
 
-	claimItem.ClaimSessionID = uint(request.Quantity)
-	claimItem.ClassID = request.ClassID
-	claimItem.Quantity = request.Quantity
-
-	if err := c.ClaimItemRepository.Update(tx, claimItem); err != nil {
-		return fmt.Errorf("failed to update claim item: %w", err)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return nil
+		if err := uc.ClaimItemRepository.Update(ctx, tx, claimItem); err != nil {
+			return fmt.Errorf("failed to update claim item: %w", err)
+		}
+		return nil
+	})
 }
 
-func (c *ClaimItemUsecase) DeleteClaimItem(ctx context.Context, id uint) error {
-	tx := c.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *ClaimItemUsecase) DeleteClaimItem(ctx context.Context, id uint) error {
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		claimItem, err := uc.ClaimItemRepository.FindByID(ctx, tx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get claim item: %w", err)
 		}
-	}()
+		if claimItem == nil {
+			return errs.ErrNotFound
+		}
 
-	ClaimItem, err := c.ClaimItemRepository.FindByID(tx, id)
-	if err != nil {
-		return fmt.Errorf("failed to get claim item: %w", err)
-	}
-	if ClaimItem == nil {
-		return errs.ErrNotFound
-	}
-
-	if err := c.ClaimItemRepository.Delete(tx, ClaimItem); err != nil {
-		return fmt.Errorf("failed to delete claim item: %w", err)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return nil
+		if err := uc.ClaimItemRepository.Delete(ctx, tx, claimItem); err != nil {
+			return fmt.Errorf("failed to delete claim item: %w", err)
+		}
+		return nil
+	})
 }

@@ -1,9 +1,11 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	enum "eticket-api/internal/common/enums"
 	"eticket-api/internal/domain"
+	"eticket-api/pkg/gotann"
 	"strings"
 	"time"
 
@@ -11,29 +13,31 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type TicketRepository struct{}
-
-func NewTicketRepository() *TicketRepository {
-	return &TicketRepository{}
+type TicketRepository struct {
+	DB *gorm.DB
 }
 
-func (tr *TicketRepository) Count(db *gorm.DB) (int64, error) {
+func NewTicketRepository(db *gorm.DB) *TicketRepository {
+	return &TicketRepository{DB: db}
+}
+
+func (r *TicketRepository) Count(ctx context.Context, conn gotann.Connection) (int64, error) {
 	var total int64
-	result := db.Model(&domain.Ticket{}).Count(&total)
+	result := conn.Model(&domain.Ticket{}).Count(&total)
 	return total, result.Error
 }
 
-func (tr *TicketRepository) CountByScheduleID(db *gorm.DB, scheduleID uint) (int64, error) {
+func (r *TicketRepository) CountByScheduleID(ctx context.Context, conn gotann.Connection, scheduleID uint) (int64, error) {
 	var total int64
-	result := db.Model(&domain.Ticket{}).Where("schedule_id = ?", scheduleID).Count(&total)
+	result := conn.Model(&domain.Ticket{}).Where("schedule_id = ?", scheduleID).Count(&total)
 	return total, result.Error
 }
 
-func (r *TicketRepository) CountByScheduleIDAndClassIDWithStatus(db *gorm.DB, scheduleID uint, classID uint) (int64, error) {
+func (r *TicketRepository) CountByScheduleIDAndClassIDWithStatus(ctx context.Context, conn gotann.Connection, scheduleID uint, classID uint) (int64, error) {
 	var count int64
 	now := time.Now()
 
-	query := db.Model(&domain.Ticket{}).
+	query := conn.Model(&domain.Ticket{}).
 		Joins("LEFT JOIN claim_session ON ticket.claim_session_id = claim_session.id").
 		Where("ticket.schedule_id = ? AND ticket.class_id = ?", scheduleID, classID).
 		Where("ticket.claim_session_id IS NOT NULL").
@@ -50,34 +54,34 @@ func (r *TicketRepository) CountByScheduleIDAndClassIDWithStatus(db *gorm.DB, sc
 	return count, nil
 }
 
-func (tr *TicketRepository) Insert(db *gorm.DB, ticket *domain.Ticket) error {
-	result := db.Create(ticket)
+func (r *TicketRepository) Insert(ctx context.Context, conn gotann.Connection, ticket *domain.Ticket) error {
+	result := conn.Create(ticket)
 	return result.Error
 }
 
-func (tr *TicketRepository) InsertBulk(db *gorm.DB, tickets []*domain.Ticket) error {
-	result := db.Create(&tickets)
+func (r *TicketRepository) InsertBulk(ctx context.Context, conn gotann.Connection, tickets []*domain.Ticket) error {
+	result := conn.Create(&tickets)
 	return result.Error
 }
 
-func (tr *TicketRepository) Update(db *gorm.DB, ticket *domain.Ticket) error {
-	result := db.Save(ticket)
+func (r *TicketRepository) Update(ctx context.Context, conn gotann.Connection, ticket *domain.Ticket) error {
+	result := conn.Save(ticket)
 	return result.Error
 }
 
-func (tr *TicketRepository) UpdateBulk(db *gorm.DB, tickets []*domain.Ticket) error {
-	result := db.Save(&tickets)
+func (r *TicketRepository) UpdateBulk(ctx context.Context, conn gotann.Connection, tickets []*domain.Ticket) error {
+	result := conn.Save(&tickets)
 	return result.Error
 }
 
-func (tr *TicketRepository) Delete(db *gorm.DB, ticket *domain.Ticket) error {
-	result := db.Select(clause.Associations).Delete(ticket)
+func (r *TicketRepository) Delete(ctx context.Context, conn gotann.Connection, ticket *domain.Ticket) error {
+	result := conn.Select(clause.Associations).Delete(ticket)
 	return result.Error
 }
 
-func (tr *TicketRepository) FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.Ticket, error) {
+func (r *TicketRepository) FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*domain.Ticket, error) {
 	tickets := []*domain.Ticket{}
-	query := db.Preload("Class").
+	query := conn.Model(&domain.Ticket{}).Preload("Class").
 		Preload("Schedule").
 		Preload("Schedule.Ship").
 		Preload("Schedule.DepartureHarbor").
@@ -95,9 +99,9 @@ func (tr *TicketRepository) FindAll(db *gorm.DB, limit, offset int, sort, search
 	return tickets, err
 }
 
-func (tr *TicketRepository) FindByID(db *gorm.DB, id uint) (*domain.Ticket, error) {
+func (r *TicketRepository) FindByID(ctx context.Context, conn gotann.Connection, id uint) (*domain.Ticket, error) {
 	ticket := new(domain.Ticket)
-	result := db.Preload("Class").
+	result := conn.Preload("Class").
 		Preload("Schedule").
 		Preload("Schedule.Ship").
 		Preload("Schedule.DepartureHarbor").
@@ -110,9 +114,9 @@ func (tr *TicketRepository) FindByID(db *gorm.DB, id uint) (*domain.Ticket, erro
 	return ticket, result.Error
 }
 
-func (tr *TicketRepository) FindByIDs(db *gorm.DB, ids []uint) ([]*domain.Ticket, error) {
+func (r *TicketRepository) FindByIDs(ctx context.Context, conn gotann.Connection, ids []uint) ([]*domain.Ticket, error) {
 	tickets := []*domain.Ticket{}
-	result := db.Preload("Class").
+	result := conn.Preload("Class").
 		Preload("Schedule").
 		Preload("Schedule.Ship").
 		Preload("Schedule.DepartureHarbor").
@@ -125,9 +129,9 @@ func (tr *TicketRepository) FindByIDs(db *gorm.DB, ids []uint) ([]*domain.Ticket
 	return tickets, nil
 }
 
-func (tr *TicketRepository) FindByBookingID(db *gorm.DB, bookingID uint) ([]*domain.Ticket, error) {
+func (r *TicketRepository) FindByBookingID(ctx context.Context, conn gotann.Connection, bookingID uint) ([]*domain.Ticket, error) {
 	tickets := []*domain.Ticket{}
-	result := db.Preload("Class").
+	result := conn.Preload("Class").
 		Preload("Schedule").
 		Preload("Schedule.Ship").
 		Preload("Schedule.DepartureHarbor").
@@ -141,9 +145,9 @@ func (tr *TicketRepository) FindByBookingID(db *gorm.DB, bookingID uint) ([]*dom
 	return tickets, result.Error
 }
 
-func (tr *TicketRepository) FindByScheduleID(db *gorm.DB, scheduleID uint) ([]*domain.Ticket, error) {
+func (r *TicketRepository) FindByScheduleID(ctx context.Context, conn gotann.Connection, scheduleID uint) ([]*domain.Ticket, error) {
 	tickets := []*domain.Ticket{}
-	result := db.Preload("Class").
+	result := conn.Preload("Class").
 		Preload("Schedule").
 		Preload("Schedule.Ship").
 		Preload("Schedule.DepartureHarbor").
@@ -157,9 +161,9 @@ func (tr *TicketRepository) FindByScheduleID(db *gorm.DB, scheduleID uint) ([]*d
 	return tickets, nil
 }
 
-func (tr *TicketRepository) FindByClaimSessionID(db *gorm.DB, sessionID uint) ([]*domain.Ticket, error) {
+func (r *TicketRepository) FindByClaimSessionID(ctx context.Context, conn gotann.Connection, sessionID uint) ([]*domain.Ticket, error) {
 	tickets := []*domain.Ticket{}
-	result := db.Preload("Class").
+	result := conn.Preload("Class").
 		Preload("Schedule").
 		Preload("Schedule.Ship").
 		Preload("Schedule.DepartureHarbor").
@@ -172,8 +176,8 @@ func (tr *TicketRepository) FindByClaimSessionID(db *gorm.DB, sessionID uint) ([
 	return tickets, nil
 }
 
-func (r *TicketRepository) CheckIn(db *gorm.DB, id uint) error {
-	return db.Model(&domain.Ticket{}).
+func (r *TicketRepository) CheckIn(ctx context.Context, conn gotann.Connection, id uint) error {
+	return conn.Model(&domain.Ticket{}).
 		Where("id = ?", id).
 		Update("status", "checkin").
 		Error

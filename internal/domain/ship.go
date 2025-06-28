@@ -1,9 +1,9 @@
 package domain
 
 import (
+	"context"
+	"eticket-api/pkg/gotann"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type Ship struct {
@@ -24,12 +24,12 @@ func (sh *Ship) TableName() string {
 }
 
 type ShipRepository interface {
-	Count(db *gorm.DB) (int64, error)
-	Insert(db *gorm.DB, entity *Ship) error
-	InsertBulk(db *gorm.DB, ships []*Ship) error
-	Update(db *gorm.DB, entity *Ship) error
-	UpdateBulk(db *gorm.DB, ships []*Ship) error
-	Delete(db *gorm.DB, entity *Ship) error
-	FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*Ship, error)
-	FindByID(db *gorm.DB, id uint) (*Ship, error)
+	Count(ctx context.Context, conn gotann.Connection) (int64, error)
+	Insert(ctx context.Context, conn gotann.Connection, entity *Ship) error
+	InsertBulk(ctx context.Context, conn gotann.Connection, ships []*Ship) error
+	Update(ctx context.Context, conn gotann.Connection, entity *Ship) error
+	UpdateBulk(ctx context.Context, conn gotann.Connection, ships []*Ship) error
+	Delete(ctx context.Context, conn gotann.Connection, entity *Ship) error
+	FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*Ship, error)
+	FindByID(ctx context.Context, conn gotann.Connection, id uint) (*Ship, error)
 }

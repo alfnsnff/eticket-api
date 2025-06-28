@@ -1,54 +1,58 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"eticket-api/internal/domain"
+	"eticket-api/pkg/gotann"
 	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-type QuotaRepository struct{}
-
-func NewQuotaRepository() *QuotaRepository {
-	return &QuotaRepository{}
+type QuotaRepository struct {
+	DB *gorm.DB
 }
 
-func (ar *QuotaRepository) Count(db *gorm.DB) (int64, error) {
+func NewQuotaRepository(db *gorm.DB) *QuotaRepository {
+	return &QuotaRepository{DB: db}
+}
+
+func (r *QuotaRepository) Count(ctx context.Context, conn gotann.Connection) (int64, error) {
 	var total int64
-	result := db.Model(&domain.Quota{}).Count(&total)
+	result := conn.Model(&domain.Quota{}).Count(&total)
 	return total, result.Error
 }
 
-func (ar *QuotaRepository) Insert(db *gorm.DB, Quota *domain.Quota) error {
-	result := db.Create(Quota)
+func (r *QuotaRepository) Insert(ctx context.Context, conn gotann.Connection, quota *domain.Quota) error {
+	result := conn.Create(quota)
 	return result.Error
 }
 
-func (ar *QuotaRepository) InsertBulk(db *gorm.DB, Quotas []*domain.Quota) error {
-	result := db.Create(&Quotas)
+func (r *QuotaRepository) InsertBulk(ctx context.Context, conn gotann.Connection, quotas []*domain.Quota) error {
+	result := conn.Create(&quotas)
 	return result.Error
 }
 
-func (ar *QuotaRepository) Update(db *gorm.DB, Quota *domain.Quota) error {
-	result := db.Save(Quota)
+func (r *QuotaRepository) Update(ctx context.Context, conn gotann.Connection, quota *domain.Quota) error {
+	result := conn.Save(quota)
 	return result.Error
 }
 
-func (ar *QuotaRepository) UpdateBulk(db *gorm.DB, Quotas []*domain.Quota) error {
-	result := db.Save(&Quotas)
+func (r *QuotaRepository) UpdateBulk(ctx context.Context, conn gotann.Connection, Quotas []*domain.Quota) error {
+	result := conn.Save(&Quotas)
 	return result.Error
 }
 
-func (ar *QuotaRepository) Delete(db *gorm.DB, Quota *domain.Quota) error {
-	result := db.Select(clause.Associations).Delete(Quota)
+func (r *QuotaRepository) Delete(ctx context.Context, conn gotann.Connection, quota *domain.Quota) error {
+	result := conn.Select(clause.Associations).Delete(quota)
 	return result.Error
 }
 
-func (ar *QuotaRepository) FindAll(db *gorm.DB, limit, offset int, sort, search string) ([]*domain.Quota, error) {
+func (r *QuotaRepository) FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*domain.Quota, error) {
 	Quotas := []*domain.Quota{}
-	query := db.Preload("Class").
+	query := conn.Model(&domain.Quota{}).Preload("Class").
 		Preload("Schedule").
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
@@ -66,9 +70,9 @@ func (ar *QuotaRepository) FindAll(db *gorm.DB, limit, offset int, sort, search 
 	return Quotas, err
 }
 
-func (ar *QuotaRepository) FindByID(db *gorm.DB, id uint) (*domain.Quota, error) {
+func (r *QuotaRepository) FindByID(ctx context.Context, conn gotann.Connection, id uint) (*domain.Quota, error) {
 	Quota := new(domain.Quota)
-	result := db.Preload("Class").
+	result := conn.Preload("Class").
 		Preload("Schedule").
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
@@ -79,9 +83,9 @@ func (ar *QuotaRepository) FindByID(db *gorm.DB, id uint) (*domain.Quota, error)
 	return Quota, result.Error
 }
 
-func (ar *QuotaRepository) FindByScheduleID(db *gorm.DB, scheduleID uint) ([]*domain.Quota, error) {
+func (r *QuotaRepository) FindByScheduleID(ctx context.Context, conn gotann.Connection, scheduleID uint) ([]*domain.Quota, error) {
 	Quotas := []*domain.Quota{}
-	result := db.Preload("Class").
+	result := conn.Preload("Class").
 		Preload("Schedule").
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
@@ -92,15 +96,15 @@ func (ar *QuotaRepository) FindByScheduleID(db *gorm.DB, scheduleID uint) ([]*do
 	return Quotas, nil
 }
 
-func (ar *QuotaRepository) FindByScheduleIDAndClassID(db *gorm.DB, scheduleID uint, classID uint) (*domain.Quota, error) {
-	Quota := new(domain.Quota)
-	result := db.Preload("Class").
+func (r *QuotaRepository) FindByScheduleIDAndClassID(ctx context.Context, conn gotann.Connection, scheduleID uint, classID uint) (*domain.Quota, error) {
+	quota := new(domain.Quota)
+	result := conn.Preload("Class").
 		Preload("Schedule").
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
-		Preload("Schedule.Ship").Where("schedule_id = ? AND class_id = ?", scheduleID, classID).Clauses(clause.Locking{Strength: "UPDATE"}).First(Quota)
+		Preload("Schedule.Ship").Where("schedule_id = ? AND class_id = ?", scheduleID, classID).Clauses(clause.Locking{Strength: "UPDATE"}).First(quota)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
-	return Quota, result.Error
+	return quota, result.Error
 }

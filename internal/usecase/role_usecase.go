@@ -3,71 +3,63 @@ package usecase
 import (
 	"context"
 	errs "eticket-api/internal/common/errors"
+	"eticket-api/internal/common/transact"
 	"eticket-api/internal/domain"
 	"eticket-api/internal/mapper"
 	"eticket-api/internal/model"
+	"eticket-api/pkg/gotann"
 	"fmt"
-
-	"gorm.io/gorm"
 )
 
 type RoleUsecase struct {
-	DB             *gorm.DB
+	Transactor     *transact.Transactor // Uncomment if you need transaction management
 	RoleRepository domain.RoleRepository
 }
 
 func NewRoleUsecase(
-	db *gorm.DB,
+	transactor *transact.Transactor, // Uncomment if you need transaction management
 	roleRepository domain.RoleRepository,
 ) *RoleUsecase {
 	return &RoleUsecase{
-		DB:             db,
+		Transactor:     transactor, // Uncomment if you need transaction management
 		RoleRepository: roleRepository,
 	}
 }
 
-func (r *RoleUsecase) CreateRole(ctx context.Context, request *model.WriteRoleRequest) error {
-	tx := r.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *RoleUsecase) CreateRole(ctx context.Context, request *model.WriteRoleRequest) error {
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		role := &domain.Role{
+			RoleName:    request.RoleName,
+			Description: request.Description,
 		}
-	}()
 
-	role := &domain.Role{
-		RoleName:    request.RoleName,
-		Description: request.Description,
-	}
-
-	if err := r.RoleRepository.Insert(tx, role); err != nil {
-		return fmt.Errorf("failed to create role: %w", err)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit: %w", err)
-	}
-
-	return nil
+		if err := uc.RoleRepository.Insert(ctx, tx, role); err != nil {
+			if errs.IsUniqueConstraintError(err) {
+				return errs.ErrConflict
+			}
+			return fmt.Errorf("failed to create role: %w", err)
+		}
+		return nil
+	})
 }
 
-func (r *RoleUsecase) ListRoles(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadRoleResponse, int, error) {
-	tx := r.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *RoleUsecase) ListRoles(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadRoleResponse, int, error) {
+	var err error
+	var total int64
+	var roles []*domain.Role
+	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		total, err = uc.RoleRepository.Count(ctx, tx)
+		if err != nil {
+			return fmt.Errorf("failed to count roles: %w", err)
 		}
-	}()
 
-	total, err := r.RoleRepository.Count(tx)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count roles: %w", err)
-	}
-
-	roles, err := r.RoleRepository.FindAll(tx, limit, offset, sort, search)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get all roles: %w", err)
+		roles, err = uc.RoleRepository.FindAll(ctx, tx, limit, offset, sort, search)
+		if err != nil {
+			return fmt.Errorf("failed to get all roles: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return nil, 0, fmt.Errorf("failed to list roles: %w", err)
 	}
 
 	responses := make([]*model.ReadRoleResponse, len(roles))
@@ -75,93 +67,61 @@ func (r *RoleUsecase) ListRoles(ctx context.Context, limit, offset int, sort, se
 		responses[i] = mapper.RoleToResponse(role)
 	}
 
-	if err := tx.Commit().Error; err != nil {
-		return nil, 0, fmt.Errorf("failed to commit: %w", err)
-	}
-
 	return responses, int(total), nil
 }
 
-func (r *RoleUsecase) GetRoleByID(ctx context.Context, id uint) (*model.ReadRoleResponse, error) {
-	tx := r.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *RoleUsecase) GetRoleByID(ctx context.Context, id uint) (*model.ReadRoleResponse, error) {
+	var err error
+	var role *domain.Role
+	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		role, err = uc.RoleRepository.FindByID(ctx, tx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get role by id: %w", err)
 		}
-	}()
-
-	role, err := r.RoleRepository.FindByID(tx, id)
-	if err != nil {
+		if role == nil {
+			return errs.ErrNotFound
+		}
+		return nil
+	}); err != nil {
 		return nil, fmt.Errorf("failed to get role by id: %w", err)
 	}
-	if role == nil {
-		return nil, errs.ErrNotFound
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("failed to commit: %w", err)
-	}
-
 	return mapper.RoleToResponse(role), nil
 }
 
-func (r *RoleUsecase) UpdateRole(ctx context.Context, request *model.UpdateRoleRequest) error {
-	tx := r.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *RoleUsecase) UpdateRole(ctx context.Context, request *model.UpdateRoleRequest) error {
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		role, err := uc.RoleRepository.FindByID(ctx, tx, request.ID)
+		if err != nil {
+			return fmt.Errorf("failed to find role: %w", err)
 		}
-	}()
+		if role == nil {
+			return errs.ErrNotFound
+		}
 
-	// Fetch existing allocation
-	role, err := r.RoleRepository.FindByID(tx, request.ID)
-	if err != nil {
-		return fmt.Errorf("failed to find role: %w", err)
-	}
-	if role == nil {
-		return errs.ErrNotFound
-	}
+		role.RoleName = request.RoleName
+		role.Description = request.Description
 
-	role.RoleName = request.RoleName
-	role.Description = request.Description
+		if err := uc.RoleRepository.Update(ctx, tx, role); err != nil {
+			return fmt.Errorf("failed to update role: %w", err)
+		}
 
-	if err := r.RoleRepository.Update(tx, role); err != nil {
-		return fmt.Errorf("failed to update role: %w", err)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit: %w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
-func (r *RoleUsecase) DeleteRole(ctx context.Context, id uint) error {
-	tx := r.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+func (uc *RoleUsecase) DeleteRole(ctx context.Context, id uint) error {
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		role, err := uc.RoleRepository.FindByID(ctx, tx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get role: %w", err)
 		}
-	}()
+		if role == nil {
+			return errs.ErrNotFound
+		}
 
-	role, err := r.RoleRepository.FindByID(tx, id)
-	if err != nil {
-		return fmt.Errorf("failed to get role: %w", err)
-	}
-	if role == nil {
-		return errs.ErrNotFound
-	}
-
-	if err := r.RoleRepository.Delete(tx, role); err != nil {
-		return fmt.Errorf("failed to delete role: %w", err)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit: %w", err)
-	}
-
-	return nil
+		if err := uc.RoleRepository.Delete(ctx, tx, role); err != nil {
+			return fmt.Errorf("failed to delete role: %w", err)
+		}
+		return nil
+	})
 }

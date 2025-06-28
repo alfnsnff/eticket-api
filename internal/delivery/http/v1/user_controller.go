@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"errors"
+	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/response"
@@ -27,39 +29,45 @@ func NewUserController(
 	user_usecase *usecase.UserUsecase,
 
 ) {
-	uc := &UserController{
+	c := &UserController{
 		Log:         log,
 		Validate:    validate,
 		UserUsecase: user_usecase,
 	}
 
-	router.GET("/users", uc.GetAllUsers)
-	router.GET("/user/:id", uc.GetUserByID)
-	router.POST("/user/create", uc.CreateUser)
+	router.GET("/users", c.GetAllUsers)
+	router.GET("/user/:id", c.GetUserByID)
+	router.POST("/user/create", c.CreateUser)
 
-	protected.PUT("/user/update/:id", uc.UpdateUser)
-	protected.DELETE("/user/:id", uc.DeleteUser)
+	protected.PUT("/user/update/:id", c.UpdateUser)
+	protected.DELETE("/user/:id", c.DeleteUser)
 }
 
-func (uc *UserController) CreateUser(ctx *gin.Context) {
+func (c *UserController) CreateUser(ctx *gin.Context) {
 
 	request := new(model.WriteUserRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
-		uc.Log.WithError(err).Error("failed to bind JSON request body")
+		c.Log.WithError(err).Error("failed to bind JSON request body")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	if err := uc.Validate.Struct(request); err != nil {
-		uc.Log.WithError(err).Error("failed to validate request body")
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("failed to validate request body")
 		errors := validator.ParseErrors(err)
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
 
-	if err := uc.UserUsecase.CreateUser(ctx, request); err != nil {
-		uc.Log.WithError(err).Error("failed to create user")
+	if err := c.UserUsecase.CreateUser(ctx, request); err != nil {
+		if errors.Is(err, errs.ErrConflict) {
+			c.Log.WithError(err).Error("user already exists")
+			ctx.JSON(http.StatusConflict, response.NewErrorResponse("user already exists", nil))
+			return
+		}
+
+		c.Log.WithError(err).Error("failed to create user")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create user", err.Error()))
 		return
 	}
@@ -67,13 +75,11 @@ func (uc *UserController) CreateUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, response.NewSuccessResponse(nil, "User created successfully", nil))
 }
 
-func (uc *UserController) GetAllUsers(ctx *gin.Context) {
-
+func (c *UserController) GetAllUsers(ctx *gin.Context) {
 	params := response.GetParams(ctx)
-	datas, total, err := uc.UserUsecase.ListUsers(ctx, params.Limit, params.Offset, params.Sort, params.Search)
-
+	datas, total, err := c.UserUsecase.ListUsers(ctx, params.Limit, params.Offset, params.Sort, params.Search)
 	if err != nil {
-		uc.Log.WithError(err).Error("failed to retrieve users")
+		c.Log.WithError(err).Error("failed to retrieve users")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve users", err.Error()))
 		return
 	}
@@ -90,59 +96,64 @@ func (uc *UserController) GetAllUsers(ctx *gin.Context) {
 	))
 }
 
-func (uc *UserController) GetUserByID(ctx *gin.Context) {
+func (c *UserController) GetUserByID(ctx *gin.Context) {
 
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
-		uc.Log.WithError(err).WithField("id", ctx.Param("id")).Error("invalid user ID")
+		c.Log.WithError(err).WithField("id", ctx.Param("id")).Error("invalid user ID")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid user ID", err.Error()))
 		return
 	}
 
-	data, err := uc.UserUsecase.GetUserByID(ctx, uint(id))
-
+	data, err := c.UserUsecase.GetUserByID(ctx, uint(id))
 	if err != nil {
-		uc.Log.WithError(err).WithField("id", id).Error("failed to retrieve user")
-		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve user", err.Error()))
-		return
-	}
+		if errors.Is(err, errs.ErrNotFound) {
+			c.Log.WithField("id", id).Warn("user not found")
+			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("user not found", nil))
+			return
+		}
 
-	if data == nil {
-		uc.Log.WithField("id", id).Warn("user not found")
-		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("User not found", nil))
+		c.Log.WithError(err).WithField("id", id).Error("failed to retrieve user")
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve user", err.Error()))
 		return
 	}
 
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "User retrieved successfully", nil))
 }
 
-func (uc *UserController) UpdateUser(ctx *gin.Context) {
+func (c *UserController) UpdateUser(ctx *gin.Context) {
 
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil || id == 0 {
-		uc.Log.WithError(err).WithField("id", ctx.Param("id")).Error("invalid or missing user ID")
+		c.Log.WithError(err).WithField("id", ctx.Param("id")).Error("invalid or missing user ID")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid or missing user ID", nil))
 		return
 	}
 
 	request := new(model.UpdateUserRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
-		uc.Log.WithError(err).Error("failed to bind JSON request body")
+		c.Log.WithError(err).Error("failed to bind JSON request body")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
 	request.ID = uint(id)
-	if err := uc.Validate.Struct(request); err != nil {
-		uc.Log.WithError(err).Error("failed to validate request body")
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("failed to validate request body")
 		errors := validator.ParseErrors(err)
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
 		return
 	}
 
-	if err := uc.UserUsecase.UpdateUser(ctx, request); err != nil {
-		uc.Log.WithError(err).WithField("id", id).Error("failed to update user")
+	if err := c.UserUsecase.UpdateUser(ctx, request); err != nil {
+		if errors.Is(err, errs.ErrConflict) {
+			c.Log.WithError(err).Error("user already exists")
+			ctx.JSON(http.StatusConflict, response.NewErrorResponse("user already exists", nil))
+			return
+		}
+
+		c.Log.WithError(err).WithField("id", id).Error("failed to update user")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update user", err.Error()))
 		return
 	}
@@ -150,18 +161,18 @@ func (uc *UserController) UpdateUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "User updated successfully", nil))
 }
 
-func (uc *UserController) DeleteUser(ctx *gin.Context) {
+func (c *UserController) DeleteUser(ctx *gin.Context) {
 
 	id, err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
-		uc.Log.WithError(err).WithField("id", ctx.Param("id")).Error("invalid user ID")
+		c.Log.WithError(err).WithField("id", ctx.Param("id")).Error("invalid user ID")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid user ID", err.Error()))
 		return
 	}
 
-	if err := uc.UserUsecase.DeleteUser(ctx, uint(id)); err != nil {
-		uc.Log.WithError(err).WithField("id", id).Error("failed to delete user")
+	if err := c.UserUsecase.DeleteUser(ctx, uint(id)); err != nil {
+		c.Log.WithError(err).WithField("id", id).Error("failed to delete user")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete user", err.Error()))
 		return
 	}
