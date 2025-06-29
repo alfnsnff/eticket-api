@@ -6,7 +6,8 @@ import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/response"
-	"eticket-api/internal/model"
+	requests "eticket-api/internal/delivery/http/v1/request"
+	"eticket-api/internal/domain"
 	"eticket-api/internal/usecase"
 	"net/http"
 	"strconv"
@@ -45,7 +46,7 @@ func NewQuotaController(
 }
 
 func (c *QuotaController) CreateQuota(ctx *gin.Context) {
-	request := new(model.WriteQuotaRequest)
+	request := new(requests.CreateQuotaRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		c.Log.WithError(err).Error("failed to bind JSON request body")
@@ -60,7 +61,7 @@ func (c *QuotaController) CreateQuota(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.QuotaUsecase.CreateQuota(ctx, request); err != nil {
+	if err := c.QuotaUsecase.CreateQuota(ctx, requests.QuotaFromCreate(request)); err != nil {
 		if errors.Is(err, errs.ErrConflict) {
 			c.Log.WithError(err).Error("user already exists")
 			ctx.JSON(http.StatusConflict, response.NewErrorResponse("user already exists", nil))
@@ -75,15 +76,15 @@ func (c *QuotaController) CreateQuota(ctx *gin.Context) {
 }
 
 func (c *QuotaController) CreateQuotaBulk(ctx *gin.Context) {
-	requests := []*model.WriteQuotaRequest{}
+	request := []*requests.CreateQuotaRequest{}
 
-	if err := ctx.ShouldBindJSON(&requests); err != nil {
+	if err := ctx.ShouldBindJSON(&request); err != nil {
 		c.Log.WithError(err).Error("failed to bind JSON request body for bulk create")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	for i, req := range requests {
+	for i, req := range request {
 		if err := c.Validate.Struct(req); err != nil {
 			c.Log.WithError(err).Error("failed to validate request body at index %d", i)
 			errors := validator.ParseErrors(err)
@@ -95,7 +96,12 @@ func (c *QuotaController) CreateQuotaBulk(ctx *gin.Context) {
 		}
 	}
 
-	if err := c.QuotaUsecase.CreateQuotaBulk(ctx, requests); err != nil {
+	quotas := make([]*domain.Quota, len(request))
+	for i, req := range request {
+		quotas[i] = requests.QuotaFromCreate(req)
+	}
+
+	if err := c.QuotaUsecase.CreateQuotaBulk(ctx, quotas); err != nil {
 		c.Log.WithError(err).Error("failed to create Quotas in bulk")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to create Quotas in bulk", err.Error()))
 		return
@@ -115,8 +121,13 @@ func (c *QuotaController) GetAllQuotas(ctx *gin.Context) {
 		return
 	}
 
+	responses := make([]*requests.QuotaResponse, len(datas))
+	for i, data := range datas {
+		responses[i] = requests.QuotaToResponse(data)
+	}
+
 	ctx.JSON(http.StatusOK, response.NewMetaResponse(
-		datas,
+		responses,
 		"Quotas retrieved successfully",
 		total,
 		params.Limit,
@@ -138,20 +149,19 @@ func (c *QuotaController) GetQuotaByID(ctx *gin.Context) {
 	}
 
 	data, err := c.QuotaUsecase.GetQuotaByID(ctx, uint(id))
-
 	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			c.Log.WithField("id", id).Warn("Quota not found")
+			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Quota not found", nil))
+			return
+		}
+
 		c.Log.WithError(err).WithField("id", id).Error("failed to retrieve Quota")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve Quota", err.Error()))
 		return
 	}
 
-	if data == nil {
-		c.Log.WithField("id", id).Warn("Quota not found")
-		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Quota not found", nil))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Quota retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(requests.QuotaToResponse(data), "Quota retrieved successfully", nil))
 }
 
 func (c *QuotaController) UpdateQuota(ctx *gin.Context) {
@@ -162,7 +172,7 @@ func (c *QuotaController) UpdateQuota(ctx *gin.Context) {
 		return
 	}
 
-	request := new(model.UpdateQuotaRequest)
+	request := new(requests.UpdateQuotaRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		c.Log.WithError(err).Error("failed to bind JSON request body")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
@@ -177,7 +187,7 @@ func (c *QuotaController) UpdateQuota(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.QuotaUsecase.UpdateQuota(ctx, request); err != nil {
+	if err := c.QuotaUsecase.UpdateQuota(ctx, requests.QuotaFromUpdate(request)); err != nil {
 		if errors.Is(err, errs.ErrNotFound) {
 			c.Log.WithField("id", id).Warn("Quota not found")
 			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Quota not found", nil))

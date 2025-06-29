@@ -15,7 +15,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
-	server, err := app.NewApp(config)
+	server, err := app.New(config)
 	if err != nil {
 		log.Fatalf("failed to initialize app: %v", err)
 	}

@@ -5,8 +5,6 @@ import (
 	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/transact"
 	"eticket-api/internal/domain"
-	"eticket-api/internal/mapper"
-	"eticket-api/internal/model"
 	"eticket-api/pkg/gotann"
 	"fmt"
 )
@@ -26,12 +24,12 @@ func NewClassUsecase(
 	}
 }
 
-func (uc *ClassUsecase) CreateClass(ctx context.Context, request *model.WriteClassRequest) error {
+func (uc *ClassUsecase) CreateClass(ctx context.Context, e *domain.Class) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
 		class := &domain.Class{
-			ClassName:  request.ClassName,
-			Type:       request.Type,
-			ClassAlias: request.ClassAlias,
+			ClassName:  e.ClassName,
+			Type:       e.Type,
+			ClassAlias: e.ClassAlias,
 		}
 
 		if err := uc.ClassRepository.Insert(ctx, tx, class); err != nil {
@@ -44,7 +42,7 @@ func (uc *ClassUsecase) CreateClass(ctx context.Context, request *model.WriteCla
 	})
 }
 
-func (uc *ClassUsecase) ListClasses(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadClassResponse, int, error) {
+func (uc *ClassUsecase) ListClasses(ctx context.Context, limit, offset int, sort, search string) ([]*domain.Class, int, error) {
 
 	var err error
 	var total int64
@@ -62,15 +60,11 @@ func (uc *ClassUsecase) ListClasses(ctx context.Context, limit, offset int, sort
 	}); err != nil {
 		return nil, 0, fmt.Errorf("failed to list classes: %w", err)
 	}
-	responses := make([]*model.ReadClassResponse, len(classes))
-	for i, class := range classes {
-		responses[i] = mapper.ClassToResponse(class)
-	}
 
-	return responses, int(total), nil
+	return classes, int(total), nil
 }
 
-func (uc *ClassUsecase) GetClassByID(ctx context.Context, id uint) (*model.ReadClassResponse, error) {
+func (uc *ClassUsecase) GetClassByID(ctx context.Context, id uint) (*domain.Class, error) {
 	var err error
 	var class *domain.Class
 	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
@@ -85,12 +79,12 @@ func (uc *ClassUsecase) GetClassByID(ctx context.Context, id uint) (*model.ReadC
 	}); err != nil {
 		return nil, fmt.Errorf("failed to get class by ID: %w", err)
 	}
-	return mapper.ClassToResponse(class), nil
+	return class, nil
 }
 
-func (uc *ClassUsecase) UpdateClass(ctx context.Context, request *model.UpdateClassRequest) error {
+func (uc *ClassUsecase) UpdateClass(ctx context.Context, e *domain.Class) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-		class, err := uc.ClassRepository.FindByID(ctx, tx, request.ID)
+		class, err := uc.ClassRepository.FindByID(ctx, tx, e.ID)
 		if err != nil {
 			return fmt.Errorf("failed to find class: %w", err)
 		}
@@ -98,9 +92,9 @@ func (uc *ClassUsecase) UpdateClass(ctx context.Context, request *model.UpdateCl
 			return errs.ErrNotFound
 		}
 
-		class.ClassName = request.ClassName
-		class.Type = request.Type
-		class.ClassAlias = request.ClassAlias
+		class.ClassName = e.ClassName
+		class.Type = e.Type
+		class.ClassAlias = e.ClassAlias
 
 		if err := uc.ClassRepository.Update(ctx, tx, class); err != nil {
 			return fmt.Errorf("failed to update class: %w", err)

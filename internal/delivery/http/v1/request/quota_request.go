@@ -1,6 +1,9 @@
-package request
+package requests
 
-import "time"
+import (
+	"eticket-api/internal/domain"
+	"time"
+)
 
 type CreateQuotaRequest struct {
 	ScheduleID uint    `json:"schedule_id" validate:"required,gt=0"`
@@ -25,6 +28,7 @@ type QuotaResponse struct {
 	Price      float64       `json:"price"`
 	Quota      int           `json:"quota"`
 	Capacity   int           `json:"Capacity"`
+	CreatedAt  time.Time     `json:"created_at"`
 	UpdatedAt  time.Time     `json:"updated_at"`
 }
 
@@ -41,4 +45,48 @@ type QuotaSchedule struct {
 	ArrivalHarbor     string    `json:"arrival_harbor"`
 	DepartureDatetime time.Time `json:"departure_datetime"`
 	ArrivalDatetime   time.Time `json:"arrival_datetime"`
+}
+
+func QuotaToResponse(quota *domain.Quota) *QuotaResponse {
+	return &QuotaResponse{
+		ID:         quota.ID,
+		ScheduleID: quota.ScheduleID,
+		Class: QuotaClass{
+			ID:        quota.Class.ID,
+			ClassName: quota.Class.ClassName,
+			Type:      quota.Class.Type,
+		},
+		Schedule: QuotaSchedule{
+			ID:                quota.Schedule.ID,
+			ShipName:          quota.Schedule.Ship.ShipName,
+			DepartureHarbor:   quota.Schedule.DepartureHarbor.HarborName,
+			ArrivalHarbor:     quota.Schedule.ArrivalHarbor.HarborName,
+			DepartureDatetime: quota.Schedule.DepartureDatetime,
+			ArrivalDatetime:   quota.Schedule.ArrivalDatetime,
+		},
+		Price:     quota.Price,
+		Quota:     quota.Quota,
+		Capacity:  quota.Capacity, // Remaining quota after reservations
+		CreatedAt: quota.CreatedAt,
+		UpdatedAt: quota.UpdatedAt,
+	}
+}
+
+func QuotaFromCreate(request *CreateQuotaRequest) *domain.Quota {
+	return &domain.Quota{
+		ScheduleID: request.ScheduleID,
+		ClassID:    request.ClassID,
+		Price:      request.Price,
+		Capacity:   request.Capacity,
+	}
+}
+
+func QuotaFromUpdate(request *UpdateQuotaRequest) *domain.Quota {
+	return &domain.Quota{
+		ID:         request.ID,
+		ScheduleID: request.ScheduleID,
+		ClassID:    request.ClassID,
+		Price:      request.Price,
+		Capacity:   request.Capacity,
+	}
 }

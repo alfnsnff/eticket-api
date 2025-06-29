@@ -14,7 +14,7 @@ type Ticket struct {
 	ClassID         uint      `gorm:"column:class_id;not null;index;"`
 	PassengerName   string    `gorm:"column:passenger_name;type:varchar(32)"`
 	PassengerAge    int       `gorm:"column:passenger_age;"`
-	Address         string    `gorm:"column:address;type:varchar(32)"`
+	Address         string    `gorm:"column:address;"`
 	PassengerGender *string   `gorm:"column:passenger_gender;type:varchar(24);"`
 	IDType          *string   `gorm:"column:id_type;type:varchar(24)"`
 	IDNumber        *string   `gorm:"column:id_number;type:varchar(24)"`

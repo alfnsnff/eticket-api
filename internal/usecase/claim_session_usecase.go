@@ -3,8 +3,11 @@ package usecase
 import (
 	"context"
 	"errors"
+	"eticket-api/internal/client"
 	enum "eticket-api/internal/common/enums"
 	errs "eticket-api/internal/common/errors"
+	"eticket-api/internal/common/mailer"
+	"eticket-api/internal/common/templates"
 	"eticket-api/internal/common/transact"
 	"eticket-api/internal/common/utils"
 	"eticket-api/internal/domain"
@@ -26,6 +29,7 @@ type ClaimSessionUsecase struct {
 	BookingRepository      domain.BookingRepository
 	QuotaRepository        domain.QuotaRepository
 	TripayClient           domain.TripayClient
+	Mailer                 mailer.Mailer // Assuming you have a Mailer interface for sending emails
 }
 
 func NewClaimSessionUsecase(
@@ -37,6 +41,7 @@ func NewClaimSessionUsecase(
 	booking_repository domain.BookingRepository,
 	quota_repository domain.QuotaRepository,
 	tripay_client domain.TripayClient,
+	mailer mailer.Mailer, // Assuming you have a Mailer interface for sending emails
 ) *ClaimSessionUsecase {
 	return &ClaimSessionUsecase{
 		Transactor:             transactor,
@@ -47,6 +52,7 @@ func NewClaimSessionUsecase(
 		BookingRepository:      booking_repository,
 		QuotaRepository:        quota_repository,
 		TripayClient:           tripay_client,
+		Mailer:                 mailer, // Initialize the Mailer
 	}
 }
 
@@ -79,9 +85,8 @@ func (uc *ClaimSessionUsecase) LockClaimSession(
 		}
 
 		// Step 3: Fetch active claim sessions and accumulate usage
-		sessions, err := uc.ClaimSessionRepository.FindByScheduleID(ctx, tx, request.ScheduleID)
+		sessions, err := uc.ClaimSessionRepository.FindActiveByScheduleID(ctx, tx, request.ScheduleID)
 		if err != nil {
-
 			return fmt.Errorf("load active sessions: %w", err)
 		}
 		usedByClass := make(map[uint]int64)
@@ -274,12 +279,12 @@ func (cd *ClaimSessionUsecase) EntryClaimSession(
 			return fmt.Errorf("failed to create tickets: %w", err)
 		}
 
-		orderItems := make([]model.OrderItem, len(tickets))
+		orderItems := make([]domain.OrderItem, len(tickets))
 		for i, ticket := range tickets {
-			orderItems[i] = mapper.TicketToItem(ticket)
+			orderItems[i] = client.TicketToItem(ticket)
 		}
 
-		payload := &model.WriteTransactionRequest{
+		payload := &domain.TransactionRequest{
 			Method:        request.PaymentMethod,
 			Amount:        int(amounts), // Convert to integer cents
 			CustomerName:  booking.CustomerName,
@@ -320,9 +325,18 @@ func (cd *ClaimSessionUsecase) EntryClaimSession(
 			}
 		}
 
-		session.Status = "LOCKED"
-		if err := cd.ClaimSessionRepository.Update(ctx, tx, session); err != nil {
+		go func() {
+			subject := "Your Booking is Confirmed"
+			htmlBody := templates.BookingInvoiceEmail(booking, payment)
 
+			if err := cd.Mailer.Send(booking.Email, subject, htmlBody); err != nil {
+				// Log the error, don't return
+				fmt.Printf("failed to send confirmation email: %v\n", err)
+			}
+		}()
+
+		session.Status = enum.ClaimSessionSuccess.String()
+		if err := cd.ClaimSessionRepository.Update(ctx, tx, session); err != nil {
 			return fmt.Errorf("failed to update session: %w", err)
 		}
 
@@ -396,7 +410,7 @@ func (uc *ClaimSessionUsecase) UpdateClaimSession(ctx context.Context, request *
 	})
 }
 
-func (uc *ClaimSessionUsecase) ListClaimSessions(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadClaimSessionResponse, int, error) {
+func (uc *ClaimSessionUsecase) ListClaimSessions(ctx context.Context, limit, offset int, sort, search string) ([]*model.TESTReadClaimSessionResponse, int, error) {
 	var err error
 	var total int64
 	var claimSessions []*domain.ClaimSession
@@ -414,9 +428,9 @@ func (uc *ClaimSessionUsecase) ListClaimSessions(ctx context.Context, limit, off
 	}); err != nil {
 		return nil, 0, fmt.Errorf("execute transaction: %w", err)
 	}
-	responses := make([]*model.ReadClaimSessionResponse, len(claimSessions))
+	responses := make([]*model.TESTReadClaimSessionResponse, len(claimSessions))
 	for i, claimSession := range claimSessions {
-		responses[i] = mapper.ClaimSessionToResponse(claimSession)
+		responses[i] = mapper.TESTClaimSessionToResponse(claimSession)
 	}
 	return responses, int(total), nil
 }

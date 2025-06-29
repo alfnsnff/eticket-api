@@ -5,8 +5,6 @@ import (
 	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/transact"
 	"eticket-api/internal/domain"
-	"eticket-api/internal/mapper"
-	"eticket-api/internal/model"
 	"eticket-api/pkg/gotann"
 	"fmt"
 )
@@ -28,14 +26,14 @@ func NewQuotaUsecase(
 	}
 }
 
-func (uc *QuotaUsecase) CreateQuota(ctx context.Context, request *model.WriteQuotaRequest) error {
+func (uc *QuotaUsecase) CreateQuota(ctx context.Context, e *domain.Quota) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
 		quota := &domain.Quota{
-			ScheduleID: request.ScheduleID,
-			ClassID:    request.ClassID,
-			Quota:      request.Capacity,
-			Capacity:   request.Capacity,
-			Price:      request.Price,
+			ScheduleID: e.ScheduleID,
+			ClassID:    e.ClassID,
+			Quota:      e.Capacity,
+			Capacity:   e.Capacity,
+			Price:      e.Price,
 		}
 		if err := uc.QuotaRepository.Insert(ctx, tx, quota); err != nil {
 			if errs.IsUniqueConstraintError(err) {
@@ -47,16 +45,16 @@ func (uc *QuotaUsecase) CreateQuota(ctx context.Context, request *model.WriteQuo
 	})
 }
 
-func (uc *QuotaUsecase) CreateQuotaBulk(ctx context.Context, requests []*model.WriteQuotaRequest) error {
+func (uc *QuotaUsecase) CreateQuotaBulk(ctx context.Context, es []*domain.Quota) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-		quotas := make([]*domain.Quota, len(requests))
-		for i, request := range requests {
+		quotas := make([]*domain.Quota, len(es))
+		for i, e := range es {
 			quotas[i] = &domain.Quota{
-				ScheduleID: request.ScheduleID,
-				ClassID:    request.ClassID,
-				Price:      request.Price,
-				Quota:      request.Capacity,
-				Capacity:   request.Capacity,
+				ScheduleID: e.ScheduleID,
+				ClassID:    e.ClassID,
+				Price:      e.Price,
+				Quota:      e.Capacity,
+				Capacity:   e.Capacity,
 			}
 		}
 
@@ -71,7 +69,7 @@ func (uc *QuotaUsecase) CreateQuotaBulk(ctx context.Context, requests []*model.W
 	})
 }
 
-func (uc *QuotaUsecase) ListQuotas(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadQuotaResponse, int, error) {
+func (uc *QuotaUsecase) ListQuotas(ctx context.Context, limit, offset int, sort, search string) ([]*domain.Quota, int, error) {
 	var err error
 	var total int64
 	var quotas []*domain.Quota
@@ -89,15 +87,10 @@ func (uc *QuotaUsecase) ListQuotas(ctx context.Context, limit, offset int, sort,
 		return nil, 0, fmt.Errorf("failed to list Quotas: %w", err)
 	}
 
-	responses := make([]*model.ReadQuotaResponse, len(quotas))
-	for i, Quota := range quotas {
-		responses[i] = mapper.QuotaToResponse(Quota)
-	}
-
-	return responses, int(total), nil
+	return quotas, int(total), nil
 }
 
-func (uc *QuotaUsecase) GetQuotaByID(ctx context.Context, id uint) (*model.ReadQuotaResponse, error) {
+func (uc *QuotaUsecase) GetQuotaByID(ctx context.Context, id uint) (*domain.Quota, error) {
 	var err error
 	var quota *domain.Quota
 	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
@@ -114,12 +107,12 @@ func (uc *QuotaUsecase) GetQuotaByID(ctx context.Context, id uint) (*model.ReadQ
 		return nil, fmt.Errorf("failed to get Quota by ID: %w", err)
 	}
 
-	return mapper.QuotaToResponse(quota), nil
+	return quota, nil
 }
 
-func (uc *QuotaUsecase) UpdateQuota(ctx context.Context, request *model.UpdateQuotaRequest) error {
+func (uc *QuotaUsecase) UpdateQuota(ctx context.Context, e *domain.Quota) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-		quota, err := uc.QuotaRepository.FindByID(ctx, tx, request.ID)
+		quota, err := uc.QuotaRepository.FindByID(ctx, tx, e.ID)
 		if err != nil {
 			return fmt.Errorf("failed to find quota: %w", err)
 		}
@@ -127,11 +120,11 @@ func (uc *QuotaUsecase) UpdateQuota(ctx context.Context, request *model.UpdateQu
 			return errs.ErrNotFound
 		}
 
-		quota.ScheduleID = request.ScheduleID
-		quota.ClassID = request.ClassID
-		quota.Quota = request.Capacity
-		quota.Capacity = request.Capacity
-		quota.Price = request.Price
+		quota.ScheduleID = e.ScheduleID
+		quota.ClassID = e.ClassID
+		quota.Quota = e.Capacity
+		quota.Capacity = e.Capacity
+		quota.Price = e.Price
 
 		if err := uc.QuotaRepository.Update(ctx, tx, quota); err != nil {
 			return fmt.Errorf("failed to update quota: %w", err)

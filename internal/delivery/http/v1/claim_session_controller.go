@@ -35,11 +35,10 @@ func NewClaimSessionController(
 	}
 
 	router.POST("/claim/lock", c.LockClaimSession)
-	router.POST("/claim/entry", c.EntryClaimSession)
+	router.POST("/claim/entry/:sessionid", c.EntryClaimSession)
 	router.POST("/claim/create", c.CreateClaimSession)
 	router.GET("/claims", c.GetAllClaimSessions)
-	router.GET("/claim/:id", c.GetSessionByID)
-	router.GET("/claim/session/:sessionid", c.GetClaimSessionByUUID)
+	router.GET("/claim/:sessionid", c.GetClaimSessionByUUID)
 	router.PUT("/claim/update/:id", c.UpdateClaimSession)
 	router.DELETE("/claim/:id", c.DeleteClaimSession)
 
@@ -77,10 +76,17 @@ func (c *ClaimSessionController) LockClaimSession(ctx *gin.Context) {
 
 func (c *ClaimSessionController) EntryClaimSession(ctx *gin.Context) {
 
-	sessionID, err := ctx.Cookie("session_id")
-	if err != nil {
-		c.Log.WithError(err).Error("missing session ID in request")
-		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Missing session id", err.Error()))
+	// sessionID, err := ctx.Cookie("session_id")
+	// if err != nil {
+	// 	c.Log.WithError(err).Error("missing session ID in request")
+	// 	ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Missing session id", err.Error()))
+	// 	return
+	// }
+
+	sessionID := ctx.Param("sessionid")
+	if sessionID == "" {
+		c.Log.WithField("sessionid", sessionID).Error("empty session UUID provided")
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid claim session ID", "sessionid is empty"))
 		return
 	}
 
@@ -101,12 +107,18 @@ func (c *ClaimSessionController) EntryClaimSession(ctx *gin.Context) {
 	datas, err := c.ClaimSessionUsecase.EntryClaimSession(ctx, request, sessionID)
 	if err != nil {
 		if errors.Is(err, errs.ErrNotFound) {
-			c.Log.WithField("id", sessionID).Warn("claim session not found")
+			c.Log.WithError(err).Warn("claim session not found")
 			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("claim session not found", nil))
 			return
 		}
 
-		c.Log.WithError(err).WithField("sessionID", sessionID).Error("failed to update claim session")
+		if errors.Is(err, errs.ErrExternalTimeout) || errors.Is(err, errs.ErrExternalDown) {
+			c.Log.WithError(err).Warn("external system unavailable")
+			ctx.JSON(http.StatusServiceUnavailable, response.NewErrorResponse("external system unavailable", nil))
+			return
+		}
+
+		c.Log.WithError(err).Error("failed to update claim session")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update claim session", err.Error()))
 		return
 	}
@@ -114,7 +126,7 @@ func (c *ClaimSessionController) EntryClaimSession(ctx *gin.Context) {
 	// Clear cookies
 	ctx.SetSameSite(http.SameSiteNoneMode)
 	ctx.SetCookie("session_id", "", -1, "/", "", true, true)
-	ctx.SetCookie("order_id", datas.OrderID, 60*60, "/", "", true, true)
+	// ctx.SetCookie("order_id", datas.OrderID, 60*60, "/", "", true, true)
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Claim session updated successfully", nil))
 }
 

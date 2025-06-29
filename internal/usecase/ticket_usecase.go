@@ -6,8 +6,6 @@ import (
 	"eticket-api/internal/common/transact"
 	"eticket-api/internal/common/utils"
 	"eticket-api/internal/domain"
-	"eticket-api/internal/mapper"
-	"eticket-api/internal/model"
 	"eticket-api/pkg/gotann"
 	"fmt"
 )
@@ -34,10 +32,10 @@ func NewTicketUsecase(
 		QuotaRepository:    quota_reposiotry,
 	}
 }
-func (uc *TicketUsecase) CreateTicket(ctx context.Context, request *model.WriteTicketRequest) error {
+func (uc *TicketUsecase) CreateTicket(ctx context.Context, e *domain.Ticket) error {
 
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-		schedule, err := uc.ScheduleRepository.FindByID(ctx, tx, request.ScheduleID)
+		schedule, err := uc.ScheduleRepository.FindByID(ctx, tx, e.ScheduleID)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve schedule: %w", err)
 		}
@@ -45,7 +43,7 @@ func (uc *TicketUsecase) CreateTicket(ctx context.Context, request *model.WriteT
 			return errs.ErrNotFound
 		}
 
-		quota, err := uc.QuotaRepository.FindByScheduleIDAndClassID(ctx, tx, request.ScheduleID, request.ClassID)
+		quota, err := uc.QuotaRepository.FindByScheduleIDAndClassID(ctx, tx, e.ScheduleID, e.ClassID)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve quota: %w", err)
 		}
@@ -53,26 +51,26 @@ func (uc *TicketUsecase) CreateTicket(ctx context.Context, request *model.WriteT
 			return errs.ErrNotFound
 		}
 
-		if request.SeatNumber == nil || *request.SeatNumber == "" {
+		if e.SeatNumber == nil || *e.SeatNumber == "" {
 			seat := fmt.Sprintf("%s%d", quota.Class.ClassAlias, quota.Capacity-quota.Quota+1)
-			request.SeatNumber = &seat
+			e.SeatNumber = &seat
 		}
 
 		ticket := &domain.Ticket{
 			TicketCode:      utils.GenerateTicketReferenceID(), // Unique ticket code
-			ScheduleID:      request.ScheduleID,
-			ClassID:         request.ClassID,
+			ScheduleID:      e.ScheduleID,
+			ClassID:         e.ClassID,
 			Type:            quota.Class.Type,
 			Price:           quota.Price,
-			Address:         request.Address,
-			PassengerName:   request.PassengerName,
-			PassengerAge:    request.PassengerAge,
-			PassengerGender: request.PassengerGender,
-			IDType:          request.IDType,
-			IDNumber:        request.IDNumber,
-			SeatNumber:      request.SeatNumber,
-			LicensePlate:    request.LicensePlate,
-			IsCheckedIn:     request.IsCheckedIn, // Default value
+			Address:         e.Address,
+			PassengerName:   e.PassengerName,
+			PassengerAge:    e.PassengerAge,
+			PassengerGender: e.PassengerGender,
+			IDType:          e.IDType,
+			IDNumber:        e.IDNumber,
+			SeatNumber:      e.SeatNumber,
+			LicensePlate:    e.LicensePlate,
+			IsCheckedIn:     e.IsCheckedIn, // Default value
 		}
 
 		if err := uc.TicketRepository.Insert(ctx, tx, ticket); err != nil {
@@ -91,7 +89,7 @@ func (uc *TicketUsecase) CreateTicket(ctx context.Context, request *model.WriteT
 	})
 }
 
-func (uc *TicketUsecase) ListTickets(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadTicketResponse, int, error) {
+func (uc *TicketUsecase) ListTickets(ctx context.Context, limit, offset int, sort, search string) ([]*domain.Ticket, int, error) {
 	var err error
 	var total int64
 	var tickets []*domain.Ticket
@@ -110,15 +108,10 @@ func (uc *TicketUsecase) ListTickets(ctx context.Context, limit, offset int, sor
 		return nil, 0, fmt.Errorf("failed to list tickets: %w", err)
 	}
 
-	responses := make([]*model.ReadTicketResponse, len(tickets))
-	for i, ticket := range tickets {
-		responses[i] = mapper.TicketToResponse(ticket)
-	}
-
-	return responses, int(total), nil
+	return tickets, int(total), nil
 }
 
-func (uc *TicketUsecase) ListTicketsByScheduleID(ctx context.Context, schedule_id, limit, offset int, sort, search string) ([]*model.ReadTicketResponse, int, error) {
+func (uc *TicketUsecase) ListTicketsByScheduleID(ctx context.Context, schedule_id, limit, offset int, sort, search string) ([]*domain.Ticket, int, error) {
 	var err error
 	var total int64
 	var tickets []*domain.Ticket
@@ -135,19 +128,15 @@ func (uc *TicketUsecase) ListTicketsByScheduleID(ctx context.Context, schedule_i
 	}); err != nil {
 		return nil, 0, fmt.Errorf("failed to list tickets by schedule ID: %w", err)
 	}
-	responses := make([]*model.ReadTicketResponse, len(tickets))
-	for i, ticket := range tickets {
-		responses[i] = mapper.TicketToResponse(ticket)
-	}
 
-	return responses, int(total), nil
+	return tickets, int(total), nil
 }
 
-func (uc *TicketUsecase) GetTicketByID(ctx context.Context, id uint) (*model.ReadTicketResponse, error) {
+func (uc *TicketUsecase) GetTicketByID(ctx context.Context, id uint) (*domain.Ticket, error) {
 	var err error
 	var ticket *domain.Ticket
 	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-		ticket, err := uc.TicketRepository.FindByID(ctx, tx, id)
+		ticket, err = uc.TicketRepository.FindByID(ctx, tx, id)
 		if err != nil {
 			return fmt.Errorf("failed to get ticket by ID: %w", err)
 		}
@@ -158,12 +147,12 @@ func (uc *TicketUsecase) GetTicketByID(ctx context.Context, id uint) (*model.Rea
 	}); err != nil {
 		return nil, fmt.Errorf("failed to get ticket by ID: %w", err)
 	}
-	return mapper.TicketToResponse(ticket), nil
+	return ticket, nil
 }
 
-func (uc *TicketUsecase) UpdateTicket(ctx context.Context, request *model.UpdateTicketRequest) error {
+func (uc *TicketUsecase) UpdateTicket(ctx context.Context, e *domain.Ticket) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-		ticket, err := uc.TicketRepository.FindByID(ctx, tx, request.ID)
+		ticket, err := uc.TicketRepository.FindByID(ctx, tx, e.ID)
 		if err != nil {
 			return fmt.Errorf("failed to find ticket: %w", err)
 		}
@@ -171,17 +160,17 @@ func (uc *TicketUsecase) UpdateTicket(ctx context.Context, request *model.Update
 			return errs.ErrNotFound
 		}
 
-		ticket.ScheduleID = request.ScheduleID
-		ticket.ClassID = request.ClassID
-		ticket.Type = request.Type
-		ticket.Address = request.Address
-		ticket.PassengerName = request.PassengerName
-		ticket.PassengerAge = request.PassengerAge
-		ticket.PassengerGender = request.PassengerGender
-		ticket.IDType = request.IDType
-		ticket.IDNumber = request.IDNumber
-		ticket.LicensePlate = request.LicensePlate
-		ticket.IsCheckedIn = request.IsCheckedIn
+		ticket.ScheduleID = e.ScheduleID
+		ticket.ClassID = e.ClassID
+		ticket.Type = e.Type
+		ticket.Address = e.Address
+		ticket.PassengerName = e.PassengerName
+		ticket.PassengerAge = e.PassengerAge
+		ticket.PassengerGender = e.PassengerGender
+		ticket.IDType = e.IDType
+		ticket.IDNumber = e.IDNumber
+		ticket.LicensePlate = e.LicensePlate
+		ticket.IsCheckedIn = e.IsCheckedIn
 
 		if err := uc.TicketRepository.Update(ctx, tx, ticket); err != nil {
 			return fmt.Errorf("failed to update ticket: %w", err)

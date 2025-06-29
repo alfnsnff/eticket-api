@@ -8,6 +8,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type LoginRequest struct {
+	Username string `json:"username" validate:"required"`
+	Password string `json:"password" validate:"required"`
+}
+
 type RefreshToken struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey"` // Correct type for UUID
 	UserID    uint      `gorm:"column:user_id"`       // Assuming foreign key to User.ID

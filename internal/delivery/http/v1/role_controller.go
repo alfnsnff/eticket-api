@@ -6,7 +6,7 @@ import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/response"
-	"eticket-api/internal/model"
+	requests "eticket-api/internal/delivery/http/v1/request"
 	"eticket-api/internal/usecase"
 	"net/http"
 	"strconv"
@@ -45,7 +45,7 @@ func NewRoleController(
 
 func (c *RoleController) CreateRole(ctx *gin.Context) {
 
-	request := new(model.WriteRoleRequest)
+	request := new(requests.CreateRoleRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		c.Log.WithError(err).Error("failed to bind JSON request body")
@@ -60,7 +60,7 @@ func (c *RoleController) CreateRole(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.RoleUsecase.CreateRole(ctx, request); err != nil {
+	if err := c.RoleUsecase.CreateRole(ctx, requests.RoleFromCreate(request)); err != nil {
 
 		if errors.Is(err, errs.ErrConflict) {
 			c.Log.WithError(err).Error("user already exists")
@@ -86,8 +86,13 @@ func (c *RoleController) GetAllRoles(ctx *gin.Context) {
 		return
 	}
 
+	responses := make([]*requests.RoleResponse, len(datas))
+	for i, data := range datas {
+		responses[i] = requests.RoleToResponse(data)
+	}
+
 	ctx.JSON(http.StatusOK, response.NewMetaResponse(
-		datas,
+		responses,
 		"Roles retrieved successfully",
 		total,
 		params.Limit,
@@ -111,18 +116,18 @@ func (c *RoleController) GetRoleByID(ctx *gin.Context) {
 	data, err := c.RoleUsecase.GetRoleByID(ctx, uint(id))
 
 	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			c.Log.WithField("id", id).Warn("role not found")
+			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("role not found", nil))
+			return
+		}
+
 		c.Log.WithError(err).WithField("id", id).Error("failed to retrieve role")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve role", err.Error()))
 		return
 	}
 
-	if data == nil {
-		c.Log.WithField("id", id).Warn("role not found")
-		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Role not found", nil))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Role retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(requests.RoleToResponse(data), "Role retrieved successfully", nil))
 }
 
 func (c *RoleController) UpdateRole(ctx *gin.Context) {
@@ -134,7 +139,7 @@ func (c *RoleController) UpdateRole(ctx *gin.Context) {
 		return
 	}
 
-	request := new(model.UpdateRoleRequest)
+	request := new(requests.UpdateRoleRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		c.Log.WithError(err).WithField("id", id).Error("failed to bind JSON request body")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
@@ -149,7 +154,7 @@ func (c *RoleController) UpdateRole(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.RoleUsecase.UpdateRole(ctx, request); err != nil {
+	if err := c.RoleUsecase.UpdateRole(ctx, requests.RoleFromUpdate(request)); err != nil {
 		if errors.Is(err, errs.ErrNotFound) {
 			c.Log.WithField("id", id).Warn("role not found")
 			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("role not found", nil))

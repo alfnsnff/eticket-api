@@ -16,3 +16,11 @@ func ClaimItemToResponse(claimItem *domain.ClaimItem) *model.ReadClaimItemRespon
 		UpdatedAt:      claimItem.UpdatedAt,
 	}
 }
+
+func ClaimItemFromRequest(req *model.WriteClaimItemRequest) *domain.ClaimItem {
+	return &domain.ClaimItem{
+		ClaimSessionID: req.ClaimSessionID,
+		ClassID:        req.ClassID,
+		Quantity:       req.Quantity,
+	}
+}

@@ -7,6 +7,118 @@ import (
 	"time"
 )
 
+func BookingInvoiceEmail(booking *domain.Booking, payment *domain.Transaction) string {
+	// QR logic: show QR from URL if available, else from base64 string, else show unavailable
+	qrImgHTML := ""
+	if payment.QrUrl != nil {
+		qrImgHTML = fmt.Sprintf(`<img src="%s" alt="QRIS Pembayaran">`, *payment.QrUrl)
+	} else if payment.QrString != nil {
+		qrImgHTML = fmt.Sprintf(`<img src="data:image/png;base64,%s" alt="QRIS Pembayaran">`, *payment.QrString)
+	} else {
+		qrImgHTML = `<div style="color:#dc3545;">QR tidak tersedia</div>`
+	}
+
+	return fmt.Sprintf(`
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tagihan Pembayaran Tiket - Tiket Hebat</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7fa; padding: 20px; }
+        .email-container { max-width: 650px; margin: 0 auto; background: #fff; border-radius: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.07); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #007bff 0%%, #00c6ff 100%%); color: white; padding: 40px 30px; text-align: center; }
+        .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 10px; }
+        .header p { font-size: 16px; opacity: 0.95; }
+        .content { padding: 40px 30px; }
+        .greeting { font-size: 20px; color: #333; margin-bottom: 20px; font-weight: 600; }
+        .invoice-summary { background: #f1f8ff; border-radius: 15px; padding: 25px; margin: 25px 0; border-left: 5px solid #007bff; }
+        .info-label { font-size: 14px; color: #666; text-transform: uppercase; margin-bottom: 5px; font-weight: 500; }
+        .info-value { font-size: 18px; color: #333; font-weight: 700; }
+        .payment-instruction { background: #fff3cd; border: 1px solid #ffd43b; border-radius: 12px; padding: 20px; margin: 25px 0; }
+        .payment-instruction h3 { color: #856404; margin-bottom: 15px; }
+        .qr-section { text-align: center; margin: 30px 0; }
+        .qr-section img { width: 180px; height: 180px; }
+        .footer { background: #343a40; color: white; padding: 30px; text-align: center; }
+        @media (max-width: 600px) {
+            .content { padding: 20px 10px; }
+            .header { padding: 30px 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>Tagihan Pembayaran Tiket</h1>
+            <p>Segera selesaikan pembayaran Anda untuk mengamankan tiket</p>
+        </div>
+        <div class="content">
+            <div class="greeting">
+                Halo %s! 👋
+            </div>
+            <p style="margin-bottom: 25px; font-size: 16px; color: #555;">
+                Terima kasih telah melakukan pemesanan tiket kapal di <strong>Tiket Hebat</strong>.<br>
+                Berikut adalah detail tagihan dan instruksi pembayaran Anda:
+            </p>
+            <div class="invoice-summary">
+                <div class="info-label">ID Pemesanan</div>
+                <div class="info-value">%s</div>
+                <div class="info-label" style="margin-top:15px;">Status</div>
+                <div class="info-value" style="color: #007bff;">Menunggu Pembayaran</div>
+                <div class="info-label" style="margin-top:15px;">Total Tagihan</div>
+                <div class="info-value" style="color: #28a745;">Rp %s</div>
+                <div class="info-label" style="margin-top:15px;">Batas Waktu Pembayaran</div>
+                <div class="info-value" style="color: #dc3545;">%s WIB</div>
+            </div>
+            <div class="payment-instruction">
+                <h3>📋 Cara Pembayaran:</h3>
+                <ul style="color: #856404; padding-left: 20px;">
+                    <li>Gunakan QRIS di bawah ini atau transfer ke rekening yang tertera pada halaman pembayaran.</li>
+                    <li>Pastikan pembayaran dilakukan sebelum batas waktu di atas.</li>
+                    <li>Setelah pembayaran, tiket akan dikirim otomatis ke email Anda.</li>
+                </ul>
+            </div>
+            <div class="qr-section">
+                <div style="margin-bottom:10px;">Scan QRIS untuk membayar:</div>
+                %s
+                <div style="margin-top:10px; font-size:14px; color:#555;">Atau gunakan kode pembayaran: <b>%s</b></div>
+            </div>
+            <div style="margin-top: 30px; color: #555; font-size: 16px;">
+                Jika Anda mengalami kendala pembayaran, silakan hubungi customer service kami.<br>
+                <strong>Tim Tiket Hebat</strong>
+            </div>
+        </div>
+        <div class="footer">
+            <div style="max-width: 500px; margin: 0 auto;">
+                <h3 style="margin-bottom: 15px;">Tiket Hebat</h3>
+                <p style="margin-bottom: 15px; color: #adb5bd;">
+                    Platform pemesanan tiket kapal terpercaya di Indonesia
+                </p>
+                <div style="margin: 20px 0;">
+                    <a href="#" style="margin: 0 10px; color: #6c757d; text-decoration: none; font-size: 14px;">Website</a> |
+                    <a href="#" style="margin: 0 10px; color: #6c757d; text-decoration: none; font-size: 14px;">Facebook</a> |
+                    <a href="#" style="margin: 0 10px; color: #6c757d; text-decoration: none; font-size: 14px;">Instagram</a>
+                </div>
+                <div style="font-size: 12px; color: #6c757d; margin-top: 20px;">
+                    &copy; %d Tiket Hebat. Semua hak dilindungi.
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+`,
+		booking.CustomerName,
+		booking.OrderID,
+		formatPrice(float64(payment.Amount)),
+		time.Unix(payment.ExpiredTime, 0).Format("2 January 2006 15:04"),
+		qrImgHTML,
+		payment.PayCode,
+		time.Now().Year(),
+	)
+}
+
 func BookingSuccessEmail(booking *domain.Booking, tickets []*domain.Ticket) string {
 	// Format departure date
 	departureDate := booking.Schedule.DepartureDatetime.Format("Monday, 2 January 2006")

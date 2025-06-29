@@ -34,6 +34,6 @@ type ClaimSessionRepository interface {
 	FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*ClaimSession, error)
 	FindByID(ctx context.Context, conn gotann.Connection, id uint) (*ClaimSession, error)
 	FindExpired(ctx context.Context, conn gotann.Connection, limit int) ([]*ClaimSession, error)
-	FindByScheduleID(ctx context.Context, conn gotann.Connection, scheduleID uint) ([]*ClaimSession, error)
 	FindBySessionID(ctx context.Context, conn gotann.Connection, uuid string) (*ClaimSession, error)
+	FindActiveByScheduleID(ctx context.Context, conn gotann.Connection, scheduleID uint) ([]*ClaimSession, error)
 }

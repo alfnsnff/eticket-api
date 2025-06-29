@@ -6,8 +6,6 @@ import (
 	"eticket-api/internal/common/transact"
 	"eticket-api/internal/common/utils"
 	"eticket-api/internal/domain"
-	"eticket-api/internal/mapper"
-	"eticket-api/internal/model"
 	"eticket-api/pkg/gotann"
 	"fmt"
 )
@@ -29,19 +27,19 @@ func NewUserUsecase(
 	}
 }
 
-func (uc *UserUsecase) CreateUser(ctx context.Context, request *model.WriteUserRequest) error {
+func (uc *UserUsecase) CreateUser(ctx context.Context, e *domain.User) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-		hashedPassword, err := utils.HashPassword(request.Password)
+		hashedPassword, err := utils.HashPassword(e.Password)
 		if err != nil {
 			return fmt.Errorf("failed to hash password: %w", err)
 		}
 
 		user := &domain.User{
-			RoleID:   request.RoleID,
-			Username: request.Username,
-			Email:    request.Email,
+			RoleID:   e.RoleID,
+			Username: e.Username,
+			Email:    e.Email,
 			Password: hashedPassword,
-			FullName: request.FullName,
+			FullName: e.FullName,
 		}
 
 		if err := uc.UserRepository.Insert(ctx, tx, user); err != nil {
@@ -54,7 +52,7 @@ func (uc *UserUsecase) CreateUser(ctx context.Context, request *model.WriteUserR
 	})
 }
 
-func (uc *UserUsecase) ListUsers(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadUserResponse, int, error) {
+func (uc *UserUsecase) ListUsers(ctx context.Context, limit, offset int, sort, search string) ([]*domain.User, int, error) {
 	var err error
 	var total int64
 	var users []*domain.User
@@ -72,15 +70,10 @@ func (uc *UserUsecase) ListUsers(ctx context.Context, limit, offset int, sort, s
 	}); err != nil {
 		return nil, 0, fmt.Errorf("failed to list users: %w", err)
 	}
-	responses := make([]*model.ReadUserResponse, len(users))
-	for i, user := range users {
-		responses[i] = mapper.UserToResponse(user)
-	}
-
-	return responses, int(total), nil
+	return users, int(total), nil
 }
 
-func (uc *UserUsecase) GetUserByID(ctx context.Context, id uint) (*model.ReadUserResponse, error) {
+func (uc *UserUsecase) GetUserByID(ctx context.Context, id uint) (*domain.User, error) {
 
 	var err error
 	var user *domain.User
@@ -97,12 +90,12 @@ func (uc *UserUsecase) GetUserByID(ctx context.Context, id uint) (*model.ReadUse
 	}); err != nil {
 		return nil, fmt.Errorf("failed to get user by id: %w", err)
 	}
-	return mapper.UserToResponse(user), nil
+	return user, nil
 }
 
-func (uc *UserUsecase) UpdateUser(ctx context.Context, request *model.UpdateUserRequest) error {
+func (uc *UserUsecase) UpdateUser(ctx context.Context, e *domain.User) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-		user, err := uc.UserRepository.FindByID(ctx, tx, request.ID)
+		user, err := uc.UserRepository.FindByID(ctx, tx, e.ID)
 		if err != nil {
 			return fmt.Errorf("failed to find user: %w", err)
 		}
@@ -110,11 +103,11 @@ func (uc *UserUsecase) UpdateUser(ctx context.Context, request *model.UpdateUser
 			return errs.ErrNotFound
 		}
 
-		user.Username = request.Username
-		user.Email = request.Email
-		user.Password = request.Password
-		user.FullName = request.FullName
-		user.RoleID = request.RoleID
+		user.Username = e.Username
+		user.Email = e.Email
+		user.Password = e.Password
+		user.FullName = e.FullName
+		user.RoleID = e.RoleID
 
 		if err := uc.UserRepository.Update(ctx, tx, user); err != nil {
 			return fmt.Errorf("failed to update user: %w", err)

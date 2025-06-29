@@ -82,6 +82,7 @@ func (r *TicketRepository) Delete(ctx context.Context, conn gotann.Connection, t
 func (r *TicketRepository) FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*domain.Ticket, error) {
 	tickets := []*domain.Ticket{}
 	query := conn.Model(&domain.Ticket{}).Preload("Class").
+		Preload("Booking").
 		Preload("Schedule").
 		Preload("Schedule.Ship").
 		Preload("Schedule.DepartureHarbor").
@@ -102,11 +103,11 @@ func (r *TicketRepository) FindAll(ctx context.Context, conn gotann.Connection, 
 func (r *TicketRepository) FindByID(ctx context.Context, conn gotann.Connection, id uint) (*domain.Ticket, error) {
 	ticket := new(domain.Ticket)
 	result := conn.Preload("Class").
+		Preload("Booking").
 		Preload("Schedule").
 		Preload("Schedule.Ship").
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
-		Preload("Booking").
 		First(&ticket, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil

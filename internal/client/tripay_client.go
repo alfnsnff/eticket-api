@@ -2,16 +2,20 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"eticket-api/config"
 	"eticket-api/internal/common/httpclient"
+	"eticket-api/internal/domain"
 	"eticket-api/internal/model"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 )
 
 const (
@@ -23,10 +27,10 @@ type TripayClient struct {
 	Tripay     *config.Tripay
 }
 
-func NewTripayClient(httpClient *httpclient.HTTP, tripay *config.Tripay) *TripayClient {
+func NewTripayClient(httpClient *httpclient.HTTP, congig *config.Config) *TripayClient {
 	return &TripayClient{
 		HTTPClient: httpClient,
-		Tripay:     tripay,
+		Tripay:     &congig.Tripay,
 	}
 }
 func VerifyCallbackSignature(private_api_key string, raw_body []byte, signature string) bool {
@@ -47,58 +51,61 @@ func GenerateTransactionSignature(merchantCode, merchantRef string, amount int, 
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// func (c *TripayClient) CreatePayment(method string, amount int, name string, email string, phone string, orderID string, items []*domain.Ticket) (model.ReadTransactionResponse, error) {
-// 	payload := model.WriteTransactionRequest{
-// 		Method:        method,
-// 		MerchantRef:   orderID,
-// 		Amount:        amount,
-// 		CustomerName:  name,
-// 		CustomerEmail: email,
-// 		CustomerPhone: phone,
-// 		OrderItems:    TicketsToItemsTr(items),
-// 		CallbackUrl:   "https://example.com/callback",
-// 		ReturnUrl:     "https://example.com/success",
-// 		ExpiredTime:   int(time.Now().Add(30 * time.Minute).Unix()),
-// 		Signature:     GenerateTransactionSignature(c.Tripay.MerhcantCode, orderID, amount, c.Tripay.PrivateApiKey),
-// 	}
+func TicketToItem(ticket *domain.Ticket) domain.OrderItem {
+	name := "Tiket " + ticket.Type
+	if ticket.Type == "passenger" && ticket.PassengerName != "" {
+		name = fmt.Sprintf("Tiket Penumpang - %s", ticket.PassengerName)
+	}
+	if ticket.Type == "vehicle" && ticket.LicensePlate != nil {
+		name = fmt.Sprintf("Tiket Kendaraan - %s", *ticket.LicensePlate)
+	}
+	return domain.OrderItem{
+		SKU:      ticket.Class.ClassName,
+		Name:     name,
+		Price:    int(ticket.Price),
+		Quantity: 1,
+	}
+}
 
-func (c *TripayClient) CreatePayment(payload *model.WriteTransactionRequest) (model.ReadTransactionResponse, error) {
-
+func (c *TripayClient) CreatePayment(payload *domain.TransactionRequest) (*domain.Transaction, error) {
 	payload.Signature = GenerateTransactionSignature(c.Tripay.MerhcantCode, payload.MerchantRef, payload.Amount, c.Tripay.PrivateApiKey)
 	jsonData, _ := json.Marshal(payload)
 	req, err := http.NewRequest("POST", TripayBaseURL+"/transaction/create", bytes.NewBuffer(jsonData))
 	if err != nil {
-		return model.ReadTransactionResponse{}, fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+c.Tripay.ApiKey)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return model.ReadTransactionResponse{}, err
+		// Handle timeout or connection error
+		if os.IsTimeout(err) || errors.Is(err, context.DeadlineExceeded) {
+			return nil, fmt.Errorf("tripay timeout: %w", err)
+		}
+		return nil, fmt.Errorf("tripay connection error: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// Print raw response body to console
 	rawBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return model.ReadTransactionResponse{}, fmt.Errorf("failed to read response body: %w", err)
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 	fmt.Println("Raw response body:", string(rawBody))
 
 	var raw model.Result
 	if err := json.Unmarshal(rawBody, &raw); err != nil {
-		return model.ReadTransactionResponse{}, fmt.Errorf("failed to decode raw result: %w", err)
+		return nil, fmt.Errorf("failed to decode raw result: %w", err)
 	}
 
 	if !raw.Success {
-		return model.ReadTransactionResponse{}, fmt.Errorf("tripay responded with success=false")
+		return nil, fmt.Errorf("tripay responded with success=false")
 	}
 
-	var data model.ReadTransactionResponse
+	var data *domain.Transaction
 	if err := json.Unmarshal(raw.Data, &data); err != nil {
-		return model.ReadTransactionResponse{}, fmt.Errorf("failed to unmarshal data field: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal data field: %w", err)
 	}
 
 	fmt.Println("Checkout URL:", data.CheckoutUrl)
@@ -108,7 +115,7 @@ func (c *TripayClient) CreatePayment(payload *model.WriteTransactionRequest) (mo
 	return data, nil
 }
 
-func (c *TripayClient) GetPaymentChannels() ([]model.ReadPaymentChannelResponse, error) {
+func (c *TripayClient) GetPaymentChannels() ([]*domain.PaymentChannel, error) {
 
 	req, err := http.NewRequest("GET", TripayBaseURL+"/merchant/payment-channel", nil)
 	if err != nil {
@@ -117,10 +124,13 @@ func (c *TripayClient) GetPaymentChannels() ([]model.ReadPaymentChannelResponse,
 	fmt.Println("Api_key:", c.Tripay.ApiKey)
 	req.Header.Set("Authorization", "Bearer "+c.Tripay.ApiKey)
 
-	client := http.DefaultClient
-	resp, err := client.Do(req)
+	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
+		// Handle timeout or connection error
+		if os.IsTimeout(err) || errors.Is(err, context.DeadlineExceeded) {
+			return nil, fmt.Errorf("tripay timeout: %w", err)
+		}
+		return nil, fmt.Errorf("tripay connection error: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -133,7 +143,7 @@ func (c *TripayClient) GetPaymentChannels() ([]model.ReadPaymentChannelResponse,
 		return nil, fmt.Errorf("tripay responded with success=false")
 	}
 
-	var data []model.ReadPaymentChannelResponse
+	var data []*domain.PaymentChannel
 	if err := json.Unmarshal(raw.Data, &data); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal data field: %w", err)
 	}
@@ -141,8 +151,7 @@ func (c *TripayClient) GetPaymentChannels() ([]model.ReadPaymentChannelResponse,
 
 }
 
-func (c *TripayClient) GetTransactionDetail(reference string) (*model.ReadTransactionResponse, error) {
-	// Build request URL with query parameter
+func (c *TripayClient) GetTransactionDetail(reference string) (*domain.Transaction, error) {
 	req, err := http.NewRequest("GET", TripayBaseURL+"/transaction/detail", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -151,14 +160,14 @@ func (c *TripayClient) GetTransactionDetail(reference string) (*model.ReadTransa
 	q.Add("reference", reference)
 	req.URL.RawQuery = q.Encode()
 
-	// Set headers
 	req.Header.Set("Authorization", "Bearer "+c.Tripay.ApiKey)
-
-	// Send request
-	client := http.DefaultClient
-	resp, err := client.Do(req)
+	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
+		// Handle timeout or connection error
+		if os.IsTimeout(err) || errors.Is(err, context.DeadlineExceeded) {
+			return nil, fmt.Errorf("tripay timeout: %w", err)
+		}
+		return nil, fmt.Errorf("tripay connection error: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -173,12 +182,12 @@ func (c *TripayClient) GetTransactionDetail(reference string) (*model.ReadTransa
 	}
 
 	// Unmarshal `raw.Data` into expected detail type
-	var detail model.ReadTransactionResponse
+	var detail *domain.Transaction
 	if err := json.Unmarshal(raw.Data, &detail); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal transaction detail: %w", err)
 	}
 
-	return &detail, nil
+	return detail, nil
 }
 
 // func (c *TripayClient) HandleCallback(r *http.Request) error {

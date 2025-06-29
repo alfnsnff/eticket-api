@@ -1,39 +1,47 @@
+//go:build wireinject
+// +build wireinject
+
 package app
 
 import (
 	"eticket-api/config"
-	"eticket-api/internal/common/db"
-	"eticket-api/internal/common/enforcer"
-	"eticket-api/internal/common/httpclient"
-	"eticket-api/internal/common/logger"
-	"eticket-api/internal/common/mailer"
-	"eticket-api/internal/common/token"
-	"eticket-api/internal/common/transact"
-	"eticket-api/internal/common/validator"
+	"eticket-api/internal/delivery/http"
 	"eticket-api/internal/domain"
-	"fmt"
-
 	"log"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/google/wire"
+	"gorm.io/gorm"
 )
 
 type Server struct {
 	app *gin.Engine
 }
 
-func NewApp(cfg *config.Config) (*Server, error) {
-	fmt.Println(">>> NewServer CALLED")
+// Wire injector
+func New(cfg *config.Config) (*Server, error) {
+	panic(wire.Build(
+		CommonSet,
+		RepositorySet,
+		ClientSet,
+		UsecaseSet,
+		// JobSet,
+		RouterSet,
+		NewServer,
+	))
+}
+
+// NewServer menerima semua dependency yang dibutuhkan, Wire akan mengisi otomatis
+func NewServer(
+	db *gorm.DB,
+	router *http.Router,
+) (*Server, error) {
 	gin.SetMode(gin.DebugMode)
 	app := gin.Default()
 
-	db, err := db.NewPostgres(cfg)
-	if err != nil {
-		log.Fatalf("Database connection failed: %v", err)
-	}
-
+	// Migrasi database
 	if err := db.AutoMigrate(
 		&domain.Role{},
 		&domain.User{},
@@ -52,6 +60,7 @@ func NewApp(cfg *config.Config) (*Server, error) {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
+	// Middleware CORS
 	app.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
 			allowed := map[string]bool{
@@ -68,26 +77,14 @@ func NewApp(cfg *config.Config) (*Server, error) {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	bootstrap := &Bootstrap{
-		Config:     cfg,
-		App:        app,
-		DB:         db,
-		Transactor: transact.NewTransactionManager(db),
-		Client:     httpclient.NewHTTPClient(cfg),
-		Enforcer:   enforcer.NewCasbinEnforcer(cfg),
-		Token:      token.NewJWT(cfg),
-		Mailer:     mailer.NewSMTP(cfg),
-		Log:        logger.NewLogrusLogger("eticket-api"),
-		Validate:   validator.NewValidator(cfg),
-	}
+	api := app.Group("/api")
 
-	if err := NewBootstrap(bootstrap); err != nil {
-		log.Fatalf("Failed to bootstrap application: %v", err)
-	}
+	// Register langsung per grup
+	router.RegisterMetrics(api)
+	router.RegisterV1(api.Group("/v1"))
+	router.RegisterV2(api.Group("/v2"))
 
-	return &Server{
-		app: app}, nil
-
+	return &Server{app: app}, nil
 }
 
 func (server Server) App() *gin.Engine {

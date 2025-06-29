@@ -6,6 +6,7 @@ import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/response"
+	requests "eticket-api/internal/delivery/http/v1/request"
 	"eticket-api/internal/model"
 	"eticket-api/internal/usecase"
 	"net/http"
@@ -44,12 +45,24 @@ func (c *PaymentController) GetPaymentChannels(ctx *gin.Context) {
 	datas, err := c.PaymentUsecase.ListPaymentChannels(ctx)
 
 	if err != nil {
+
+		if errors.Is(err, errs.ErrExternalTimeout) || errors.Is(err, errs.ErrExternalDown) {
+			c.Log.WithError(err).Warn("external system unavailable")
+			ctx.JSON(http.StatusServiceUnavailable, response.NewErrorResponse("external system unavailable", nil))
+			return
+		}
+
 		c.Log.WithError(err).Error("failed to retrieve payment channels")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve payment channels", err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Payment channels retrieved successfully", nil))
+	responses := make([]*requests.PaymentChannel, len(datas))
+	for i, data := range datas {
+		responses[i] = requests.PaymentToResponse(data)
+	}
+
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(responses, "Payment channels retrieved successfully", nil))
 }
 
 func (c *PaymentController) GetTransactionDetail(ctx *gin.Context) {
@@ -60,6 +73,12 @@ func (c *PaymentController) GetTransactionDetail(ctx *gin.Context) {
 		if errors.Is(err, errs.ErrNotFound) {
 			c.Log.WithField("id", id).Warn("transaction not found")
 			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("transaction not found", nil))
+			return
+		}
+
+		if errors.Is(err, errs.ErrExternalTimeout) || errors.Is(err, errs.ErrExternalDown) {
+			c.Log.WithError(err).Warn("external system unavailable")
+			ctx.JSON(http.StatusServiceUnavailable, response.NewErrorResponse("external system unavailable", nil))
 			return
 		}
 
@@ -103,14 +122,14 @@ func (c *PaymentController) CreatePayment(ctx *gin.Context) {
 }
 
 func (c *PaymentController) HandleCallback(ctx *gin.Context) {
-	request := new(model.WriteCallbackRequest)
+	request := new(requests.CreareCallbackRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		c.Log.WithError(err).Error("failed to bind JSON callback request")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
 		return
 	}
 
-	err := c.PaymentUsecase.HandleCallback(ctx, request)
+	err := c.PaymentUsecase.HandleCallback(ctx, requests.CallbackFromCreate(request))
 	if err != nil {
 		if errors.Is(err, errs.ErrNotFound) {
 			c.Log.WithField("id", request.MerchantRef).Warn("payment not found")

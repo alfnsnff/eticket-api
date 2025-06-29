@@ -5,8 +5,6 @@ import (
 	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/transact"
 	"eticket-api/internal/domain"
-	"eticket-api/internal/mapper"
-	"eticket-api/internal/model"
 	"eticket-api/pkg/gotann"
 	"fmt"
 )
@@ -28,16 +26,16 @@ func NewShipUsecase(
 	}
 }
 
-func (uc *ShipUsecase) CreateShip(ctx context.Context, request *model.WriteShipRequest) error {
+func (uc *ShipUsecase) CreateShip(ctx context.Context, e *domain.Ship) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
 		ship := &domain.Ship{
-			ShipName:      request.ShipName,
-			ShipType:      request.ShipType,
-			ShipAlias:     request.ShipAlias,
-			Status:        request.Status,
-			YearOperation: request.YearOperation,
-			ImageLink:     request.ImageLink,
-			Description:   request.Description,
+			ShipName:      e.ShipName,
+			ShipType:      e.ShipType,
+			ShipAlias:     e.ShipAlias,
+			Status:        e.Status,
+			YearOperation: e.YearOperation,
+			ImageLink:     e.ImageLink,
+			Description:   e.Description,
 		}
 		if err := uc.ShipRepository.Insert(ctx, tx, ship); err != nil {
 			if errs.IsUniqueConstraintError(err) {
@@ -49,7 +47,7 @@ func (uc *ShipUsecase) CreateShip(ctx context.Context, request *model.WriteShipR
 	})
 }
 
-func (uc *ShipUsecase) ListShips(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadShipResponse, int, error) {
+func (uc *ShipUsecase) ListShips(ctx context.Context, limit, offset int, sort, search string) ([]*domain.Ship, int, error) {
 	var err error
 	var total int64
 	var ships []*domain.Ship
@@ -66,14 +64,10 @@ func (uc *ShipUsecase) ListShips(ctx context.Context, limit, offset int, sort, s
 	}); err != nil {
 		return nil, 0, fmt.Errorf("failed to list ships: %w", err)
 	}
-	responses := make([]*model.ReadShipResponse, len(ships))
-	for i, ship := range ships {
-		responses[i] = mapper.ShipToResponse(ship)
-	}
-	return responses, int(total), nil
+	return ships, int(total), nil
 }
 
-func (uc *ShipUsecase) GetShipByID(ctx context.Context, id uint) (*model.ReadShipResponse, error) {
+func (uc *ShipUsecase) GetShipByID(ctx context.Context, id uint) (*domain.Ship, error) {
 	var err error
 	var ship *domain.Ship
 	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
@@ -88,12 +82,12 @@ func (uc *ShipUsecase) GetShipByID(ctx context.Context, id uint) (*model.ReadShi
 	}); err != nil {
 		return nil, fmt.Errorf("failed to get ship by id: %w", err)
 	}
-	return mapper.ShipToResponse(ship), nil
+	return ship, nil
 }
 
-func (uc *ShipUsecase) UpdateShip(ctx context.Context, request *model.UpdateShipRequest) error {
+func (uc *ShipUsecase) UpdateShip(ctx context.Context, e *domain.Ship) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-		ship, err := uc.ShipRepository.FindByID(ctx, tx, request.ID)
+		ship, err := uc.ShipRepository.FindByID(ctx, tx, e.ID)
 		if err != nil {
 			return fmt.Errorf("failed to find ship: %w", err)
 		}
@@ -101,13 +95,13 @@ func (uc *ShipUsecase) UpdateShip(ctx context.Context, request *model.UpdateShip
 			return errs.ErrNotFound
 		}
 
-		ship.ShipName = request.ShipName
-		ship.ShipType = request.ShipType
-		ship.ShipAlias = request.ShipAlias
-		ship.Status = request.Status
-		ship.YearOperation = request.YearOperation
-		ship.ImageLink = request.ImageLink
-		ship.Description = request.Description
+		ship.ShipName = e.ShipName
+		ship.ShipType = e.ShipType
+		ship.ShipAlias = e.ShipAlias
+		ship.Status = e.Status
+		ship.YearOperation = e.YearOperation
+		ship.ImageLink = e.ImageLink
+		ship.Description = e.Description
 
 		if err := uc.ShipRepository.Update(ctx, tx, ship); err != nil {
 			return fmt.Errorf("failed to update ship: %w", err)

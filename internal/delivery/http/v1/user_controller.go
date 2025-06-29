@@ -6,7 +6,7 @@ import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/response"
-	"eticket-api/internal/model"
+	requests "eticket-api/internal/delivery/http/v1/request"
 	"eticket-api/internal/usecase"
 	"net/http"
 	"strconv"
@@ -45,7 +45,7 @@ func NewUserController(
 
 func (c *UserController) CreateUser(ctx *gin.Context) {
 
-	request := new(model.WriteUserRequest)
+	request := new(requests.CreateUserRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		c.Log.WithError(err).Error("failed to bind JSON request body")
@@ -60,7 +60,7 @@ func (c *UserController) CreateUser(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.UserUsecase.CreateUser(ctx, request); err != nil {
+	if err := c.UserUsecase.CreateUser(ctx, requests.UserFromCreate(request)); err != nil {
 		if errors.Is(err, errs.ErrConflict) {
 			c.Log.WithError(err).Error("user already exists")
 			ctx.JSON(http.StatusConflict, response.NewErrorResponse("user already exists", nil))
@@ -84,8 +84,13 @@ func (c *UserController) GetAllUsers(ctx *gin.Context) {
 		return
 	}
 
+	responses := make([]*requests.UserResponse, len(datas))
+	for i, data := range datas {
+		responses[i] = requests.UserToResponse(data)
+	}
+
 	ctx.JSON(http.StatusOK, response.NewMetaResponse(
-		datas,
+		responses,
 		"Users retrieved successfully",
 		total,
 		params.Limit,
@@ -119,7 +124,7 @@ func (c *UserController) GetUserByID(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "User retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(requests.UserToResponse(data), "User retrieved successfully", nil))
 }
 
 func (c *UserController) UpdateUser(ctx *gin.Context) {
@@ -131,7 +136,7 @@ func (c *UserController) UpdateUser(ctx *gin.Context) {
 		return
 	}
 
-	request := new(model.UpdateUserRequest)
+	request := new(requests.UpdateUserRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		c.Log.WithError(err).Error("failed to bind JSON request body")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
@@ -146,7 +151,13 @@ func (c *UserController) UpdateUser(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.UserUsecase.UpdateUser(ctx, request); err != nil {
+	if err := c.UserUsecase.UpdateUser(ctx, requests.UserFromUpdate(request)); err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			c.Log.WithField("id", id).Warn("user not found")
+			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("user not found", nil))
+			return
+		}
+
 		if errors.Is(err, errs.ErrConflict) {
 			c.Log.WithError(err).Error("user already exists")
 			ctx.JSON(http.StatusConflict, response.NewErrorResponse("user already exists", nil))

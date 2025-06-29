@@ -27,12 +27,12 @@ func NewClaimItemUsecase(
 	}
 }
 
-func (uc *ClaimItemUsecase) CreateClaimItem(ctx context.Context, request *model.WriteClaimItemRequest) error {
+func (uc *ClaimItemUsecase) CreateClaimItem(ctx context.Context, e *domain.ClaimItem) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
 		claimItem := &domain.ClaimItem{
-			ClaimSessionID: request.ClaimSessionID,
-			ClassID:        request.ClassID,
-			Quantity:       request.Quantity,
+			ClaimSessionID: e.ClaimSessionID,
+			ClassID:        e.ClassID,
+			Quantity:       e.Quantity,
 		}
 		if err := uc.ClaimItemRepository.Insert(ctx, tx, claimItem); err != nil {
 			if errs.IsUniqueConstraintError(err) {
@@ -90,9 +90,9 @@ func (uc *ClaimItemUsecase) GetClaimItemByID(ctx context.Context, id uint) (*mod
 	return mapper.ClaimItemToResponse(claimItem), nil
 }
 
-func (uc *ClaimItemUsecase) UpdateClaimItem(ctx context.Context, request *model.UpdateClaimItemRequest) error {
+func (uc *ClaimItemUsecase) UpdateClaimItem(ctx context.Context, e *domain.ClaimItem) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-		claimItem, err := uc.ClaimItemRepository.FindByID(ctx, tx, request.ID)
+		claimItem, err := uc.ClaimItemRepository.FindByID(ctx, tx, e.ID)
 		if err != nil {
 			return fmt.Errorf("failed to find claim item: %w", err)
 		}
@@ -100,9 +100,9 @@ func (uc *ClaimItemUsecase) UpdateClaimItem(ctx context.Context, request *model.
 			return errs.ErrNotFound
 		}
 
-		claimItem.ClaimSessionID = request.ClaimSessionID
-		claimItem.ClassID = request.ClassID
-		claimItem.Quantity = request.Quantity
+		claimItem.ClaimSessionID = e.ClaimSessionID
+		claimItem.ClassID = e.ClassID
+		claimItem.Quantity = e.Quantity
 
 		if err := uc.ClaimItemRepository.Update(ctx, tx, claimItem); err != nil {
 			return fmt.Errorf("failed to update claim item: %w", err)

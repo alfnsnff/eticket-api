@@ -1,6 +1,7 @@
-package request
+package requests
 
 import (
+	"eticket-api/internal/domain"
 	"time"
 )
 
@@ -27,4 +28,36 @@ type HarborResponse struct {
 	YearOperation string    `json:"year_operation"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+// Map Harbor domain to ReadHarborResponse model
+func HarborToResponse(harbor *domain.Harbor) *HarborResponse {
+	return &HarborResponse{
+		ID:            harbor.ID,
+		HarborName:    harbor.HarborName,
+		Status:        harbor.Status,
+		HarborAlias:   harbor.HarborAlias,
+		YearOperation: harbor.YearOperation,
+		CreatedAt:     harbor.CreatedAt,
+		UpdatedAt:     harbor.UpdatedAt,
+	}
+}
+
+func HarborFromCreate(request *CreateHarborRequest) *domain.Harbor {
+	return &domain.Harbor{
+		HarborName:    request.HarborName,
+		HarborAlias:   request.HarborAlias,
+		Status:        request.Status,
+		YearOperation: request.YearOperation,
+	}
+}
+
+func HarborFromUpdate(request *UpdateHarborRequest) *domain.Harbor {
+	return &domain.Harbor{
+		ID:            request.ID,
+		HarborName:    request.HarborName,
+		HarborAlias:   request.HarborAlias,
+		Status:        request.Status,
+		YearOperation: request.YearOperation,
+	}
 }

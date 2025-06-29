@@ -6,7 +6,7 @@ import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/response"
-	"eticket-api/internal/model"
+	requests "eticket-api/internal/delivery/http/v1/request"
 	"eticket-api/internal/usecase"
 	"net/http"
 	"strconv"
@@ -46,7 +46,7 @@ func NewBookingController(
 }
 
 func (c *BookingController) CreateBooking(ctx *gin.Context) {
-	request := new(model.WriteBookingRequest)
+	request := new(requests.CreateBookingRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		c.Log.WithError(err).Error("failed to bind JSON request body")
@@ -61,7 +61,7 @@ func (c *BookingController) CreateBooking(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.BookingUsecase.CreateBooking(ctx, request); err != nil {
+	if err := c.BookingUsecase.CreateBooking(ctx, requests.BookingFromCreate(request)); err != nil {
 		if errors.Is(err, errs.ErrConflict) {
 			c.Log.WithError(err).Error("user already exists")
 			ctx.JSON(http.StatusConflict, response.NewErrorResponse("user already exists", nil))
@@ -86,8 +86,13 @@ func (c *BookingController) GetAllBookings(ctx *gin.Context) {
 		return
 	}
 
+	responses := make([]*requests.BookingResponse, len(datas))
+	for i, data := range datas {
+		responses[i] = requests.BookingToResponse(data)
+	}
+
 	ctx.JSON(http.StatusOK, response.NewMetaResponse(
-		datas,
+		responses,
 		"Bookings retrieved successfully",
 		total,
 		params.Limit,
@@ -109,20 +114,18 @@ func (c *BookingController) GetBookingByID(ctx *gin.Context) {
 	}
 
 	data, err := c.BookingUsecase.GetBookingByID(ctx, uint(id))
-
 	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			c.Log.WithField("id", id).Warn("booking not found")
+			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("booking not found", nil))
+			return
+		}
 		c.Log.WithError(err).WithField("id", id).Error("failed to retrieve booking")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve booking", err.Error()))
 		return
 	}
 
-	if data == nil {
-		c.Log.WithField("id", id).Warn("booking not found")
-		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Booking not found", nil))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Booking retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(requests.BookingToResponse(data), "Booking retrieved successfully", nil))
 }
 
 // GetBookingByOrderID retrieves a booking by its Order ID
@@ -149,7 +152,7 @@ func (c *BookingController) GetBookingByOrderID(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Booking retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(requests.BookingToResponse(data), "Booking retrieved successfully", nil))
 }
 
 func (c *BookingController) UpdateBooking(ctx *gin.Context) {
@@ -160,7 +163,7 @@ func (c *BookingController) UpdateBooking(ctx *gin.Context) {
 		return
 	}
 
-	request := new(model.UpdateBookingRequest)
+	request := new(requests.UpdateBookingRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		c.Log.WithError(err).Error("failed to bind JSON request body")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
@@ -175,7 +178,7 @@ func (c *BookingController) UpdateBooking(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.BookingUsecase.UpdateBooking(ctx, request); err != nil {
+	if err := c.BookingUsecase.UpdateBooking(ctx, requests.BookingFromUpdate(request)); err != nil {
 		if errors.Is(err, errs.ErrNotFound) {
 			c.Log.WithField("id", id).Warn("booking not found")
 			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("booking not found", nil))

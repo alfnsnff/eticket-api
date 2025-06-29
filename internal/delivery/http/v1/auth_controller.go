@@ -7,7 +7,7 @@ import (
 	"eticket-api/internal/common/token"
 	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/response"
-	"eticket-api/internal/model"
+	requests "eticket-api/internal/delivery/http/v1/request"
 	"eticket-api/internal/usecase"
 	"net/http"
 
@@ -39,13 +39,13 @@ func NewAuthController(
 	router.GET("/auth/me", c.Me)
 	router.POST("/auth/login", c.Login)
 	router.POST("/auth/refresh", c.RefreshToken)
-	router.POST("/auth/forget-password", c.ForgetPassword)
+	// router.POST("/auth/forget-password", c.ForgetPassword)
 
 	protected.POST("/auth/logout", c.Logout)
 }
 
 func (c *AuthController) Login(ctx *gin.Context) {
-	request := new(model.WriteLoginRequest)
+	request := new(requests.LoginRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		c.Log.WithError(err).Error("failed to bind JSON login request")
@@ -60,7 +60,7 @@ func (c *AuthController) Login(ctx *gin.Context) {
 		return
 	}
 
-	datas, accessToken, refreshToken, err := c.AuthUsecase.Login(ctx, request)
+	datas, accessToken, refreshToken, err := c.AuthUsecase.Login(ctx, requests.LoginFromRequest(request))
 	if err != nil {
 		if errors.Is(err, errs.ErrNotFound) {
 			c.Log.WithError(err).Warn("Invalid credentials")
@@ -127,30 +127,30 @@ func (c *AuthController) RefreshToken(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Token refreshed successfully", nil))
 }
 
-func (c *AuthController) ForgetPassword(ctx *gin.Context) {
-	c.Log.Info("Processing forget password request")
-	request := new(model.WriteForgetPasswordRequest)
+// func (c *AuthController) ForgetPassword(ctx *gin.Context) {
+// 	c.Log.Info("Processing forget password request")
+// 	request := new(model.WriteForgetPasswordRequest)
 
-	if err := ctx.ShouldBindJSON(request); err != nil {
-		c.Log.WithError(err).Error("failed to bind JSON forget password request")
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
-		return
-	}
+// 	if err := ctx.ShouldBindJSON(request); err != nil {
+// 		c.Log.WithError(err).Error("failed to bind JSON forget password request")
+// 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+// 		return
+// 	}
 
-	if err := c.Validate.Struct(request); err != nil {
-		c.Log.WithError(err).Error("failed to validate forget password request body")
-		errors := validator.ParseErrors(err)
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
-		return
-	}
+// 	if err := c.Validate.Struct(request); err != nil {
+// 		c.Log.WithError(err).Error("failed to validate forget password request body")
+// 		errors := validator.ParseErrors(err)
+// 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
+// 		return
+// 	}
 
-	if err := c.AuthUsecase.RequestPasswordReset(ctx, request.Email); err != nil {
-		c.Log.WithError(err).WithField("email", request.Email).Error("failed to process password reset request")
-		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Reset password failed", err.Error()))
-		return
-	}
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "We will send reset password email if it matched to our system", nil))
-}
+// 	if err := c.AuthUsecase.RequestPasswordReset(ctx, request.Email); err != nil {
+// 		c.Log.WithError(err).WithField("email", request.Email).Error("failed to process password reset request")
+// 		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Reset password failed", err.Error()))
+// 		return
+// 	}
+// 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "We will send reset password email if it matched to our system", nil))
+// }
 
 func (c *AuthController) Me(ctx *gin.Context) {
 	c.Log.Info("Retrieving user profile information")

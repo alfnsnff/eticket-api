@@ -5,8 +5,6 @@ import (
 	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/transact"
 	"eticket-api/internal/domain"
-	"eticket-api/internal/mapper"
-	"eticket-api/internal/model"
 	"eticket-api/pkg/gotann"
 	"fmt"
 )
@@ -26,11 +24,11 @@ func NewRoleUsecase(
 	}
 }
 
-func (uc *RoleUsecase) CreateRole(ctx context.Context, request *model.WriteRoleRequest) error {
+func (uc *RoleUsecase) CreateRole(ctx context.Context, e *domain.Role) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
 		role := &domain.Role{
-			RoleName:    request.RoleName,
-			Description: request.Description,
+			RoleName:    e.RoleName,
+			Description: e.Description,
 		}
 
 		if err := uc.RoleRepository.Insert(ctx, tx, role); err != nil {
@@ -43,7 +41,7 @@ func (uc *RoleUsecase) CreateRole(ctx context.Context, request *model.WriteRoleR
 	})
 }
 
-func (uc *RoleUsecase) ListRoles(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadRoleResponse, int, error) {
+func (uc *RoleUsecase) ListRoles(ctx context.Context, limit, offset int, sort, search string) ([]*domain.Role, int, error) {
 	var err error
 	var total int64
 	var roles []*domain.Role
@@ -62,15 +60,10 @@ func (uc *RoleUsecase) ListRoles(ctx context.Context, limit, offset int, sort, s
 		return nil, 0, fmt.Errorf("failed to list roles: %w", err)
 	}
 
-	responses := make([]*model.ReadRoleResponse, len(roles))
-	for i, role := range roles {
-		responses[i] = mapper.RoleToResponse(role)
-	}
-
-	return responses, int(total), nil
+	return roles, int(total), nil
 }
 
-func (uc *RoleUsecase) GetRoleByID(ctx context.Context, id uint) (*model.ReadRoleResponse, error) {
+func (uc *RoleUsecase) GetRoleByID(ctx context.Context, id uint) (*domain.Role, error) {
 	var err error
 	var role *domain.Role
 	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
@@ -85,12 +78,12 @@ func (uc *RoleUsecase) GetRoleByID(ctx context.Context, id uint) (*model.ReadRol
 	}); err != nil {
 		return nil, fmt.Errorf("failed to get role by id: %w", err)
 	}
-	return mapper.RoleToResponse(role), nil
+	return role, nil
 }
 
-func (uc *RoleUsecase) UpdateRole(ctx context.Context, request *model.UpdateRoleRequest) error {
+func (uc *RoleUsecase) UpdateRole(ctx context.Context, e *domain.Role) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-		role, err := uc.RoleRepository.FindByID(ctx, tx, request.ID)
+		role, err := uc.RoleRepository.FindByID(ctx, tx, e.ID)
 		if err != nil {
 			return fmt.Errorf("failed to find role: %w", err)
 		}
@@ -98,8 +91,8 @@ func (uc *RoleUsecase) UpdateRole(ctx context.Context, request *model.UpdateRole
 			return errs.ErrNotFound
 		}
 
-		role.RoleName = request.RoleName
-		role.Description = request.Description
+		role.RoleName = e.RoleName
+		role.Description = e.Description
 
 		if err := uc.RoleRepository.Update(ctx, tx, role); err != nil {
 			return fmt.Errorf("failed to update role: %w", err)

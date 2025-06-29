@@ -2,15 +2,16 @@ package usecase
 
 import (
 	"context"
+	"eticket-api/internal/client"
 	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/mailer"
 	"eticket-api/internal/common/templates"
 	"eticket-api/internal/common/transact"
 	"eticket-api/internal/domain"
-	"eticket-api/internal/mapper"
 	"eticket-api/internal/model"
 	"eticket-api/pkg/gotann"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -41,25 +42,22 @@ func NewPaymentUsecase(
 	}
 }
 
-func (uc *PaymentUsecase) ListPaymentChannels(ctx context.Context) ([]*model.ReadPaymentChannelResponse, error) {
+func (uc *PaymentUsecase) ListPaymentChannels(ctx context.Context) ([]*domain.PaymentChannel, error) {
 	channels, err := uc.TripayClient.GetPaymentChannels()
 	if err != nil {
 		return nil, err
 	}
-	result := make([]*model.ReadPaymentChannelResponse, len(channels))
-	for i := range channels {
-		result[i] = &channels[i]
-	}
-	return result, nil
+	return channels, nil
 }
 
-func (uc *PaymentUsecase) GetTransactionDetail(ctx context.Context, reference string) (*model.ReadTransactionResponse, error) {
+func (uc *PaymentUsecase) GetTransactionDetail(ctx context.Context, reference string) (*domain.Transaction, error) {
 	return uc.TripayClient.GetTransactionDetail(reference)
 }
 
-func (uc *PaymentUsecase) CreatePayment(ctx context.Context, request *model.WritePaymentRequest) (*model.ReadTransactionResponse, error) {
-	var payment model.ReadTransactionResponse
-	if err := uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+func (uc *PaymentUsecase) CreatePayment(ctx context.Context, request *model.WritePaymentRequest) (*domain.Transaction, error) {
+	var err error
+	var payment *domain.Transaction
+	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
 		booking, err := uc.BookingRepository.FindByOrderID(ctx, tx, request.OrderID)
 		if err != nil {
 			return fmt.Errorf("failed to get booking: %w", err)
@@ -81,12 +79,12 @@ func (uc *PaymentUsecase) CreatePayment(ctx context.Context, request *model.Writ
 			amounts += ticket.Price
 		}
 
-		orderItems := make([]model.OrderItem, len(tickets))
+		orderItems := make([]domain.OrderItem, len(tickets))
 		for i, ticket := range tickets {
-			orderItems[i] = mapper.TicketToItem(ticket)
+			orderItems[i] = client.TicketToItem(ticket)
 		}
 
-		payload := &model.WriteTransactionRequest{
+		payload := &domain.TransactionRequest{
 			Method:        request.PaymentMethod,
 			Amount:        int(amounts), // Convert to integer cents
 			CustomerName:  booking.CustomerName,
@@ -99,9 +97,15 @@ func (uc *PaymentUsecase) CreatePayment(ctx context.Context, request *model.Writ
 			ExpiredTime:   int(time.Now().Add(30 * time.Minute).Unix()),
 		}
 
-		// Create payment
 		payment, err = uc.TripayClient.CreatePayment(payload)
 		if err != nil {
+			// Tangani error Tripay timeout/down
+			if strings.Contains(err.Error(), "timeout") {
+				return errs.ErrExternalTimeout
+			}
+			if strings.Contains(err.Error(), "connection error") {
+				return errs.ErrExternalDown
+			}
 			return fmt.Errorf("create Tripay payment failed: %w", err)
 		}
 
@@ -118,10 +122,10 @@ func (uc *PaymentUsecase) CreatePayment(ctx context.Context, request *model.Writ
 		return nil, fmt.Errorf("failed to start transaction: %w", err)
 	}
 
-	return &payment, nil
+	return payment, nil
 }
 
-func (uc *PaymentUsecase) HandleCallback(ctx context.Context, request *model.WriteCallbackRequest) error {
+func (uc *PaymentUsecase) HandleCallback(ctx context.Context, request *domain.Callback) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
 		booking, err := uc.BookingRepository.FindByOrderID(ctx, tx, request.MerchantRef)
 		if err != nil {
@@ -159,7 +163,6 @@ func (uc *PaymentUsecase) HandleCallback(ctx context.Context, request *model.Wri
 	})
 }
 
-// Handle successful payment
 func (uc *PaymentUsecase) HandleSuccessfulPayment(ctx context.Context, tx gotann.Connection, booking *domain.Booking, tickets []*domain.Ticket) error {
 	// Send confirmation email
 	subject := "Your Booking is Confirmed"
@@ -173,7 +176,6 @@ func (uc *PaymentUsecase) HandleSuccessfulPayment(ctx context.Context, tx gotann
 
 }
 
-// Handle unsuccessful payment
 func (uc *PaymentUsecase) HandleUnsuccessfulPayment(ctx context.Context, tx gotann.Connection, booking *domain.Booking, tickets []*domain.Ticket, status string) error {
 	// Restore quota for each ticket's class
 	restored := make(map[uint]bool)

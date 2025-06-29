@@ -1,6 +1,7 @@
-package request
+package requests
 
 import (
+	"eticket-api/internal/domain"
 	"time"
 )
 
@@ -25,7 +26,7 @@ type UpdateShipRequest struct {
 	Description   string `json:"description" validate:"required"`
 }
 
-type ReadShipResponse struct {
+type ShipResponse struct {
 	ID            uint      `json:"id"`
 	ShipName      string    `json:"ship_name"`
 	Status        string    `json:"status"`
@@ -36,4 +37,45 @@ type ReadShipResponse struct {
 	Description   string    `json:"description"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+// Map Ship domain to ReadShipResponse
+func ShipToResponse(ship *domain.Ship) *ShipResponse {
+	return &ShipResponse{
+		ID:            ship.ID,
+		ShipName:      ship.ShipName,
+		Status:        ship.Status,
+		ShipType:      ship.ShipType,
+		ShipAlias:     ship.ShipAlias,
+		YearOperation: ship.YearOperation,
+		ImageLink:     ship.ImageLink,
+		Description:   ship.Description,
+		CreatedAt:     ship.CreatedAt,
+		UpdatedAt:     ship.UpdatedAt,
+	}
+}
+
+func ShipFromCreate(request *CreateShipRequest) *domain.Ship {
+	return &domain.Ship{
+		ShipName:      request.ShipName,
+		ShipAlias:     request.ShipAlias,
+		ShipType:      request.ShipType,
+		Status:        request.Status,
+		YearOperation: request.YearOperation,
+		ImageLink:     request.ImageLink,
+		Description:   request.Description,
+	}
+}
+
+func ShipFromUpdate(request *UpdateShipRequest) *domain.Ship {
+	return &domain.Ship{
+		ID:            request.ID,
+		ShipName:      request.ShipName,
+		ShipAlias:     request.ShipAlias,
+		ShipType:      request.ShipType,
+		Status:        request.Status,
+		YearOperation: request.YearOperation,
+		ImageLink:     request.ImageLink,
+		Description:   request.Description,
+	}
 }

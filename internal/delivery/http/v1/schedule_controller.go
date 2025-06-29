@@ -6,7 +6,7 @@ import (
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http/response"
-	"eticket-api/internal/model"
+	requests "eticket-api/internal/delivery/http/v1/request"
 	"eticket-api/internal/usecase"
 	"net/http"
 	"strconv"
@@ -45,7 +45,7 @@ func NewScheduleController(
 
 func (c *ScheduleController) CreateSchedule(ctx *gin.Context) {
 
-	request := new(model.WriteScheduleRequest)
+	request := new(requests.CreateScheduleRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		c.Log.WithError(err).Error("failed to bind JSON request body")
@@ -60,7 +60,7 @@ func (c *ScheduleController) CreateSchedule(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.ScheduleUsecase.CreateSchedule(ctx, request); err != nil {
+	if err := c.ScheduleUsecase.CreateSchedule(ctx, requests.ScheduleFromCreate(request)); err != nil {
 		if errors.Is(err, errs.ErrConflict) {
 			c.Log.WithError(err).Error("user already exists")
 			ctx.JSON(http.StatusConflict, response.NewErrorResponse("user already exists", nil))
@@ -86,8 +86,13 @@ func (c *ScheduleController) GetAllSchedules(ctx *gin.Context) {
 		return
 	}
 
+	responses := make([]*requests.ScheduleResponse, len(datas))
+	for i, data := range datas {
+		responses[i] = requests.ScheduleToResponse(data)
+	}
+
 	ctx.JSON(http.StatusOK, response.NewMetaResponse(
-		datas,
+		responses,
 		"Schedules retrieved successfully",
 		total,
 		params.Limit,
@@ -108,7 +113,12 @@ func (c *ScheduleController) GetAllScheduled(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Schedules retrieved successfully", nil))
+	responses := make([]*requests.ScheduleResponse, len(datas))
+	for i, data := range datas {
+		responses[i] = requests.ScheduleToResponse(data)
+	}
+
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(responses, "Schedules retrieved successfully", nil))
 }
 
 func (c *ScheduleController) GetScheduleByID(ctx *gin.Context) {
@@ -123,18 +133,18 @@ func (c *ScheduleController) GetScheduleByID(ctx *gin.Context) {
 	data, err := c.ScheduleUsecase.GetScheduleByID(ctx, uint(id))
 
 	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			c.Log.WithField("id", id).Warn("schedule not found")
+			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("schedule not found", nil))
+			return
+		}
+
 		c.Log.WithError(err).WithField("id", id).Error("failed to retrieve schedule")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to retrieve schedule", err.Error()))
 		return
 	}
 
-	if data == nil {
-		c.Log.WithField("id", id).Warn("schedule not found")
-		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Schedule not found", nil))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Schedule retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(requests.ScheduleToResponse(data), "Schedule retrieved successfully", nil))
 }
 
 func (c *ScheduleController) UpdateSchedule(ctx *gin.Context) {
@@ -146,7 +156,7 @@ func (c *ScheduleController) UpdateSchedule(ctx *gin.Context) {
 		return
 	}
 
-	request := new(model.UpdateScheduleRequest)
+	request := new(requests.UpdateScheduleRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		c.Log.WithError(err).WithField("id", id).Error("failed to bind JSON request body")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
@@ -161,7 +171,7 @@ func (c *ScheduleController) UpdateSchedule(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.ScheduleUsecase.UpdateSchedule(ctx, request); err != nil {
+	if err := c.ScheduleUsecase.UpdateSchedule(ctx, requests.ScheduleFromUpdate(request)); err != nil {
 		if errors.Is(err, errs.ErrNotFound) {
 			c.Log.WithField("id", id).Warn("schedule not found")
 			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("schedule not found", nil))

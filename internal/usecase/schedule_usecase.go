@@ -5,47 +5,46 @@ import (
 	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/transact"
 	"eticket-api/internal/domain"
-	"eticket-api/internal/mapper"
-	"eticket-api/internal/model"
 	"eticket-api/pkg/gotann"
 	"fmt"
 )
 
 type ScheduleUsecase struct {
-	Transactor         *transact.Transactor
-	ClassRepository    domain.ClassRepository
-	ShipRepository     domain.ShipRepository
-	ScheduleRepository domain.ScheduleRepository
-	TicketRepository   domain.TicketRepository
+	Transactor             *transact.Transactor
+	ClaimSessionRepository domain.ClaimSessionRepository
+	ClassRepository        domain.ClassRepository
+	ShipRepository         domain.ShipRepository
+	ScheduleRepository     domain.ScheduleRepository
+	TicketRepository       domain.TicketRepository
 }
 
 func NewScheduleUsecase(
-
 	transactor *transact.Transactor,
+	claim_session_repository domain.ClaimSessionRepository,
 	class_repository domain.ClassRepository,
 	ship_repository domain.ShipRepository,
 	schedule_repository domain.ScheduleRepository,
 	ticket_repository domain.TicketRepository,
 ) *ScheduleUsecase {
 	return &ScheduleUsecase{
-
-		Transactor:         transactor,
-		ClassRepository:    class_repository,
-		ShipRepository:     ship_repository,
-		ScheduleRepository: schedule_repository,
-		TicketRepository:   ticket_repository,
+		Transactor:             transactor,
+		ClaimSessionRepository: claim_session_repository,
+		ClassRepository:        class_repository,
+		ShipRepository:         ship_repository,
+		ScheduleRepository:     schedule_repository,
+		TicketRepository:       ticket_repository,
 	}
 }
 
-func (uc *ScheduleUsecase) CreateSchedule(ctx context.Context, request *model.WriteScheduleRequest) error {
+func (uc *ScheduleUsecase) CreateSchedule(ctx context.Context, e *domain.Schedule) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
 		schedule := &domain.Schedule{
-			ShipID:            request.ShipID,
-			DepartureHarborID: request.DepartureHarborID,
-			ArrivalHarborID:   request.ArrivalHarborID,
-			DepartureDatetime: request.DepartureDatetime,
-			ArrivalDatetime:   request.ArrivalDatetime,
-			Status:            request.Status,
+			ShipID:            e.ShipID,
+			DepartureHarborID: e.DepartureHarborID,
+			ArrivalHarborID:   e.ArrivalHarborID,
+			DepartureDatetime: e.DepartureDatetime,
+			ArrivalDatetime:   e.ArrivalDatetime,
+			Status:            e.Status,
 		}
 		if err := uc.ScheduleRepository.Insert(ctx, tx, schedule); err != nil {
 			if errs.IsUniqueConstraintError(err) {
@@ -57,7 +56,7 @@ func (uc *ScheduleUsecase) CreateSchedule(ctx context.Context, request *model.Wr
 	})
 }
 
-func (uc *ScheduleUsecase) ListSchedules(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadScheduleResponse, int, error) {
+func (uc *ScheduleUsecase) ListSchedules(ctx context.Context, limit, offset int, sort, search string) ([]*domain.Schedule, int, error) {
 	var err error
 	var total int64
 	schedules := []*domain.Schedule{}
@@ -75,14 +74,11 @@ func (uc *ScheduleUsecase) ListSchedules(ctx context.Context, limit, offset int,
 	}); err != nil {
 		return nil, 0, fmt.Errorf("failed to list schedules: %w", err)
 	}
-	responses := make([]*model.ReadScheduleResponse, len(schedules))
-	for i, schedule := range schedules {
-		responses[i] = mapper.ScheduleToResponse(schedule)
-	}
-	return responses, int(total), nil
+
+	return schedules, int(total), nil
 }
 
-func (uc *ScheduleUsecase) ListActiveSchedules(ctx context.Context) ([]*model.ReadScheduleResponse, error) {
+func (uc *ScheduleUsecase) ListActiveSchedules(ctx context.Context) ([]*domain.Schedule, error) {
 	var err error
 	var schedules []*domain.Schedule
 	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
@@ -94,17 +90,15 @@ func (uc *ScheduleUsecase) ListActiveSchedules(ctx context.Context) ([]*model.Re
 	}); err != nil {
 		return nil, fmt.Errorf("failed to list active schedules: %w", err)
 	}
-	responses := make([]*model.ReadScheduleResponse, len(schedules))
-	for i, schedule := range schedules {
-		responses[i] = mapper.ScheduleToResponse(schedule)
-	}
-	return responses, nil
+	return schedules, nil
 }
 
-func (uc *ScheduleUsecase) GetScheduleByID(ctx context.Context, id uint) (*model.ReadScheduleResponse, error) {
-	var err error
+func (uc *ScheduleUsecase) GetScheduleByID(ctx context.Context, id uint) (*domain.Schedule, error) {
 	var schedule *domain.Schedule
+	var err error
+
 	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		// 1. Ambil schedule beserta preloaded quotas
 		schedule, err = uc.ScheduleRepository.FindByID(ctx, tx, id)
 		if err != nil {
 			return fmt.Errorf("failed to get schedule: %w", err)
@@ -112,16 +106,38 @@ func (uc *ScheduleUsecase) GetScheduleByID(ctx context.Context, id uint) (*model
 		if schedule == nil {
 			return errs.ErrNotFound
 		}
+
+		// 2. Ambil semua claim session aktif (sudah preload claim items)
+		claimSessions, err := uc.ClaimSessionRepository.FindActiveByScheduleID(ctx, tx, schedule.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get claim sessions: %w", err)
+		}
+
+		// 3. Hitung total claimed per class
+		claimedByClass := make(map[uint]int)
+		for _, session := range claimSessions {
+			for _, item := range session.ClaimItems {
+				claimedByClass[item.ClassID] += item.Quantity
+			}
+		}
+
+		// 4. Hitung available quota untuk setiap class
+		for _, quota := range schedule.Quotas {
+			claimed := claimedByClass[quota.ClassID]
+			quota.Quota = max(quota.Quota-claimed, 0)
+			fmt.Printf("Schedule ID %d has %d active claim sessions, [Quota:%s:%d]\n", schedule.ID, len(claimSessions), quota.Class.ClassName, quota.Quota)
+		}
+
 		return nil
 	}); err != nil {
-		return nil, fmt.Errorf("failed to get schedule by ID: %w", err)
+		return nil, fmt.Errorf("failed to get schedule with quotas: %w", err)
 	}
-	return mapper.ScheduleToResponse(schedule), nil
+	return schedule, nil
 }
 
-func (uc *ScheduleUsecase) UpdateSchedule(ctx context.Context, request *model.UpdateScheduleRequest) error {
+func (uc *ScheduleUsecase) UpdateSchedule(ctx context.Context, e *domain.Schedule) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-		schedule, err := uc.ScheduleRepository.FindByID(ctx, tx, request.ID)
+		schedule, err := uc.ScheduleRepository.FindByID(ctx, tx, e.ID)
 		if err != nil {
 			return fmt.Errorf("failed to find schedule: %w", err)
 		}
@@ -129,12 +145,12 @@ func (uc *ScheduleUsecase) UpdateSchedule(ctx context.Context, request *model.Up
 			return errs.ErrNotFound
 		}
 
-		schedule.ShipID = request.ShipID
-		schedule.DepartureHarborID = request.DepartureHarborID
-		schedule.ArrivalHarborID = request.ArrivalHarborID
-		schedule.DepartureDatetime = request.DepartureDatetime
-		schedule.ArrivalDatetime = request.ArrivalDatetime
-		schedule.Status = request.Status
+		schedule.ShipID = e.ShipID
+		schedule.DepartureHarborID = e.DepartureHarborID
+		schedule.ArrivalHarborID = e.ArrivalHarborID
+		schedule.DepartureDatetime = e.DepartureDatetime
+		schedule.ArrivalDatetime = e.ArrivalDatetime
+		schedule.Status = e.Status
 
 		if err := uc.ScheduleRepository.Update(ctx, tx, schedule); err != nil {
 			return fmt.Errorf("failed to update schedule: %w", err)

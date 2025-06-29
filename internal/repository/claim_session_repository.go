@@ -111,7 +111,7 @@ func (r *ClaimSessionRepository) FindBySessionID(ctx context.Context, conn gotan
 	return session, result.Error
 }
 
-func (r *ClaimSessionRepository) FindByScheduleID(ctx context.Context, conn gotann.Connection, scheduleID uint) ([]*domain.ClaimSession, error) {
+func (r *ClaimSessionRepository) FindActiveByScheduleID(ctx context.Context, conn gotann.Connection, scheduleID uint) ([]*domain.ClaimSession, error) {
 	sessions := []*domain.ClaimSession{}
 	result := conn.Preload("Schedule").
 		Preload("Schedule.DepartureHarbor").

@@ -5,13 +5,10 @@ import (
 	"errors"
 	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/mailer"
-	"eticket-api/internal/common/templates"
 	"eticket-api/internal/common/token"
 	"eticket-api/internal/common/transact"
 	"eticket-api/internal/common/utils"
 	"eticket-api/internal/domain"
-	"eticket-api/internal/mapper"
-	"eticket-api/internal/model"
 	"eticket-api/pkg/gotann"
 	"fmt"
 	"time"
@@ -43,7 +40,7 @@ func NewAuthUsecase(
 	}
 }
 
-func (uc *AuthUsecase) Login(ctx context.Context, request *model.WriteLoginRequest) (*model.ReadLoginResponse, string, string, error) {
+func (uc *AuthUsecase) Login(ctx context.Context, request *domain.LoginRequest) (*domain.User, string, string, error) {
 	var err error
 	var user *domain.User
 	var accessToken string
@@ -94,7 +91,7 @@ func (uc *AuthUsecase) Login(ctx context.Context, request *model.WriteLoginReque
 		return nil, "", "", fmt.Errorf("login failed: %w", err)
 	}
 
-	return mapper.AuthToResponse(user), accessToken, refreshToken, nil
+	return user, accessToken, refreshToken, nil
 }
 
 func (uc *AuthUsecase) RefreshToken(ctx context.Context, refreshToken string) (string, error) {
@@ -154,7 +151,7 @@ func (uc *AuthUsecase) Logout(ctx context.Context, refreshToken string) error {
 	})
 }
 
-func (uc *AuthUsecase) Me(ctx context.Context, accessToken string) (*model.ReadUserResponse, error) {
+func (uc *AuthUsecase) Me(ctx context.Context, accessToken string) (*domain.User, error) {
 	var err error
 	var claims *token.Claims
 	var user *domain.User
@@ -176,82 +173,82 @@ func (uc *AuthUsecase) Me(ctx context.Context, accessToken string) (*model.ReadU
 		return nil, fmt.Errorf("failed to get user info: %w", err)
 	}
 
-	return mapper.UserToResponse(user), nil
+	return user, nil
 }
 
-func (uc *AuthUsecase) RequestPasswordReset(ctx context.Context, email string) error {
-	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-		user, err := uc.UserRepository.FindByEmail(ctx, tx, email)
-		if err != nil {
-			return fmt.Errorf("failed to retrieve user: %w", err)
-		}
-		if user == nil {
-			return errs.ErrNotFound
-		}
+// func (uc *AuthUsecase) RequestPasswordReset(ctx context.Context, email string) error {
+// 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+// 		user, err := uc.UserRepository.FindByEmail(ctx, tx, email)
+// 		if err != nil {
+// 			return fmt.Errorf("failed to retrieve user: %w", err)
+// 		}
+// 		if user == nil {
+// 			return errs.ErrNotFound
+// 		}
 
-		token, err := utils.GenerateSecureToken(32)
-		if err != nil {
-			return fmt.Errorf("failed to generate token: %w", err)
-		}
+// 		token, err := utils.GenerateSecureToken(32)
+// 		if err != nil {
+// 			return fmt.Errorf("failed to generate token: %w", err)
+// 		}
 
-		reset := &domain.PasswordReset{
-			UserID:    user.ID,
-			Token:     token,
-			ExpiresAt: time.Now().Add(15 * time.Minute),
-			CreatedAt: time.Now(),
-		}
+// 		reset := &domain.PasswordReset{
+// 			UserID:    user.ID,
+// 			Token:     token,
+// 			ExpiresAt: time.Now().Add(15 * time.Minute),
+// 			CreatedAt: time.Now(),
+// 		}
 
-		if err := uc.AuthRepository.InsertPasswordReset(ctx, tx, reset); err != nil {
-			if errs.IsUniqueConstraintError(err) {
-				return errs.ErrConflict
-			}
-			return fmt.Errorf("failed to save reset token: %w", err)
-		}
+// 		if err := uc.AuthRepository.InsertPasswordReset(ctx, tx, reset); err != nil {
+// 			if errs.IsUniqueConstraintError(err) {
+// 				return errs.ErrConflict
+// 			}
+// 			return fmt.Errorf("failed to save reset token: %w", err)
+// 		}
 
-		resetLink := fmt.Sprintf("https://yourdomain.com/reset-password?token=%s", token)
-		subject := "Password Reset"
-		htmlBody := templates.PasswordResetEmail(user.Username, resetLink, time.Now().Year())
+// 		resetLink := fmt.Sprintf("https://yourdomain.com/reset-password?token=%s", token)
+// 		subject := "Password Reset"
+// 		htmlBody := templates.PasswordResetEmail(user.Username, resetLink, time.Now().Year())
 
-		if err := uc.Mailer.Send(user.Email, subject, htmlBody); err != nil {
-			return fmt.Errorf("failed to send reset email: %w", err)
-		}
+// 		if err := uc.Mailer.Send(user.Email, subject, htmlBody); err != nil {
+// 			return fmt.Errorf("failed to send reset email: %w", err)
+// 		}
 
-		return nil
-	})
-}
+// 		return nil
+// 	})
+// }
 
-func (uc *AuthUsecase) ResetPassword(ctx context.Context, token string, password string) error {
-	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-		validReset, err := uc.AuthRepository.FindPasswordResetByTokenAndStatus(ctx, tx, token, false)
-		if err != nil {
-			return fmt.Errorf("invalid or expired reset token: %w", err)
-		}
-		if validReset.Issued || time.Now().After(validReset.ExpiresAt) {
-			return errors.New("token expired or already used")
-		}
+// func (uc *AuthUsecase) ResetPassword(ctx context.Context, token string, password string) error {
+// 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+// 		validReset, err := uc.AuthRepository.FindPasswordResetByTokenAndStatus(ctx, tx, token, false)
+// 		if err != nil {
+// 			return fmt.Errorf("invalid or expired reset token: %w", err)
+// 		}
+// 		if validReset.Issued || time.Now().After(validReset.ExpiresAt) {
+// 			return errors.New("token expired or already used")
+// 		}
 
-		user, err := uc.UserRepository.FindByID(ctx, tx, validReset.UserID)
-		if err != nil {
-			return fmt.Errorf("failed to retrieve user: %w", err)
-		}
-		if user == nil {
-			return errs.ErrNotFound
-		}
+// 		user, err := uc.UserRepository.FindByID(ctx, tx, validReset.UserID)
+// 		if err != nil {
+// 			return fmt.Errorf("failed to retrieve user: %w", err)
+// 		}
+// 		if user == nil {
+// 			return errs.ErrNotFound
+// 		}
 
-		hashedPassword, err := utils.HashPassword(password)
-		if err != nil {
-			return fmt.Errorf("failed to hash password: %w", err)
-		}
+// 		hashedPassword, err := utils.HashPassword(password)
+// 		if err != nil {
+// 			return fmt.Errorf("failed to hash password: %w", err)
+// 		}
 
-		user.Password = hashedPassword
+// 		user.Password = hashedPassword
 
-		if err := uc.UserRepository.Update(ctx, tx, user); err != nil {
-			return fmt.Errorf("failed to update password: %w", err)
-		}
+// 		if err := uc.UserRepository.Update(ctx, tx, user); err != nil {
+// 			return fmt.Errorf("failed to update password: %w", err)
+// 		}
 
-		if err := uc.AuthRepository.RevokePasswordResetByToken(ctx, tx, token); err != nil {
-			return fmt.Errorf("failed to mark token as used: %w", err)
-		}
-		return nil
-	})
-}
+// 		if err := uc.AuthRepository.RevokePasswordResetByToken(ctx, tx, token); err != nil {
+// 			return fmt.Errorf("failed to mark token as used: %w", err)
+// 		}
+// 		return nil
+// 	})
+// }

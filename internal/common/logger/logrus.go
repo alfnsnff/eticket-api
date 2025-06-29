@@ -10,7 +10,7 @@ type LogrusLogger struct {
 	entry *logrus.Entry
 }
 
-func NewLogrusLogger(serviceName string) Logger {
+func NewLogrus(serviceName string) Logger {
 	l := logrus.New()
 	l.SetFormatter(&logrus.JSONFormatter{}) // Structured logging
 	l.SetOutput(os.Stdout)

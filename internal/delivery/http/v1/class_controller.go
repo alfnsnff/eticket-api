@@ -5,10 +5,10 @@ import (
 	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/logger"
 	"eticket-api/internal/common/validator"
-	"eticket-api/internal/model"
 	"eticket-api/internal/usecase"
 
 	"eticket-api/internal/delivery/http/response"
+	requests "eticket-api/internal/delivery/http/v1/request"
 	"net/http"
 	"strconv"
 
@@ -44,7 +44,7 @@ func NewClassController(
 }
 
 func (c *ClassController) CreateClass(ctx *gin.Context) {
-	request := new(model.WriteClassRequest)
+	request := new(requests.CreateClassRequest)
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		c.Log.WithError(err).Error("failed to bind JSON request body")
@@ -59,7 +59,7 @@ func (c *ClassController) CreateClass(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.ClassUsecase.CreateClass(ctx, request); err != nil {
+	if err := c.ClassUsecase.CreateClass(ctx, requests.ClassFromCreate(request)); err != nil {
 		if errors.Is(err, errs.ErrConflict) {
 			c.Log.WithError(err).Error("user already exists")
 			ctx.JSON(http.StatusConflict, response.NewErrorResponse("user already exists", nil))
@@ -84,8 +84,13 @@ func (c *ClassController) GetAllClasses(ctx *gin.Context) {
 		return
 	}
 
+	responses := make([]*requests.ClassResponse, len(datas))
+	for i, data := range datas {
+		responses[i] = requests.ClassToResponse(data)
+	}
+
 	ctx.JSON(http.StatusOK, response.NewMetaResponse(
-		datas,
+		responses,
 		"Classes retrieved successfully",
 		total,
 		params.Limit,
@@ -118,13 +123,7 @@ func (c *ClassController) GetClassByID(ctx *gin.Context) {
 		return
 	}
 
-	if data == nil {
-		c.Log.WithField("id", id).Warn("class not found")
-		ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Class not found", nil))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(data, "Class retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(requests.ClassToResponse(data), "Class retrieved successfully", nil))
 }
 
 func (c *ClassController) UpdateClass(ctx *gin.Context) {
@@ -135,7 +134,7 @@ func (c *ClassController) UpdateClass(ctx *gin.Context) {
 		return
 	}
 
-	request := new(model.UpdateClassRequest)
+	request := new(requests.UpdateClassRequest)
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		c.Log.WithError(err).WithField("id", id).Error("failed to bind JSON request body")
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
@@ -150,7 +149,7 @@ func (c *ClassController) UpdateClass(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.ClassUsecase.UpdateClass(ctx, request); err != nil {
+	if err := c.ClassUsecase.UpdateClass(ctx, requests.ClassFromUpdate(request)); err != nil {
 		if errors.Is(err, errs.ErrNotFound) {
 			c.Log.WithField("id", id).Warn("class not found")
 			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("Class not found", nil))

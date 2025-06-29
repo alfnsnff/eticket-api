@@ -20,7 +20,7 @@ type Schedule struct {
 	Ship            Ship           `gorm:"foreignKey:ShipID"` // Gorm will create the relationship
 	DepartureHarbor Harbor         `gorm:"foreignKey:DepartureHarborID"`
 	ArrivalHarbor   Harbor         `gorm:"foreignKey:ArrivalHarborID"`
-	Quotas          []Quota        `gorm:"foreignKey:ScheduleID"`
+	Quotas          []*Quota       `gorm:"foreignKey:ScheduleID"`
 	ClaimSessions   []ClaimSession `gorm:"foreignKey:ScheduleID"`
 }
 

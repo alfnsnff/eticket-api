@@ -5,8 +5,6 @@ import (
 	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/transact"
 	"eticket-api/internal/domain"
-	"eticket-api/internal/mapper"
-	"eticket-api/internal/model"
 	"eticket-api/pkg/gotann"
 	"fmt"
 )
@@ -26,19 +24,19 @@ func NewBookingUsecase(
 	}
 }
 
-func (uc *BookingUsecase) CreateBooking(ctx context.Context, request *model.WriteBookingRequest) error {
+func (uc *BookingUsecase) CreateBooking(ctx context.Context, e *domain.Booking) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
 		booking := &domain.Booking{
-			OrderID:         request.OrderID,
-			ScheduleID:      request.ScheduleID,
-			IDType:          request.IDType,
-			IDNumber:        request.IDNumber,
-			CustomerName:    request.CustomerName,
-			CustomerAge:     request.CustomerAge,
-			CustomerGender:  request.CustomerGender,
-			PhoneNumber:     request.PhoneNumber,
-			Email:           request.Email,
-			ReferenceNumber: request.ReferenceNumber,
+			OrderID:         e.OrderID,
+			ScheduleID:      e.ScheduleID,
+			IDType:          e.IDType,
+			IDNumber:        e.IDNumber,
+			CustomerName:    e.CustomerName,
+			CustomerAge:     e.CustomerAge,
+			CustomerGender:  e.CustomerGender,
+			PhoneNumber:     e.PhoneNumber,
+			Email:           e.Email,
+			ReferenceNumber: e.ReferenceNumber,
 		}
 		if err := uc.BookingRepository.Insert(ctx, tx, booking); err != nil {
 			if errs.IsUniqueConstraintError(err) {
@@ -50,7 +48,7 @@ func (uc *BookingUsecase) CreateBooking(ctx context.Context, request *model.Writ
 	})
 }
 
-func (uc *BookingUsecase) ListBookings(ctx context.Context, limit, offset int, sort, search string) ([]*model.ReadBookingResponse, int, error) {
+func (uc *BookingUsecase) ListBookings(ctx context.Context, limit, offset int, sort, search string) ([]*domain.Booking, int, error) {
 	var err error
 	var total int64
 	var bookings []*domain.Booking
@@ -69,19 +67,14 @@ func (uc *BookingUsecase) ListBookings(ctx context.Context, limit, offset int, s
 		return nil, 0, fmt.Errorf("failed to list bookings: %w", err)
 	}
 
-	responses := make([]*model.ReadBookingResponse, len(bookings))
-	for i, booking := range bookings {
-		responses[i] = mapper.BookingToResponse(booking)
-	}
-
-	return responses, int(total), nil
+	return bookings, int(total), nil
 }
 
-func (uc *BookingUsecase) GetBookingByID(ctx context.Context, id uint) (*model.ReadBookingResponse, error) {
+func (uc *BookingUsecase) GetBookingByID(ctx context.Context, id uint) (*domain.Booking, error) {
 	var err error
 	var booking *domain.Booking
 	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-		booking, err := uc.BookingRepository.FindByID(ctx, tx, id)
+		booking, err = uc.BookingRepository.FindByID(ctx, tx, id)
 		if err != nil {
 			return fmt.Errorf("failed to get booking: %w", err)
 		}
@@ -94,10 +87,10 @@ func (uc *BookingUsecase) GetBookingByID(ctx context.Context, id uint) (*model.R
 		return nil, fmt.Errorf("failed to get booking by id: %w", err)
 	}
 
-	return mapper.BookingToResponse(booking), nil
+	return booking, nil
 }
 
-func (uc *BookingUsecase) GetBookingByOrderID(ctx context.Context, orderID string) (*model.ReadBookingResponse, error) {
+func (uc *BookingUsecase) GetBookingByOrderID(ctx context.Context, orderID string) (*domain.Booking, error) {
 	var err error
 	var booking *domain.Booking
 	if err = uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
@@ -113,12 +106,12 @@ func (uc *BookingUsecase) GetBookingByOrderID(ctx context.Context, orderID strin
 		return nil, fmt.Errorf("failed to get booking by order ID: %w", err)
 	}
 
-	return mapper.BookingToResponse(booking), nil
+	return booking, nil
 }
 
-func (uc *BookingUsecase) UpdateBooking(ctx context.Context, request *model.UpdateBookingRequest) error {
+func (uc *BookingUsecase) UpdateBooking(ctx context.Context, e *domain.Booking) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-		booking, err := uc.BookingRepository.FindByID(ctx, tx, request.ID)
+		booking, err := uc.BookingRepository.FindByID(ctx, tx, e.ID)
 		if err != nil {
 			return fmt.Errorf("failed to find booking: %w", err)
 		}
@@ -126,16 +119,16 @@ func (uc *BookingUsecase) UpdateBooking(ctx context.Context, request *model.Upda
 			return errs.ErrNotFound
 		}
 
-		booking.OrderID = request.OrderID
-		booking.ScheduleID = request.ScheduleID
-		booking.IDType = request.IDType
-		booking.IDNumber = request.IDNumber
-		booking.CustomerName = request.CustomerName
-		booking.CustomerAge = request.CustomerAge
-		booking.CustomerGender = request.CustomerGender
-		booking.PhoneNumber = request.PhoneNumber
-		booking.Email = request.Email
-		booking.ReferenceNumber = request.ReferenceNumber
+		booking.OrderID = e.OrderID
+		booking.ScheduleID = e.ScheduleID
+		booking.IDType = e.IDType
+		booking.IDNumber = e.IDNumber
+		booking.CustomerName = e.CustomerName
+		booking.CustomerAge = e.CustomerAge
+		booking.CustomerGender = e.CustomerGender
+		booking.PhoneNumber = e.PhoneNumber
+		booking.Email = e.Email
+		booking.ReferenceNumber = e.ReferenceNumber
 
 		if err := uc.BookingRepository.Update(ctx, tx, booking); err != nil {
 			return fmt.Errorf("failed to update booking: %w", err)
