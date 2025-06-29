@@ -18,6 +18,7 @@ import (
 	"eticket-api/internal/common/validator"
 	"eticket-api/internal/delivery/http"
 	"eticket-api/internal/domain"
+	"eticket-api/internal/job"
 	"eticket-api/internal/repository"
 	"eticket-api/internal/usecase"
 	"github.com/gin-contrib/cors"
@@ -42,10 +43,10 @@ func New(cfg *config.Config) (*Server, error) {
 	transactor := transact.NewTransactionManager(gormDB)
 	quotaRepository := repository.NewQuotaRepository(gormDB)
 	quotaUsecase := usecase.NewQuotaUsecase(transactor, quotaRepository)
-	authRepository := repository.NewAuthRepository(gormDB)
+	refreshTokenRepository := repository.NewRefreshTokenRepository(gormDB)
 	userRepository := repository.NewUserRepository(gormDB)
 	smtp := mailer.NewSMTP(cfg)
-	authUsecase := usecase.NewAuthUsecase(transactor, authRepository, userRepository, smtp, jwt)
+	authUsecase := usecase.NewAuthUsecase(transactor, refreshTokenRepository, userRepository, smtp, jwt)
 	bookingRepository := repository.NewBookingRepository(gormDB)
 	bookingUsecase := usecase.NewBookingUsecase(transactor, bookingRepository)
 	classRepository := repository.NewClassRepository(gormDB)
@@ -68,7 +69,9 @@ func New(cfg *config.Config) (*Server, error) {
 	claimItemRepository := repository.NewClaimItemRepository(gormDB)
 	claimSessionUsecase := usecase.NewClaimSessionUsecase(transactor, claimSessionRepository, claimItemRepository, ticketRepository, scheduleRepository, bookingRepository, quotaRepository, tripayClient, smtp)
 	router := http.NewRouter(jwt, loggerLogger, validatorValidator, quotaUsecase, authUsecase, bookingUsecase, classUsecase, harborUsecase, roleUsecase, scheduleUsecase, shipUsecase, ticketUsecase, userUsecase, paymentUsecase, claimSessionUsecase)
-	server, err := NewServer(gormDB, router)
+	claimSessionJob := job.NewClaimSessionJob(loggerLogger, claimSessionUsecase)
+	emailJob := job.NewEmailJobQueue(smtp, loggerLogger)
+	server, err := NewServer(gormDB, router, claimSessionJob, emailJob)
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +91,8 @@ type Server struct {
 // NewServer menerima semua dependency yang dibutuhkan, Wire akan mengisi otomatis
 func NewServer(db2 *gorm.DB,
 	router *http.Router,
+	claimSessionJob *job.ClaimSessionJob,
+	emailJob *job.EmailJob,
 ) (*Server, error) {
 	gin.SetMode(gin.DebugMode)
 	app := gin.Default()
@@ -131,6 +136,7 @@ func NewServer(db2 *gorm.DB,
 	router.RegisterMetrics(api)
 	router.RegisterV1(api.Group("/v1"))
 	router.RegisterV2(api.Group("/v2"))
+	go claimSessionJob.CleanExpiredClaimSession()
 
 	return &Server{app: app}, nil
 }

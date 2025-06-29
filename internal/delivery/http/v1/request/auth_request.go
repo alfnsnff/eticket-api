@@ -12,12 +12,24 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	Role UserRole `json:"role"`
+	Role LoginUserRole `json:"role"`
 }
 
-func LoginFromRequest(request *LoginRequest) *domain.LoginRequest {
-	return &domain.LoginRequest{
+type LoginUserRole struct {
+	RoleName string `json:"role_name"`
+}
+
+func LoginFromRequest(request *LoginRequest) *domain.Login {
+	return &domain.Login{
 		Username: request.Username,
 		Password: request.Password,
+	}
+}
+
+func LoginToResponse(user *domain.User) *LoginResponse {
+	return &LoginResponse{
+		Role: LoginUserRole{
+			RoleName: user.Role.RoleName,
+		},
 	}
 }

@@ -168,10 +168,7 @@ func (uc *PaymentUsecase) HandleSuccessfulPayment(ctx context.Context, tx gotann
 	subject := "Your Booking is Confirmed"
 	htmlBody := templates.BookingSuccessEmail(booking, tickets)
 
-	if err := uc.Mailer.Send(booking.Email, subject, htmlBody); err != nil {
-		return fmt.Errorf("failed to send confirmation email: %w", err)
-	}
-
+	uc.Mailer.SendAsync(booking.Email, subject, htmlBody)
 	return nil
 
 }
@@ -218,9 +215,6 @@ func (uc *PaymentUsecase) HandleUnsuccessfulPayment(ctx context.Context, tx gota
 		htmlBody = templates.BookingFailedEmail(booking, "Payment was cancelled or refunded")
 	}
 
-	if err := uc.Mailer.Send(booking.Email, subject, htmlBody); err != nil {
-		fmt.Printf("Warning: failed to send failure email: %v\n", err)
-	}
-
+	uc.Mailer.SendAsync(booking.Email, subject, htmlBody)
 	return nil
 }

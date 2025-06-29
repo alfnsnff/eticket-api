@@ -46,7 +46,7 @@ var RepositorySet = wire.NewSet(
 	// --- Concrete constructors ---
 	repository.NewRoleRepository,
 	repository.NewUserRepository,
-	repository.NewAuthRepository,
+	repository.NewRefreshTokenRepository,
 	repository.NewShipRepository,
 	repository.NewHarborRepository,
 	repository.NewClassRepository,
@@ -60,7 +60,7 @@ var RepositorySet = wire.NewSet(
 	// --- Interface bindings ---
 	wire.Bind(new(domain.RoleRepository), new(*repository.RoleRepository)),
 	wire.Bind(new(domain.UserRepository), new(*repository.UserRepository)),
-	wire.Bind(new(domain.AuthRepository), new(*repository.AuthRepository)),
+	wire.Bind(new(domain.RefreshTokenRepository), new(*repository.RefreshTokenRepository)),
 	wire.Bind(new(domain.ShipRepository), new(*repository.ShipRepository)),
 	wire.Bind(new(domain.HarborRepository), new(*repository.HarborRepository)),
 	wire.Bind(new(domain.ClassRepository), new(*repository.ClassRepository)),
@@ -98,7 +98,7 @@ var UsecaseSet = wire.NewSet(
 
 var JobSet = wire.NewSet(
 	job.NewClaimSessionJob,
-	// ...dst
+	job.NewEmailJobQueue, // <--- tambahkan ini
 )
 
 var RouterSet = wire.NewSet(

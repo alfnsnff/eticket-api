@@ -78,7 +78,7 @@ func (c *AuthController) Login(ctx *gin.Context) {
 	ctx.SetCookie("refresh_token", refreshToken, 24*60*60, "/", "", true, true) // 1 day
 
 	// OR: Return tokens in JSON (useful for SPA apps)
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(datas, "Login successful", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(requests.LoginToResponse(datas), "Login successful", nil))
 }
 
 func (c *AuthController) Logout(ctx *gin.Context) {
@@ -126,31 +126,6 @@ func (c *AuthController) RefreshToken(ctx *gin.Context) {
 	ctx.SetCookie("access_token", newAccessToken, 15*60, "/", "", true, true)
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Token refreshed successfully", nil))
 }
-
-// func (c *AuthController) ForgetPassword(ctx *gin.Context) {
-// 	c.Log.Info("Processing forget password request")
-// 	request := new(model.WriteForgetPasswordRequest)
-
-// 	if err := ctx.ShouldBindJSON(request); err != nil {
-// 		c.Log.WithError(err).Error("failed to bind JSON forget password request")
-// 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
-// 		return
-// 	}
-
-// 	if err := c.Validate.Struct(request); err != nil {
-// 		c.Log.WithError(err).Error("failed to validate forget password request body")
-// 		errors := validator.ParseErrors(err)
-// 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
-// 		return
-// 	}
-
-// 	if err := c.AuthUsecase.RequestPasswordReset(ctx, request.Email); err != nil {
-// 		c.Log.WithError(err).WithField("email", request.Email).Error("failed to process password reset request")
-// 		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Reset password failed", err.Error()))
-// 		return
-// 	}
-// 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "We will send reset password email if it matched to our system", nil))
-// }
 
 func (c *AuthController) Me(ctx *gin.Context) {
 	c.Log.Info("Retrieving user profile information")

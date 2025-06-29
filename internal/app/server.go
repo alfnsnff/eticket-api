@@ -7,6 +7,7 @@ import (
 	"eticket-api/config"
 	"eticket-api/internal/delivery/http"
 	"eticket-api/internal/domain"
+	"eticket-api/internal/job"
 	"log"
 	"time"
 
@@ -27,7 +28,7 @@ func New(cfg *config.Config) (*Server, error) {
 		RepositorySet,
 		ClientSet,
 		UsecaseSet,
-		// JobSet,
+		JobSet,
 		RouterSet,
 		NewServer,
 	))
@@ -37,6 +38,8 @@ func New(cfg *config.Config) (*Server, error) {
 func NewServer(
 	db *gorm.DB,
 	router *http.Router,
+	claimSessionJob *job.ClaimSessionJob,
+	emailJob *job.EmailJob,
 ) (*Server, error) {
 	gin.SetMode(gin.DebugMode)
 	app := gin.Default()
@@ -83,6 +86,7 @@ func NewServer(
 	router.RegisterMetrics(api)
 	router.RegisterV1(api.Group("/v1"))
 	router.RegisterV2(api.Group("/v2"))
+	go claimSessionJob.CleanExpiredClaimSession()
 
 	return &Server{app: app}, nil
 }

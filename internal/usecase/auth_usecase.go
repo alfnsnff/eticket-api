@@ -17,30 +17,30 @@ import (
 )
 
 type AuthUsecase struct {
-	Transactor     *transact.Transactor
-	AuthRepository domain.AuthRepository
-	UserRepository domain.UserRepository
-	Mailer         mailer.Mailer
-	TokenUtil      token.TokenUtil
+	Transactor             *transact.Transactor
+	RefreshTokenRepository domain.RefreshTokenRepository
+	UserRepository         domain.UserRepository
+	Mailer                 mailer.Mailer
+	TokenUtil              token.TokenUtil
 }
 
 func NewAuthUsecase(
 	transactor *transact.Transactor,
-	auth_repository domain.AuthRepository,
+	refresh_repository domain.RefreshTokenRepository,
 	user_repository domain.UserRepository,
 	mailer mailer.Mailer,
 	tm token.TokenUtil,
 ) *AuthUsecase {
 	return &AuthUsecase{
-		Transactor:     transactor,
-		AuthRepository: auth_repository,
-		UserRepository: user_repository,
-		Mailer:         mailer,
-		TokenUtil:      tm,
+		Transactor:             transactor,
+		RefreshTokenRepository: refresh_repository,
+		UserRepository:         user_repository,
+		Mailer:                 mailer,
+		TokenUtil:              tm,
 	}
 }
 
-func (uc *AuthUsecase) Login(ctx context.Context, request *domain.LoginRequest) (*domain.User, string, string, error) {
+func (uc *AuthUsecase) Login(ctx context.Context, request *domain.Login) (*domain.User, string, string, error) {
 	var err error
 	var user *domain.User
 	var accessToken string
@@ -79,7 +79,7 @@ func (uc *AuthUsecase) Login(ctx context.Context, request *domain.LoginRequest) 
 			UpdatedAt: time.Now(),
 		}
 
-		if err = uc.AuthRepository.InsertRefreshToken(ctx, tx, refreshTokendomain); err != nil {
+		if err = uc.RefreshTokenRepository.InsertRefreshToken(ctx, tx, refreshTokendomain); err != nil {
 			if errs.IsUniqueConstraintError(err) {
 				return errs.ErrConflict
 			}
@@ -101,7 +101,7 @@ func (uc *AuthUsecase) RefreshToken(ctx context.Context, refreshToken string) (s
 		if err != nil {
 			return fmt.Errorf("invalid refresh token: %w", err)
 		}
-		validSession, err := uc.AuthRepository.FindRefreshTokenByIDAndStatus(ctx, tx, claims.ID, false)
+		validSession, err := uc.RefreshTokenRepository.FindRefreshTokenByIDAndStatus(ctx, tx, claims.ID, false)
 		if err != nil {
 			return fmt.Errorf("failed to get refresh token: %w", err)
 		}
@@ -144,7 +144,7 @@ func (uc *AuthUsecase) Logout(ctx context.Context, refreshToken string) error {
 			return fmt.Errorf("invalid token ID: %w", err)
 		}
 
-		if err := uc.AuthRepository.RevokeRefreshTokenByID(ctx, tx, tokenID); err != nil {
+		if err := uc.RefreshTokenRepository.RevokeRefreshTokenByID(ctx, tx, tokenID); err != nil {
 			return fmt.Errorf("failed to revoke refresh token: %w", err)
 		}
 		return nil
@@ -175,80 +175,3 @@ func (uc *AuthUsecase) Me(ctx context.Context, accessToken string) (*domain.User
 
 	return user, nil
 }
-
-// func (uc *AuthUsecase) RequestPasswordReset(ctx context.Context, email string) error {
-// 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-// 		user, err := uc.UserRepository.FindByEmail(ctx, tx, email)
-// 		if err != nil {
-// 			return fmt.Errorf("failed to retrieve user: %w", err)
-// 		}
-// 		if user == nil {
-// 			return errs.ErrNotFound
-// 		}
-
-// 		token, err := utils.GenerateSecureToken(32)
-// 		if err != nil {
-// 			return fmt.Errorf("failed to generate token: %w", err)
-// 		}
-
-// 		reset := &domain.PasswordReset{
-// 			UserID:    user.ID,
-// 			Token:     token,
-// 			ExpiresAt: time.Now().Add(15 * time.Minute),
-// 			CreatedAt: time.Now(),
-// 		}
-
-// 		if err := uc.AuthRepository.InsertPasswordReset(ctx, tx, reset); err != nil {
-// 			if errs.IsUniqueConstraintError(err) {
-// 				return errs.ErrConflict
-// 			}
-// 			return fmt.Errorf("failed to save reset token: %w", err)
-// 		}
-
-// 		resetLink := fmt.Sprintf("https://yourdomain.com/reset-password?token=%s", token)
-// 		subject := "Password Reset"
-// 		htmlBody := templates.PasswordResetEmail(user.Username, resetLink, time.Now().Year())
-
-// 		if err := uc.Mailer.Send(user.Email, subject, htmlBody); err != nil {
-// 			return fmt.Errorf("failed to send reset email: %w", err)
-// 		}
-
-// 		return nil
-// 	})
-// }
-
-// func (uc *AuthUsecase) ResetPassword(ctx context.Context, token string, password string) error {
-// 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
-// 		validReset, err := uc.AuthRepository.FindPasswordResetByTokenAndStatus(ctx, tx, token, false)
-// 		if err != nil {
-// 			return fmt.Errorf("invalid or expired reset token: %w", err)
-// 		}
-// 		if validReset.Issued || time.Now().After(validReset.ExpiresAt) {
-// 			return errors.New("token expired or already used")
-// 		}
-
-// 		user, err := uc.UserRepository.FindByID(ctx, tx, validReset.UserID)
-// 		if err != nil {
-// 			return fmt.Errorf("failed to retrieve user: %w", err)
-// 		}
-// 		if user == nil {
-// 			return errs.ErrNotFound
-// 		}
-
-// 		hashedPassword, err := utils.HashPassword(password)
-// 		if err != nil {
-// 			return fmt.Errorf("failed to hash password: %w", err)
-// 		}
-
-// 		user.Password = hashedPassword
-
-// 		if err := uc.UserRepository.Update(ctx, tx, user); err != nil {
-// 			return fmt.Errorf("failed to update password: %w", err)
-// 		}
-
-// 		if err := uc.AuthRepository.RevokePasswordResetByToken(ctx, tx, token); err != nil {
-// 			return fmt.Errorf("failed to mark token as used: %w", err)
-// 		}
-// 		return nil
-// 	})
-// }
