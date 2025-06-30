@@ -26,27 +26,27 @@ func (r *QuotaRepository) Count(ctx context.Context, conn gotann.Connection) (in
 }
 
 func (r *QuotaRepository) Insert(ctx context.Context, conn gotann.Connection, quota *domain.Quota) error {
-	result := conn.Create(quota)
+	result := conn.Clauses(clause.Locking{Strength: "UPDATE"}).Create(quota)
 	return result.Error
 }
 
 func (r *QuotaRepository) InsertBulk(ctx context.Context, conn gotann.Connection, quotas []*domain.Quota) error {
-	result := conn.Create(&quotas)
+	result := conn.Clauses(clause.Locking{Strength: "UPDATE"}).Create(&quotas)
 	return result.Error
 }
 
 func (r *QuotaRepository) Update(ctx context.Context, conn gotann.Connection, quota *domain.Quota) error {
-	result := conn.Save(quota)
+	result := conn.Clauses(clause.Locking{Strength: "UPDATE"}).Save(quota)
 	return result.Error
 }
 
 func (r *QuotaRepository) UpdateBulk(ctx context.Context, conn gotann.Connection, Quotas []*domain.Quota) error {
-	result := conn.Save(&Quotas)
+	result := conn.Clauses(clause.Locking{Strength: "UPDATE"}).Save(&Quotas)
 	return result.Error
 }
 
 func (r *QuotaRepository) Delete(ctx context.Context, conn gotann.Connection, quota *domain.Quota) error {
-	result := conn.Select(clause.Associations).Delete(quota)
+	result := conn.Clauses(clause.Locking{Strength: "UPDATE"}).Select(clause.Associations).Delete(quota)
 	return result.Error
 }
 
@@ -76,7 +76,7 @@ func (r *QuotaRepository) FindByID(ctx context.Context, conn gotann.Connection, 
 		Preload("Schedule").
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
-		Preload("Schedule.Ship").First(&Quota, id)
+		Preload("Schedule.Ship").Clauses(clause.Locking{Strength: "UPDATE"}).First(&Quota, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
@@ -89,7 +89,7 @@ func (r *QuotaRepository) FindByScheduleID(ctx context.Context, conn gotann.Conn
 		Preload("Schedule").
 		Preload("Schedule.DepartureHarbor").
 		Preload("Schedule.ArrivalHarbor").
-		Preload("Schedule.Ship").Where("schedule_id = ?", scheduleID).Find(&Quotas)
+		Preload("Schedule.Ship").Clauses(clause.Locking{Strength: "UPDATE"}).Where("schedule_id = ?", scheduleID).Find(&Quotas)
 	if result.Error != nil {
 		return nil, result.Error // Handle database errors
 	}
