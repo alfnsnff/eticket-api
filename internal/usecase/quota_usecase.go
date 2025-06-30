@@ -10,13 +10,13 @@ import (
 )
 
 type QuotaUsecase struct {
-	Transactor      *transact.Transactor
+	Transactor      transact.Transactor
 	QuotaRepository domain.QuotaRepository
 }
 
 func NewQuotaUsecase(
 
-	transactor *transact.Transactor,
+	transactor transact.Transactor,
 	Quota_repository domain.QuotaRepository,
 ) *QuotaUsecase {
 	return &QuotaUsecase{

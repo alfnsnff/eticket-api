@@ -143,5 +143,5 @@ func (c *AuthController) Me(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse(user, "User info retrieved successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(requests.UserToResponse(user), "User info retrieved successfully", nil))
 }

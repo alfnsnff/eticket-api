@@ -10,12 +10,12 @@ import (
 )
 
 type RoleUsecase struct {
-	Transactor     *transact.Transactor // Uncomment if you need transaction management
+	Transactor     transact.Transactor // Uncomment if you need transaction management
 	RoleRepository domain.RoleRepository
 }
 
 func NewRoleUsecase(
-	transactor *transact.Transactor, // Uncomment if you need transaction management
+	transactor transact.Transactor, // Uncomment if you need transaction management
 	roleRepository domain.RoleRepository,
 ) *RoleUsecase {
 	return &RoleUsecase{

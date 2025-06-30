@@ -10,12 +10,12 @@ import (
 )
 
 type BookingUsecase struct {
-	Transactor        *transact.Transactor
+	Transactor        transact.Transactor
 	BookingRepository domain.BookingRepository
 }
 
 func NewBookingUsecase(
-	transactor *transact.Transactor,
+	transactor transact.Transactor,
 	booking_repository domain.BookingRepository,
 ) *BookingUsecase {
 	return &BookingUsecase{

@@ -10,12 +10,12 @@ import (
 )
 
 type ClassUsecase struct {
-	Transactor      *transact.Transactor
+	Transactor      transact.Transactor
 	ClassRepository domain.ClassRepository
 }
 
 func NewClassUsecase(
-	transactor *transact.Transactor,
+	transactor transact.Transactor,
 	class_repository domain.ClassRepository,
 ) *ClassUsecase {
 	return &ClassUsecase{

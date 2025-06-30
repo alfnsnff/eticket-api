@@ -16,7 +16,7 @@ import (
 )
 
 type PaymentUsecase struct {
-	Transactor        *transact.Transactor // Assuming transact package is imported
+	Transactor        transact.Transactor // Assuming transact package is imported
 	TripayClient      domain.TripayClient
 	BookingRepository domain.BookingRepository
 	TicketRepository  domain.TicketRepository
@@ -25,7 +25,7 @@ type PaymentUsecase struct {
 }
 
 func NewPaymentUsecase(
-	transactor *transact.Transactor, // Assuming transact package is imported
+	transactor transact.Transactor, // Assuming transact package is imported
 	tripay_client domain.TripayClient,
 	booking_repository domain.BookingRepository,
 	ticket_repository domain.TicketRepository,

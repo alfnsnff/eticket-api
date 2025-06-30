@@ -10,13 +10,13 @@ import (
 )
 
 type ShipUsecase struct {
-	Transactor     *transact.Transactor
+	Transactor     transact.Transactor
 	ShipRepository domain.ShipRepository
 }
 
 func NewShipUsecase(
 
-	transactor *transact.Transactor,
+	transactor transact.Transactor,
 	ship_repository domain.ShipRepository,
 ) *ShipUsecase {
 	return &ShipUsecase{

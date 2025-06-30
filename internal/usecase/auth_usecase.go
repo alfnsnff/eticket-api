@@ -17,7 +17,7 @@ import (
 )
 
 type AuthUsecase struct {
-	Transactor             *transact.Transactor
+	Transactor             transact.Transactor
 	RefreshTokenRepository domain.RefreshTokenRepository
 	UserRepository         domain.UserRepository
 	Mailer                 mailer.Mailer
@@ -25,7 +25,7 @@ type AuthUsecase struct {
 }
 
 func NewAuthUsecase(
-	transactor *transact.Transactor,
+	transactor transact.Transactor,
 	refresh_repository domain.RefreshTokenRepository,
 	user_repository domain.UserRepository,
 	mailer mailer.Mailer,

@@ -10,13 +10,13 @@ import (
 )
 
 type HarborUsecase struct {
-	Transactor       *transact.Transactor
+	Transactor       transact.Transactor
 	HarborRepository domain.HarborRepository
 }
 
 func NewHarborUsecase(
 
-	transactor *transact.Transactor,
+	transactor transact.Transactor,
 	harborRepository domain.HarborRepository,
 ) *HarborUsecase {
 	return &HarborUsecase{

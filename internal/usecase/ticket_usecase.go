@@ -11,7 +11,7 @@ import (
 )
 
 type TicketUsecase struct {
-	Transactor         *transact.Transactor
+	Transactor         transact.Transactor
 	TicketRepository   domain.TicketRepository
 	ScheduleRepository domain.ScheduleRepository
 	QuotaRepository    domain.QuotaRepository
@@ -19,7 +19,7 @@ type TicketUsecase struct {
 
 func NewTicketUsecase(
 
-	transactor *transact.Transactor,
+	transactor transact.Transactor,
 	ticket_repository domain.TicketRepository,
 	schedule_repository domain.ScheduleRepository,
 	quota_reposiotry domain.QuotaRepository,

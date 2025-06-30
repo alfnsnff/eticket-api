@@ -12,13 +12,12 @@ import (
 )
 
 type ClaimItemUsecase struct {
-	Conn                gotann.Connection
-	Transactor          *transact.Transactor
+	Transactor          transact.Transactor
 	ClaimItemRepository domain.ClaimItemRepository
 }
 
 func NewClaimItemUsecase(
-	transactor *transact.Transactor,
+	transactor transact.Transactor,
 	claim_item_repository domain.ClaimItemRepository,
 ) *ClaimItemUsecase {
 	return &ClaimItemUsecase{

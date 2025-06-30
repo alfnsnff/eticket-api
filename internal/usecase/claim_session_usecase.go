@@ -21,7 +21,7 @@ import (
 )
 
 type ClaimSessionUsecase struct {
-	Transactor             *transact.Transactor
+	Transactor             transact.Transactor
 	ClaimSessionRepository domain.ClaimSessionRepository
 	ClaimItemRepository    domain.ClaimItemRepository // Assuming you have a ClaimItemRepository
 	TicketRepository       domain.TicketRepository
@@ -33,7 +33,7 @@ type ClaimSessionUsecase struct {
 }
 
 func NewClaimSessionUsecase(
-	transactor *transact.Transactor,
+	transactor transact.Transactor,
 	claim_session_repository domain.ClaimSessionRepository,
 	claim_item_repository domain.ClaimItemRepository, // Assuming you have a ClaimItemRepository
 	ticket_repository domain.TicketRepository,

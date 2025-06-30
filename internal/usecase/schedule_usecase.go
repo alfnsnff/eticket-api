@@ -10,7 +10,7 @@ import (
 )
 
 type ScheduleUsecase struct {
-	Transactor             *transact.Transactor
+	Transactor             transact.Transactor
 	ClaimSessionRepository domain.ClaimSessionRepository
 	ClassRepository        domain.ClassRepository
 	ShipRepository         domain.ShipRepository
@@ -19,7 +19,7 @@ type ScheduleUsecase struct {
 }
 
 func NewScheduleUsecase(
-	transactor *transact.Transactor,
+	transactor transact.Transactor,
 	claim_session_repository domain.ClaimSessionRepository,
 	class_repository domain.ClassRepository,
 	ship_repository domain.ShipRepository,

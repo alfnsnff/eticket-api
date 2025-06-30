@@ -11,13 +11,13 @@ import (
 )
 
 type UserUsecase struct {
-	Transactor     *transact.Transactor
+	Transactor     transact.Transactor
 	UserRepository domain.UserRepository
 }
 
 func NewUserUsecase(
 
-	transactor *transact.Transactor, // Assuming transact package is imported
+	transactor transact.Transactor, // Assuming transact package is imported
 	user_repository domain.UserRepository,
 ) *UserUsecase {
 	return &UserUsecase{
