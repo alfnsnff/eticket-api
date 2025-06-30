@@ -51,7 +51,7 @@ func (r *RoleRepository) Delete(ctx context.Context, conn gotann.Connection, rol
 
 func (r *RoleRepository) FindAll(ctx context.Context, conn gotann.Connection, limit, offset int, sort, search string) ([]*domain.Role, error) {
 	roles := []*domain.Role{}
-	query := conn.Model(&domain.Ship{})
+	query := conn.Model(&domain.Role{})
 	if search != "" {
 		search = "%" + search + "%"
 		query = query.Where("role_name ILIKE ?", search)
