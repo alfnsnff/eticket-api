@@ -1,12 +1,13 @@
-name: Build and Push Docker Image Test
+name: Build and Deploy GO Test
 
 on:
   push:
-     branches:
+    branches:
       - test
 
 jobs:
-  docker:
+  build:
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
 
     steps:
@@ -20,3 +21,45 @@ jobs:
         run: |
           docker build -t ghcr.io/${{ secrets.GHCR_USERNAME }}/tikethebattest:latest .
           docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/tikethebattest:latest
+
+  deploy:
+    name: Deploy to Droplet
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Droplet via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DROPLET_HOST_TEST }}
+          username: root
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
+            docker pull ghcr.io/${{ secrets.GHCR_USERNAME }}/tikethebattest:latest
+            docker stop tikethebattest || true
+            docker rm tikethebattest || true
+            docker run -d \
+              --name tikethebattest \
+              --restart unless-stopped \
+              --network tikethebattest \
+              -p 8080:80 \
+              -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
+              -e PORT=${{ secrets.PORT }} \
+              -e ACCESS_TOKEN_EXPIRY=${{ secrets.ACCESS_TOKEN_EXPIRY }} \
+              -e REFRESH_TOKEN_EXPIRY=${{ secrets.REFRESH_TOKEN_EXPIRY }} \
+              -e TRIPAY_API_KEY=${{ secrets.TRIPAY_API_KEY }} \
+              -e TRIPAY_PRIVATE_API_KEY=${{ secrets.TRIPAY_PRIVATE_API_KEY }} \
+              -e TRIPAY_MERCHANT_CODE=${{ secrets.TRIPAY_MERCHANT_CODE }} \
+              -e DATABASE_HOST=${{ secrets.DATABASE_HOST }} \
+              -e DATABASE_PORT=${{ secrets.DATABASE_PORT }} \
+              -e DATABASE_NAME=${{ secrets.DATABASE_NAME }} \
+              -e DATABASE_USER=${{ secrets.DATABASE_USER }} \
+              -e DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }} \
+              -e DATABASE_SSLMODE=${{ secrets.DATABASE_SSLMODE }} \
+              -e MAILER_HOST=${{ secrets.MAILER_HOST }} \
+              -e MAILER_PORT=${{ secrets.MAILER_PORT }} \
+              -e MAILER_USERNAME=${{ secrets.MAILER_USERNAME }} \
+              -e MAILER_PASSWORD=${{ secrets.MAILER_PASSWORD }} \
+              -e MAILER_FROM=${{ secrets.MAILER_FROM }} \
+              ghcr.io/${{ secrets.GHCR_USERNAME }}/tikethebattest:latest
