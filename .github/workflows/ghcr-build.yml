@@ -1,9 +1,9 @@
-name: Build and Push Docker Image
+name: Build and Push Docker Image Test
 
 on:
   push:
     branches:
-      - master
+      - test
 
 jobs:
   docker:
@@ -18,5 +18,5 @@ jobs:
 
       - name: Build and Push Docker image
         run: |
-          docker build -t ghcr.io/${{ secrets.GHCR_USERNAME }}/tikethebat:latest .
-          docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/tikethebat:latest
+          docker build -t ghcr.io/${{ secrets.GHCR_USERNAME }}/tikethebattest:latest .
+          docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/tikethebattest:latest
