@@ -20,10 +20,3 @@ jobs:
         run: |
           docker build -t ghcr.io/${{ secrets.GHCR_USERNAME }}/tikethebat:latest .
           docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/tikethebat:latest
-
-      - uses: actions/delete-package-versions@v4
-        with:
-          package-name: 'tikethebat'
-          package-type: 'container'
-          min-versions-to-keep: 3
-          delete-only-untagged-versions: true
