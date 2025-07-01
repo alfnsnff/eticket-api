@@ -1,4 +1,4 @@
-name: Deploy to Azure VM
+name: Deploy GO
 
 on:
   workflow_run:
