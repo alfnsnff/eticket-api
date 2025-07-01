@@ -1,0 +1,78 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Application logs
+  - job_name: eticket-api
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: eticket-api
+          service: eticket-api
+          environment: development
+          __path__: /var/log/app/*.log
+
+  # JSON logs parsing
+  - job_name: eticket-api-json
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: eticket-api-json
+          service: eticket-api
+          __path__: /var/log/app/*.json
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            message: message
+            timestamp: timestamp
+      - labels:
+          level:
+
+  # System logs
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: system-logs
+          __path__: /var/log/host/*.log
+
+  # Docker logs
+  - job_name: docker
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: docker-logs
+          __path__: /var/lib/docker/containers/*/*.log
+    pipeline_stages:
+      - json:
+          expressions:
+            output: log
+            stream: stream
+            attrs:
+      - json:
+          source: attrs
+          expressions:
+            tag:
+      - regex:
+          source: tag
+          expression: (?P<container_name>(?:[^|]*))\|
+      - timestamp:
+          source: time
+          format: RFC3339Nano
+      - labels:
+          stream:
+          container_name:
+      - output:
+          source: output
