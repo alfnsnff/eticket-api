@@ -48,6 +48,7 @@ jobs:
       - name: Ensure Docker network exists
         run: |
           docker network inspect tikethebat >/dev/null 2>&1 || docker network create tikethebat
+          docker network inspect monitoring >/dev/null 2>&1 || docker network create monitoring
 
       - name: Run new container
         run: |
