@@ -18,7 +18,7 @@ services:
       - '--web.enable-lifecycle'
       - '--web.enable-admin-api'
     networks:
-      - monitoring
+      - tikethebat
 
   # Loki - Log Aggregation
   loki:
@@ -32,7 +32,7 @@ services:
       - loki_data:/loki
     command: -config.file=/etc/loki/local-config.yaml
     networks:
-      - monitoring
+      - tikethebat
 
   # Promtail - Log Shipper
   promtail:
@@ -48,7 +48,7 @@ services:
     depends_on:
       - loki
     networks:
-      - monitoring
+      - tikethebat
 
   # Grafana - Visualization
   grafana:
@@ -61,7 +61,7 @@ services:
       - prometheus
       - loki
     networks:
-      - monitoring
+      - tikethebat
 
   # Node Exporter - System Metrics (Optional)
   node-exporter:
@@ -80,7 +80,7 @@ services:
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     networks:
-      - monitoring
+      - tikethebat
 
 volumes:
   prometheus_data:
@@ -88,5 +88,5 @@ volumes:
   grafana_data:
 
 networks:
-  monitoring:
+  tikethebat:
     external: true
