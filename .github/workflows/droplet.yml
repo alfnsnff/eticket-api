@@ -19,15 +19,15 @@ jobs:
           username: root
           key: ${{ secrets.DROPLET_SSH_KEY }}
           script: |
-            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
             docker pull ghcr.io/${{ secrets.GHCR_USERNAME }}/tikethebat:latest
             docker stop tikethebat || true
             docker rm tikethebat || true
             docker run -d \
               --name tikethebat \
               --restart unless-stopped \
-              -p 8080:80 \
               --network tikethebat \
+              -p 8080:80 \
               -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
               -e PORT=${{ secrets.PORT }} \
               -e ACCESS_TOKEN_EXPIRY=${{ secrets.ACCESS_TOKEN_EXPIRY }} \
