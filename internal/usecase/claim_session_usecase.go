@@ -7,7 +7,6 @@ import (
 	enum "eticket-api/internal/common/enums"
 	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/mailer"
-	"eticket-api/internal/common/templates"
 	"eticket-api/internal/common/transact"
 	"eticket-api/internal/common/utils"
 	"eticket-api/internal/domain"
@@ -321,9 +320,9 @@ func (cd *ClaimSessionUsecase) EntryClaimSession(
 			}
 		}
 
-		subject := "Your Booking is Confirmed"
-		htmlBody := templates.BookingInvoiceEmail(booking, payment)
-		cd.Mailer.SendAsync(booking.Email, subject, htmlBody)
+		// subject := "Your Booking is Confirmed"
+		// htmlBody := templates.BookingInvoiceEmail(booking, payment)
+		// cd.Mailer.SendAsync(booking.Email, subject, htmlBody)
 		session.Status = enum.ClaimSessionSuccess.String()
 		if err := cd.ClaimSessionRepository.Update(ctx, tx, session); err != nil {
 			return fmt.Errorf("failed to update session: %w", err)

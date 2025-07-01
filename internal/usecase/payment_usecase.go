@@ -5,7 +5,6 @@ import (
 	"eticket-api/internal/client"
 	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/mailer"
-	"eticket-api/internal/common/templates"
 	"eticket-api/internal/common/transact"
 	"eticket-api/internal/domain"
 	"eticket-api/internal/model"
@@ -165,10 +164,10 @@ func (uc *PaymentUsecase) HandleCallback(ctx context.Context, request *domain.Ca
 
 func (uc *PaymentUsecase) HandleSuccessfulPayment(ctx context.Context, tx gotann.Connection, booking *domain.Booking, tickets []*domain.Ticket) error {
 	// Send confirmation email
-	subject := "Your Booking is Confirmed"
-	htmlBody := templates.BookingSuccessEmail(booking, tickets)
+	// subject := "Your Booking is Confirmed"
+	// htmlBody := templates.BookingSuccessEmail(booking, tickets)
 
-	uc.Mailer.SendAsync(booking.Email, subject, htmlBody)
+	// uc.Mailer.SendAsync(booking.Email, subject, htmlBody)
 	return nil
 
 }
@@ -203,18 +202,18 @@ func (uc *PaymentUsecase) HandleUnsuccessfulPayment(ctx context.Context, tx gota
 		}
 	}
 
-	subject := "Payment Failed - Booking Not Confirmed"
-	var htmlBody string
+	// subject := "Payment Failed - Booking Not Confirmed"
+	// var htmlBody string
 
-	switch status {
-	case "FAILED":
-		htmlBody = templates.BookingFailedEmail(booking, "Payment processing failed")
-	case "EXPIRED":
-		htmlBody = templates.BookingFailedEmail(booking, "Payment time expired")
-	case "CANCELLED", "REFUND":
-		htmlBody = templates.BookingFailedEmail(booking, "Payment was cancelled or refunded")
-	}
+	// switch status {
+	// case "FAILED":
+	// 	htmlBody = templates.BookingFailedEmail(booking, "Payment processing failed")
+	// case "EXPIRED":
+	// 	htmlBody = templates.BookingFailedEmail(booking, "Payment time expired")
+	// case "CANCELLED", "REFUND":
+	// 	htmlBody = templates.BookingFailedEmail(booking, "Payment was cancelled or refunded")
+	// }
 
-	uc.Mailer.SendAsync(booking.Email, subject, htmlBody)
+	// uc.Mailer.SendAsync(booking.Email, subject, htmlBody)
 	return nil
 }

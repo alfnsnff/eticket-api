@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	TripayBaseURL = "http://localhost:3001/api"
+	TripayBaseURL = "https://mockservicetripay--0000001.proudpebble-66ad7167.southeastasia.azurecontainerapps.io/api"
 )
 
 type TripayClient struct {
