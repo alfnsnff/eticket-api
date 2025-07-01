@@ -12,7 +12,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to VM
+      - name: Create .env file
+        run: |
+          cat <<EOF > .env
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          PORT=${{ secrets.PORT }}
+          ACCESS_TOKEN_EXPIRY=${{ secrets.ACCESS_TOKEN_EXPIRY }}
+          REFRESH_TOKEN_EXPIRY=${{ secrets.REFRESH_TOKEN_EXPIRY }}
+          TRIPAY_API_KEY=${{ secrets.TRIPAY_API_KEY }}
+          TRIPAY_PRIVATE_API_KEY=${{ secrets.TRIPAY_PRIVATE_API_KEY }}
+          TRIPAY_MERCHANT_CODE=${{ secrets.TRIPAY_MERCHANT_CODE }}
+          DATABASE_HOST=${{ secrets.DATABASE_HOST }}
+          DATABASE_PORT=${{ secrets.DATABASE_PORT }}
+          DATABASE_NAME=${{ secrets.DATABASE_NAME }}
+          DATABASE_USER=${{ secrets.DATABASE_USER }}
+          DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}
+          DATABASE_SSLMODE=${{ secrets.DATABASE_SSLMODE }}
+          MAILER_HOST=${{ secrets.MAILER_HOST }}
+          MAILER_PORT=${{ secrets.MAILER_PORT }}
+          MAILER_USERNAME=${{ secrets.MAILER_USERNAME }}
+          MAILER_PASSWORD=${{ secrets.MAILER_PASSWORD }}
+          MAILER_FROM=${{ secrets.MAILER_FROM }}
+          EOF
+
+
+      - name: Deploy to Droplet
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DROPLET_HOST }}
@@ -20,7 +44,7 @@ jobs:
           key: ${{ secrets.DROPLET_SSH_KEY }}
           script: |
             docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
-            docker pull ghcr.io/${{ github.repository_owner }}/tikethebat:latest
+            docker pull ghcr.io/${{ secrets.GHCR_USERNAME }}/tikethebat:latest
             docker stop tikethebat || true
             docker rm tikethebat || true
             docker run -d \
