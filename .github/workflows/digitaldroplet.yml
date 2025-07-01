@@ -3,6 +3,8 @@ name: Deploy GO Test
 on:
   workflow_run:
     workflows: ["Build and Push Docker Image Test"]
+    branches:
+      - test
     types:
       - completed
 
