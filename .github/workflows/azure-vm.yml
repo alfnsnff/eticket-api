@@ -2,7 +2,7 @@ name: Deploy GO
 
 on:
   workflow_run:
-    workflows: ["Build and Push Docker Image"]
+    workflows: ["Build and Push Image"]
     types:
       - completed
 
