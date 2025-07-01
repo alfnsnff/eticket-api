@@ -42,7 +42,7 @@ jobs:
             docker run -d \
               --name tikethebattest \
               --restart unless-stopped \
-              --network tikethebattest \
+              --network tikethebat \
               -p 8080:80 \
               -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
               -e PORT=${{ secrets.PORT }} \
