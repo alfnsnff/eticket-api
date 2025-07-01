@@ -45,10 +45,9 @@ jobs:
           docker stop myapp || true
           docker rm myapp || true
 
-          - name: Ensure Docker network exists
-  run: |
-    docker network inspect tikethebat >/dev/null 2>&1 || docker network create tikethebat
-
+      - name: Ensure Docker network exists
+        run: |
+          docker network inspect tikethebat >/dev/null 2>&1 || docker network create tikethebat
 
       - name: Run new container
         run: |
