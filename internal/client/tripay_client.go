@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	TripayBaseURL = "https://tripay.co.id/api-sandbox"
+	TripayBaseURL = "http://localhost:3001/api"
 )
 
 type TripayClient struct {

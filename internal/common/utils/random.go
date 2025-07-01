@@ -7,13 +7,22 @@ import (
 	"time"
 )
 
-func GenerateOrderID(departure, arrival, shipCode string) string {
-	now := time.Now().Format("060102") // YYMMDD
-	return fmt.Sprintf("%s%s%s", departure, now, Random(3))
+func GenerateOrderID(departure string) string {
+	now := time.Now()
+	day := now.Format("02")  // Tanggal (DD)
+	hour := now.Format("15") // Jam (HH)
+
+	// Get last 3 digits of millisecond timestamp
+	msPart := now.UnixMilli() % 1000
+	msStr := fmt.Sprintf("%03d", msPart)
+
+	random := Random(4) // A-Z0-9, 4 chars
+
+	return fmt.Sprintf("%s%s%s%s%s", departure, day, hour, msStr, random)
 }
 
 func Random(n int) string {
-	const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" // Fixed: removed duplicate numbers
+	const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	b := make([]byte, n)
 	_, _ = crypt.Read(b)
 	for i := range b {

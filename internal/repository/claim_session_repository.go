@@ -119,7 +119,7 @@ func (r *ClaimSessionRepository) FindActiveByScheduleID(ctx context.Context, con
 		Preload("Schedule.Ship").
 		Preload("ClaimItems").
 		Preload("ClaimItems.Class").
-		Where("schedule_id = ? AND status = ?", scheduleID, enum.ClaimSessionPendingData).
+		Where("schedule_id = ? AND status = ?", scheduleID, enum.ClaimSessionPending).
 		Where("expires_at > ?", time.Now()).
 		Find(&sessions)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {

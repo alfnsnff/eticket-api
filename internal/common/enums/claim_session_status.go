@@ -5,8 +5,7 @@ type ClaimSessionStatus int
 
 const (
 	ClaimSessionFailed ClaimSessionStatus = iota
-	ClaimSessionPendingData
-	ClaimSessionPendingPayment
+	ClaimSessionPending
 	ClaimSessionSuccess
 	ClaimSessionCancelled
 )
@@ -15,10 +14,8 @@ func (css ClaimSessionStatus) String() string {
 	switch css {
 	case ClaimSessionFailed:
 		return "FAILED"
-	case ClaimSessionPendingData:
-		return "DATA_PENDING"
-	case ClaimSessionPendingPayment:
-		return "PAYMENT_PENDING"
+	case ClaimSessionPending:
+		return "PENDING"
 	case ClaimSessionSuccess:
 		return "RESERVED"
 	case ClaimSessionCancelled:
@@ -38,8 +35,7 @@ func GetSuccessClaimSessionStatuses() []string {
 // Get statuses that are pending and respect expiration
 func GetPendingClaimSessionStatuses() []string {
 	return []string{
-		ClaimSessionPendingData.String(),
-		ClaimSessionPendingPayment.String(),
+		ClaimSessionPending.String(),
 	}
 }
 

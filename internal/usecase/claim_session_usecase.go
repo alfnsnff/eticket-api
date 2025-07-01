@@ -129,7 +129,7 @@ func (uc *ClaimSessionUsecase) LockClaimSession(
 		claimSession = &domain.ClaimSession{
 			SessionID:  uuid.NewString(),
 			ScheduleID: request.ScheduleID,
-			Status:     enum.ClaimSessionPendingData.String(),
+			Status:     enum.ClaimSessionPending.String(),
 			ExpiresAt:  time.Now().Add(16 * time.Minute),
 			ClaimItems: claimItems, // attach here
 		}
@@ -173,11 +173,7 @@ func (cd *ClaimSessionUsecase) EntryClaimSession(
 			return errors.New("claim session expired")
 		}
 		// Generate order ID
-		orderID := utils.GenerateOrderID(
-			session.Schedule.DepartureHarbor.HarborAlias,
-			session.Schedule.ArrivalHarbor.HarborAlias,
-			session.Schedule.Ship.ShipAlias,
-		)
+		orderID := utils.GenerateOrderID(session.Schedule.DepartureHarbor.HarborAlias)
 
 		// Create booking
 		booking = &domain.Booking{
@@ -188,7 +184,7 @@ func (cd *ClaimSessionUsecase) EntryClaimSession(
 			PhoneNumber:  request.PhoneNumber,
 			CustomerName: request.CustomerName,
 			Email:        request.Email,
-			Status:       enum.ClaimSessionPendingData.String(),
+			Status:       enum.ClaimSessionPending.String(),
 			ExpiresAt:    time.Now().Add(13 * time.Minute), // Set expiration for 13 minutes
 		}
 		if err := cd.BookingRepository.Insert(ctx, tx, booking); err != nil {
@@ -350,7 +346,7 @@ func (uc *ClaimSessionUsecase) CreateClaimSession(ctx context.Context, request *
 		claimSession := &domain.ClaimSession{
 			SessionID:  uuid.NewString(),
 			ScheduleID: request.ScheduleID,
-			Status:     enum.ClaimSessionPendingData.String(),
+			Status:     enum.ClaimSessionPending.String(),
 			ExpiresAt:  time.Now().Add(16 * time.Minute),
 			ClaimItems: make([]domain.ClaimItem, len(request.Items)),
 		}

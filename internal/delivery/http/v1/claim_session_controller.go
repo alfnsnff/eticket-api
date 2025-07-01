@@ -112,6 +112,12 @@ func (c *ClaimSessionController) EntryClaimSession(ctx *gin.Context) {
 			return
 		}
 
+		if errors.Is(err, errs.ErrConflict) {
+			c.Log.WithError(err).Error("duplicate value already exists")
+			ctx.JSON(http.StatusConflict, response.NewErrorResponse("duplicate value already exists", nil))
+			return
+		}
+
 		if errors.Is(err, errs.ErrExternalTimeout) || errors.Is(err, errs.ErrExternalDown) {
 			c.Log.WithError(err).Warn("external system unavailable")
 			ctx.JSON(http.StatusServiceUnavailable, response.NewErrorResponse("external system unavailable", nil))
@@ -245,8 +251,8 @@ func (c *ClaimSessionController) UpdateClaimSession(ctx *gin.Context) {
 		}
 
 		if errors.Is(err, errs.ErrConflict) {
-			c.Log.WithError(err).Error("claim session already exists")
-			ctx.JSON(http.StatusConflict, response.NewErrorResponse("claim session already exists", nil))
+			c.Log.WithError(err).Error("duplicate value already exists")
+			ctx.JSON(http.StatusConflict, response.NewErrorResponse("duplicate value already exists", nil))
 			return
 		}
 
