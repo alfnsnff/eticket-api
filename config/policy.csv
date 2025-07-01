@@ -1,0 +1,13 @@
+p, admin, /v1/role/create, POST
+p, admin, /v1/role/update/:id, POST
+p, admin, /v1/role/:id, DELETE
+
+p, admin, /v1/ticket/create, POST
+p, admin, /v1/ticket/check-in/:id, POST
+p, admin, /v1/ticket/update/:id, POST
+p, admin, /v1/ticket/:id, DELETE
+
+p, operator, /v1/ticket/create, POST
+p, operator, /v1/ticket/check-in/:id, POST
+p, operator, /v1/ticket/update/:id, POST
+p, operator, /v1/ticket/:id, DELETE
