@@ -59,6 +59,8 @@ jobs:
             --env-file .env \
             -p 8080:80 \
             ghcr.io/${{ secrets.GHCR_USERNAME }}/myapp:${{ github.sha }}
+          
+          docker network connect monitoring myapp
 
       - name: Cleanup
         run: rm .env
