@@ -45,12 +45,18 @@ jobs:
           docker stop myapp || true
           docker rm myapp || true
 
+          - name: Ensure Docker network exists
+  run: |
+    docker network inspect tikethebat >/dev/null 2>&1 || docker network create tikethebat
+
+
       - name: Run new container
         run: |
           docker run -d \
             --add-host=host.docker.internal:host-gateway \
             --name myapp \
             --restart unless-stopped \
+            --network tikethebat \
             --env-file .env \
             -p 8080:80 \
             ghcr.io/${{ secrets.GHCR_USERNAME }}/myapp:${{ github.sha }}
