@@ -250,11 +250,11 @@ func (c *ClaimSessionController) UpdateClaimSession(ctx *gin.Context) {
 			return
 		}
 
-		if errors.Is(err, errs.ErrConflict) {
-			c.Log.WithError(err).Error("duplicate value already exists")
-			ctx.JSON(http.StatusConflict, response.NewErrorResponse("duplicate value already exists", nil))
-			return
-		}
+		// if errors.Is(err, errs.ErrConflict) {
+		// 	c.Log.WithError(err).Error("duplicate value already exists")
+		// 	ctx.JSON(http.StatusConflict, response.NewErrorResponse("duplicate value already exists", nil))
+		// 	return
+		// }
 
 		c.Log.WithError(err).Error("failed to update claim session")
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update claim session", err.Error()))

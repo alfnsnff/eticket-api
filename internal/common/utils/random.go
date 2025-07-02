@@ -2,23 +2,40 @@ package utils
 
 import (
 	crypt "crypto/rand"
+	"encoding/hex"
 	"fmt"
 	math "math/rand"
 	"time"
 )
 
+// GenerateOrderID generates a highly unique order ID
 func GenerateOrderID(departure string) string {
-	now := time.Now()
-	day := now.Format("02")  // Tanggal (DD)
-	hour := now.Format("15") // Jam (HH)
+	now := time.Now().UTC()
+	timePart := now.Format("20060102150405") // yyyyMMddHHmmss
+	nanoPart := fmt.Sprintf("%09d", now.Nanosecond())
 
-	// Get last 3 digits of millisecond timestamp
-	msPart := now.UnixMilli() % 1000
-	msStr := fmt.Sprintf("%03d", msPart)
+	uuidPart := generateRandomHex(8) // 8 bytes = 16 hex chars
 
-	random := Random(4) // A-Z0-9, 4 chars
+	return fmt.Sprintf("%s-%s%s-%s", departure, timePart, nanoPart, uuidPart)
+}
 
-	return fmt.Sprintf("%s%s%s%s%s", departure, day, hour, msStr, random)
+// GenerateTicketReferenceID creates a highly unique ticket reference ID
+func GenerateTicketReferenceID() string {
+	now := time.Now().UTC()
+	datePart := now.Format("060102")                      // YYMMDD
+	nanoPart := fmt.Sprintf("%09d", now.Nanosecond())[:6] // 6-digit nanosec
+	randPart := generateRandomHex(4)                      // 4 bytes = 8 hex chars
+
+	return fmt.Sprintf("T%s-%s%s", datePart, nanoPart, randPart)
+}
+
+// generateRandomHex returns a securely generated random hex string of n bytes
+func generateRandomHex(n int) string {
+	b := make([]byte, n)
+	if _, err := crypt.Read(b); err != nil {
+		panic("failed to generate secure random ID")
+	}
+	return hex.EncodeToString(b)
 }
 
 func Random(n int) string {
@@ -38,10 +55,4 @@ func ShuffleString(s string) string {
 		runes[i], runes[j] = runes[j], runes[i]
 	})
 	return string(runes)
-}
-
-func GenerateTicketReferenceID() string {
-	now := time.Now().Format("060102") // YYMMDD
-	random := Random(3)                // 6-char alphanumeric
-	return fmt.Sprintf("T-%s-%s", now, random)
 }

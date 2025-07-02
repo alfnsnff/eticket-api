@@ -9,7 +9,7 @@ import (
 type Ticket struct {
 	ID              uint      `gorm:"column:id;primaryKey"`
 	BookingID       *uint     `gorm:"column:booking_id;not null;index;"`
-	TicketCode      string    `gorm:"column:ticket_code;type:varchar(64);not null;uniqueIndex"` // Unique ticket code
+	TicketCode      string    `gorm:"column:ticket_code;type:varchar(64);not null;"` // Unique ticket code
 	ScheduleID      uint      `gorm:"column:schedule_id;not null;index;"`
 	ClassID         uint      `gorm:"column:class_id;not null;index;"`
 	PassengerName   string    `gorm:"column:passenger_name;type:varchar(32)"`

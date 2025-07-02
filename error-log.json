@@ -1,0 +1,2 @@
+time="2025-07-02T16:58:17+07:00" level=error msg="{\"vu\":10,\"iter\":0,\"endpoint\":\"POST /v1/claim/entry/efa08d21-6bfd-4a02-beb0-3a18c9aa43fd\",\"status\":409,\"body\":\"{\\\"status\\\":false,\\\"message\\\":\\\"duplicate value already exists\\\"}\"}" source=console
+time="2025-07-02T16:58:18+07:00" level=error msg="test run was aborted because k6 received a 'interrupt' signal"
