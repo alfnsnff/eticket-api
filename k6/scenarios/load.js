@@ -4,7 +4,7 @@ export const options = {
     { duration: '1m', target: 100 },
     { duration: '1m', target: 150 },
     { duration: '2m', target: 200 },
-    { duration: '1m', target: 0 },
+    { duration: '30s', target: 0 },
   ],
   
   thresholds: {

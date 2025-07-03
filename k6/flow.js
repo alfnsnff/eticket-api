@@ -15,6 +15,7 @@ export default function () {
     const res = http.get(`${BASE_URL}/v1/schedules`, { tags: { name: '/schedules' } });
     const ok = check(res, { 'load schedules success': (r) => r.status === 200 });
     if (!ok) console.error(JSON.stringify({ vu: vuId, iter: iteration, endpoint: 'GET /v1/schedules', status: res.status, body: res.body }));
+    sleep(0.5)
   });
 
   let selectedSchedule;
@@ -23,6 +24,7 @@ export default function () {
     const res = http.get(`${BASE_URL}/v1/schedule/${selectedSchedule}`, { tags: { name: '/schedule/:id' } });
     const ok = check(res, { 'load class success': (r) => r.status === 200 });
     if (!ok) console.error(JSON.stringify({ vu: vuId, iter: iteration, endpoint: `GET /v1/schedule/${selectedSchedule}`, status: res.status, body: res.body }));
+   sleep(1);
   });
 
   let sessionId;
@@ -38,6 +40,7 @@ export default function () {
       return;
     }
     sessionId = JSON.parse(res.body).data.session_id;
+    sleep(1);
   });
 
   let orderId;
@@ -70,6 +73,7 @@ export default function () {
       return;
     }
     orderId = JSON.parse(res.body).data.order_id;
+    sleep(1);
   });
 
     group('Get Booking', () => {
@@ -94,7 +98,6 @@ export default function () {
     });
     const ok = check(res, { 'payment success': (r) => r.status === 200 });
     if (!ok) console.error(JSON.stringify({ vu: vuId, iter: iteration, endpoint: 'POST /v1/payment/callback', status: res.status, body: res.body }));
+    sleep(1);
   });
-
-
 }

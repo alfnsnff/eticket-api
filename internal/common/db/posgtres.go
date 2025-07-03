@@ -35,8 +35,8 @@ func NewPostgres(cfg *config.Config) (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to configure database pool: %w", err)
 	}
 
-	sqlDB.SetMaxOpenConns(50)
-	sqlDB.SetMaxIdleConns(15)
+	sqlDB.SetMaxOpenConns(10)
+	sqlDB.SetMaxIdleConns(5)
 	sqlDB.SetConnMaxLifetime(1 * time.Minute)
 
 	return pg, nil
