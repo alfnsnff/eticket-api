@@ -25,7 +25,7 @@ func NewTransactionManager(db *gorm.DB) *Gotann {
 
 	// Build manager with your preferences
 	manager := gotann.NewBuilder(provider).
-		WithMaxConcurrentTransactions(50).
+		WithMaxConcurrentTransactions(100).
 		WithDefaultTimeout(30 * time.Second).
 		WithMetrics(true).
 		WithTracing(false).

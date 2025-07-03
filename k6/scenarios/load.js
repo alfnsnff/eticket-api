@@ -11,7 +11,7 @@ export const options = {
   
   thresholds: {
     // Toleransi kegagalan yang SANGAT KETAT untuk Load Test
-    'http_req_failed': ['rate<0.05'], // Kurang dari 1% request yang gagal
+    'http_req_failed': ['rate<0.05'], // Kurang dari 5% request yang gagal
     'http_req_duration': ['p(95)<3000'], // 95% request selesai dalam 1 detik
 
   },
