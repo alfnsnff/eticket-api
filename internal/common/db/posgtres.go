@@ -35,9 +35,9 @@ func NewPostgres(cfg *config.Config) (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to configure database pool: %w", err)
 	}
 
-	sqlDB.SetMaxOpenConns(100)          // sesuai kapasitas PostgreSQL
-	sqlDB.SetMaxIdleConns(10)           // idle pool cukup besar
-	sqlDB.SetConnMaxLifetime(time.Hour) // koneksi akan refresh tiap 1 jam
+	sqlDB.SetMaxOpenConns(50)
+	sqlDB.SetMaxIdleConns(15)
+	sqlDB.SetConnMaxLifetime(1 * time.Minute)
 
 	return pg, nil
 }
