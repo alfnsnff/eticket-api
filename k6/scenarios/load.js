@@ -1,19 +1,12 @@
 export const options = {
   stages: [
-    // Tahap Warm-up: Memanaskan sistem dengan beban rendah
-    { duration: '30s', target: 20 }, // Naik ke 20 VU dalam 30 detik
-
-    // Tahap Ramp-up: Peningkatan bertahap menuju beban puncak yang diharapkan
-    { duration: '1m', target: 50 },  // Naik ke 50 VU dalam 1 menit
-    { duration: '1m', target: 100 }, // Naik ke 100 VU dalam 1 menit
-    { duration: '1m', target: 200 }, // Naik ke 200 VU dalam 1 menit
-    { duration: '1m', target: 300 }, // Naik ke 300 VU dalam 1 menit
-
-    // Tahap Sustain: Pertahankan beban puncak selama periode yang cukup lama
-    { duration: '5m', target: 250 }, // Pertahankan 250 VU selama 5 menit
-
-    // Tahap Ramp-down: Turunkan beban secara bertahap
-    { duration: '30s', target: 0 },  // Turun ke 0 VU dalam 30 detik
+    { duration: '30s', target: 100 },   // pemanasan awal
+    { duration: '30s', target: 200 },
+    { duration: '30s', target: 300 },
+    { duration: '30s', target: 400 },
+    { duration: '30s', target: 500 },   // mencapai puncak
+    { duration: '2m', target: 500 },    // pertahankan load puncak
+    { duration: '1m', target: 0 },      // cool down
   ],
   
   thresholds: {

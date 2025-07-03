@@ -1,0 +1,234 @@
+{
+    "metrics": {
+        "http_req_sending": {
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 0.6256769999999992,
+            "avg": 0.0158774811557789,
+            "min": 0,
+            "med": 0,
+            "max": 1.9515
+        },
+        "iterations": {
+            "rate": 7.537349615441559,
+            "count": 2566
+        },
+        "vus": {
+            "value": 4,
+            "min": 4,
+            "max": 500
+        },
+        "iteration_duration": {
+            "p(99)": 105026.200445,
+            "avg": 44708.65343090407,
+            "min": 425.5421,
+            "med": 43851.5156,
+            "max": 126952.6859,
+            "p(90)": 78031.6212,
+            "p(95)": 87426.1165
+        },
+        "vus_max": {
+            "value": 500,
+            "min": 500,
+            "max": 500
+        },
+        "group_duration": {
+            "p(99)": 30035.767408,
+            "avg": 7597.523676168357,
+            "min": 26.1779,
+            "med": 4795.03285,
+            "max": 30318.0769,
+            "p(90)": 19710.62623,
+            "p(95)": 26382.532739999995
+        },
+        "http_req_waiting": {
+            "p(99)": 30035.108970999998,
+            "avg": 7594.493574484909,
+            "min": 0,
+            "med": 4792.0887,
+            "max": 30316.7087,
+            "p(90)": 19706.91001,
+            "p(95)": 26382.485359999995
+        },
+        "data_sent": {
+            "count": 3652599,
+            "rate": 10729.117563527756
+        },
+        "http_reqs": {
+            "count": 15920,
+            "rate": 46.76329145667561
+        },
+        "http_req_receiving": {
+            "p(99)": 1.0991429999999998,
+            "avg": 0.27555410804020064,
+            "min": 0,
+            "med": 0,
+            "max": 2.6061,
+            "p(90)": 0.90171,
+            "p(95)": 0.9888
+        },
+        "checks": {
+            "passes": 15354,
+            "fails": 566,
+            "value": 0.9644472361809046
+        },
+        "http_req_duration": {
+            "min": 0,
+            "med": 4792.57835,
+            "max": 30317.2239,
+            "p(90)": 19706.984650000002,
+            "p(95)": 26382.485359999995,
+            "p(99)": 30035.158881,
+            "avg": 7594.785006074114,
+            "thresholds": {
+                "p(95)<3000": true
+            }
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 6773.1468265728845,
+            "min": 26.1779,
+            "med": 4525.19685,
+            "max": 30002.2353,
+            "p(90)": 16797.750500000002,
+            "p(95)": 21278.87268,
+            "p(99)": 27474.591822999984
+        },
+        "http_req_tls_handshaking": {
+            "p(99)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "data_received": {
+            "count": 13081609,
+            "rate": 38425.822511888866
+        },
+        "http_req_failed": {
+            "passes": 566,
+            "fails": 15354,
+            "thresholds": {
+                "rate<0.05": false
+            },
+            "value": 0.03555276381909548
+        },
+        "http_req_connecting": {
+            "avg": 1.2198679208542715,
+            "min": 0,
+            "med": 0,
+            "max": 215.0092,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 33.14651099999999
+        },
+        "http_req_blocked": {
+            "avg": 1.2260977889447235,
+            "min": 0,
+            "med": 0,
+            "max": 215.5251,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 33.224528999999954
+        }
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "Get Schedules": {
+                "path": "::Get Schedules",
+                "id": "1ff9489e4aecbab4130dffcc3e5cd03a",
+                "groups": {},
+                "checks": {
+                        "load schedules success": {
+                            "fails": 87,
+                            "name": "load schedules success",
+                            "path": "::Get Schedules::load schedules success",
+                            "id": "d7930b0532faef923b00592c74568498",
+                            "passes": 2623
+                        }
+                    },
+                "name": "Get Schedules"
+            },
+            "Get Schedule by ID": {
+                "name": "Get Schedule by ID",
+                "path": "::Get Schedule by ID",
+                "id": "a3cc98a0b6f4e50a23ff0d152a3caf5f",
+                "groups": {},
+                "checks": {
+                        "load class success": {
+                            "fails": 100,
+                            "name": "load class success",
+                            "path": "::Get Schedule by ID::load class success",
+                            "id": "1749ff3bd43cceb661ed4207b608ebd1",
+                            "passes": 2600
+                        }
+                    }
+            },
+            "Claim Lock": {
+                "name": "Claim Lock",
+                "path": "::Claim Lock",
+                "id": "17097546a3fc691b5c0f8d9ca6060e51",
+                "groups": {},
+                "checks": {
+                        "claim lock success": {
+                            "fails": 99,
+                            "name": "claim lock success",
+                            "path": "::Claim Lock::claim lock success",
+                            "id": "285d7793f111caa953d1c803e4a70a97",
+                            "passes": 2582
+                        }
+                    }
+            },
+            "Claim Entry": {
+                "checks": {
+                    "claim entry success": {
+                        "fails": 113,
+                        "name": "claim entry success",
+                        "path": "::Claim Entry::claim entry success",
+                        "id": "11cbf43e5ec4ddf6af6487213c5868f2",
+                        "passes": 2533
+                    }
+                },
+                "name": "Claim Entry",
+                "path": "::Claim Entry",
+                "id": "7127c92ddd7507150af1be4973a1cc3e",
+                "groups": {}
+            },
+            "Get Booking by Order ID": {
+                "name": "Get Booking by Order ID",
+                "path": "::Get Booking by Order ID",
+                "id": "faf20d84412f46bc411ba244c0948efe",
+                "groups": {},
+                "checks": {
+                        "get booking success": {
+                            "passes": 2534,
+                            "fails": 83,
+                            "name": "get booking success",
+                            "path": "::Get Booking by Order ID::get booking success",
+                            "id": "7c912f6fb073f95581b95bef5877d45c"
+                        }
+                    }
+            },
+            "Payment Callback": {
+                "path": "::Payment Callback",
+                "id": "7f0747d5b7ab2dc2964e62eb9d76d72f",
+                "groups": {},
+                "checks": {
+                        "payment callback success": {
+                            "name": "payment callback success",
+                            "path": "::Payment Callback::payment callback success",
+                            "id": "f2deffc63907886ea9be899578726ab0",
+                            "passes": 2482,
+                            "fails": 84
+                        }
+                    },
+                "name": "Payment Callback"
+            }
+        },
+        "checks": {}
+    }
+}
