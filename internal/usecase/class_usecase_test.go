@@ -1,4 +1,4 @@
-package tests
+package usecase
 
 import (
 	"context"
@@ -6,24 +6,23 @@ import (
 
 	"eticket-api/internal/domain"
 	"eticket-api/internal/mocks"
-	"eticket-api/internal/usecase"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
-func quotaUsecase(t *testing.T) (*usecase.QuotaUsecase, *mocks.MockQuotaRepository, *mocks.MockTransactor) {
+func classUsecase(t *testing.T) (*ClassUsecase, *mocks.MockClassRepository, *mocks.MockTransactor) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
-	repo := mocks.NewMockQuotaRepository(ctrl)
+	repo := mocks.NewMockClassRepository(ctrl)
 	transactor := mocks.NewMockTransactor(ctrl)
-	uc := usecase.NewQuotaUsecase(transactor, repo)
+	uc := NewClassUsecase(transactor, repo)
 	return uc, repo, transactor
 }
 
-func TestQuotaUsecase_CreateQuota(t *testing.T) {
+func TestClassUsecase_CreateClass(t *testing.T) {
 	t.Parallel()
-	uc, _, transactor := quotaUsecase(t)
+	uc, _, transactor := classUsecase(t)
 	tests := []struct {
 		name string
 		mock func()
@@ -47,7 +46,7 @@ func TestQuotaUsecase_CreateQuota(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mock()
-			err := uc.CreateQuota(context.Background(), &domain.Quota{})
+			err := uc.CreateClass(context.Background(), &domain.Class{})
 			if tc.err != nil {
 				require.ErrorIs(t, err, tc.err)
 			} else {
@@ -57,12 +56,13 @@ func TestQuotaUsecase_CreateQuota(t *testing.T) {
 	}
 }
 
-func TestQuotaUsecase_CreateQuotaBulk(t *testing.T) {
+func TestClassUsecase_GetClassByID(t *testing.T) {
 	t.Parallel()
-	uc, _, transactor := quotaUsecase(t)
+	uc, _, transactor := classUsecase(t)
 	tests := []struct {
 		name string
 		mock func()
+		res  *domain.Class
 		err  error
 	}{
 		{
@@ -70,20 +70,22 @@ func TestQuotaUsecase_CreateQuotaBulk(t *testing.T) {
 			mock: func() {
 				transactor.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(nil)
 			},
+			res: &domain.Class{},
 			err: nil,
 		},
 		{
-			name: "repo error",
+			name: "not found",
 			mock: func() {
 				transactor.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(errInternalServErr)
 			},
+			res: nil,
 			err: errInternalServErr,
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mock()
-			err := uc.CreateQuotaBulk(context.Background(), []*domain.Quota{{}})
+			_, err := uc.GetClassByID(context.Background(), 1)
 			if tc.err != nil {
 				require.ErrorIs(t, err, tc.err)
 			} else {

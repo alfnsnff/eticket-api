@@ -1,4 +1,4 @@
-package tests
+package usecase
 
 import (
 	"context"
@@ -6,28 +6,23 @@ import (
 
 	"eticket-api/internal/domain"
 	"eticket-api/internal/mocks"
-	"eticket-api/internal/usecase"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
-func scheduleUsecase(t *testing.T) (*usecase.ScheduleUsecase, *mocks.MockClaimSessionRepository, *mocks.MockClassRepository, *mocks.MockShipRepository, *mocks.MockScheduleRepository, *mocks.MockTicketRepository, *mocks.MockTransactor) {
+func quotaUsecase(t *testing.T) (*QuotaUsecase, *mocks.MockQuotaRepository, *mocks.MockTransactor) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
-	claimSessionRepo := mocks.NewMockClaimSessionRepository(ctrl)
-	classRepo := mocks.NewMockClassRepository(ctrl)
-	shipRepo := mocks.NewMockShipRepository(ctrl)
-	scheduleRepo := mocks.NewMockScheduleRepository(ctrl)
-	ticketRepo := mocks.NewMockTicketRepository(ctrl)
+	repo := mocks.NewMockQuotaRepository(ctrl)
 	transactor := mocks.NewMockTransactor(ctrl)
-	uc := usecase.NewScheduleUsecase(transactor, claimSessionRepo, classRepo, shipRepo, scheduleRepo, ticketRepo)
-	return uc, claimSessionRepo, classRepo, shipRepo, scheduleRepo, ticketRepo, transactor
+	uc := NewQuotaUsecase(transactor, repo)
+	return uc, repo, transactor
 }
 
-func TestScheduleUsecase_CreateSchedule(t *testing.T) {
+func TestQuotaUsecase_CreateQuota(t *testing.T) {
 	t.Parallel()
-	uc, _, _, _, _, _, transactor := scheduleUsecase(t)
+	uc, _, transactor := quotaUsecase(t)
 	tests := []struct {
 		name string
 		mock func()
@@ -51,7 +46,7 @@ func TestScheduleUsecase_CreateSchedule(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mock()
-			err := uc.CreateSchedule(context.Background(), &domain.Schedule{})
+			err := uc.CreateQuota(context.Background(), &domain.Quota{})
 			if tc.err != nil {
 				require.ErrorIs(t, err, tc.err)
 			} else {
@@ -61,13 +56,12 @@ func TestScheduleUsecase_CreateSchedule(t *testing.T) {
 	}
 }
 
-func TestScheduleUsecase_GetScheduleByID(t *testing.T) {
+func TestQuotaUsecase_CreateQuotaBulk(t *testing.T) {
 	t.Parallel()
-	uc, _, _, _, _, _, transactor := scheduleUsecase(t)
+	uc, _, transactor := quotaUsecase(t)
 	tests := []struct {
 		name string
 		mock func()
-		res  *domain.Schedule
 		err  error
 	}{
 		{
@@ -75,22 +69,20 @@ func TestScheduleUsecase_GetScheduleByID(t *testing.T) {
 			mock: func() {
 				transactor.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(nil)
 			},
-			res: &domain.Schedule{},
 			err: nil,
 		},
 		{
-			name: "not found",
+			name: "repo error",
 			mock: func() {
 				transactor.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(errInternalServErr)
 			},
-			res: nil,
 			err: errInternalServErr,
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mock()
-			_, err := uc.GetScheduleByID(context.Background(), 1)
+			err := uc.CreateQuotaBulk(context.Background(), []*domain.Quota{{}})
 			if tc.err != nil {
 				require.ErrorIs(t, err, tc.err)
 			} else {

@@ -1,4 +1,4 @@
-package tests
+package usecase
 
 import (
 	"context"
@@ -6,13 +6,12 @@ import (
 
 	"eticket-api/internal/mocks"
 	"eticket-api/internal/model"
-	"eticket-api/internal/usecase"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
-func claimSessionUsecase(t *testing.T) (*usecase.ClaimSessionUsecase, *mocks.MockClaimSessionRepository, *mocks.MockClaimItemRepository, *mocks.MockTicketRepository, *mocks.MockScheduleRepository, *mocks.MockBookingRepository, *mocks.MockQuotaRepository, *mocks.MockTripayClient, *mocks.MockMailer, *mocks.MockTransactor) {
+func claimSessionUsecase(t *testing.T) (*ClaimSessionUsecase, *mocks.MockClaimSessionRepository, *mocks.MockClaimItemRepository, *mocks.MockTicketRepository, *mocks.MockScheduleRepository, *mocks.MockBookingRepository, *mocks.MockQuotaRepository, *mocks.MockTripayClient, *mocks.MockMailer, *mocks.MockTransactor) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	claimSessionRepo := mocks.NewMockClaimSessionRepository(ctrl)
@@ -24,7 +23,7 @@ func claimSessionUsecase(t *testing.T) (*usecase.ClaimSessionUsecase, *mocks.Moc
 	tripayClient := mocks.NewMockTripayClient(ctrl)
 	mailer := mocks.NewMockMailer(ctrl)
 	transactor := mocks.NewMockTransactor(ctrl)
-	uc := usecase.NewClaimSessionUsecase(transactor, claimSessionRepo, claimItemRepo, ticketRepo, scheduleRepo, bookingRepo, quotaRepo, tripayClient, mailer)
+	uc := NewClaimSessionUsecase(transactor, claimSessionRepo, claimItemRepo, ticketRepo, scheduleRepo, bookingRepo, quotaRepo, tripayClient, mailer)
 	return uc, claimSessionRepo, claimItemRepo, ticketRepo, scheduleRepo, bookingRepo, quotaRepo, tripayClient, mailer, transactor
 }
 

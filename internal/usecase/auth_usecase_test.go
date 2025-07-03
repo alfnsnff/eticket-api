@@ -1,4 +1,4 @@
-package tests
+package usecase
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	"eticket-api/internal/common/utils"
 	"eticket-api/internal/domain"
 	"eticket-api/internal/mocks"
-	"eticket-api/internal/usecase"
 	"eticket-api/pkg/gotann"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -22,7 +21,7 @@ import (
 var errInternalServErr = errors.New("internal server error")
 
 // Helper untuk AuthUsecase
-func authUsecase(t *testing.T) (*usecase.AuthUsecase, *mocks.MockRefreshTokenRepository, *mocks.MockUserRepository, *mocks.MockMailer, *mocks.MockTokenUtil, *mocks.MockTransactor) {
+func authUsecase(t *testing.T) (*AuthUsecase, *mocks.MockRefreshTokenRepository, *mocks.MockUserRepository, *mocks.MockMailer, *mocks.MockTokenUtil, *mocks.MockTransactor) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	refreshRepo := mocks.NewMockRefreshTokenRepository(ctrl)
@@ -30,7 +29,7 @@ func authUsecase(t *testing.T) (*usecase.AuthUsecase, *mocks.MockRefreshTokenRep
 	mailer := mocks.NewMockMailer(ctrl)
 	tokenUtil := mocks.NewMockTokenUtil(ctrl)
 	transactor := mocks.NewMockTransactor(ctrl)
-	uc := usecase.NewAuthUsecase(transactor, refreshRepo, userRepo, mailer, tokenUtil)
+	uc := NewAuthUsecase(transactor, refreshRepo, userRepo, mailer, tokenUtil)
 	return uc, refreshRepo, userRepo, mailer, tokenUtil, transactor
 }
 

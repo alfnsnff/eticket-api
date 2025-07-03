@@ -1,10 +1,9 @@
-package tests
+package usecase
 
 import (
 	"context"
 	"eticket-api/internal/domain"
 	"eticket-api/internal/mocks"
-	"eticket-api/internal/usecase"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -12,12 +11,12 @@ import (
 )
 
 // Helper for ShipUsecase
-func shipUsecase(t *testing.T) (*usecase.ShipUsecase, *mocks.MockShipRepository, *mocks.MockTransactor) {
+func shipUsecase(t *testing.T) (*ShipUsecase, *mocks.MockShipRepository, *mocks.MockTransactor) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	repo := mocks.NewMockShipRepository(ctrl)
 	transactor := mocks.NewMockTransactor(ctrl)
-	uc := usecase.NewShipUsecase(transactor, repo)
+	uc := NewShipUsecase(transactor, repo)
 	return uc, repo, transactor
 }
 

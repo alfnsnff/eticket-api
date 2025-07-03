@@ -1,4 +1,4 @@
-package tests
+package usecase
 
 import (
 	"context"
@@ -7,13 +7,12 @@ import (
 	"eticket-api/internal/domain"
 	"eticket-api/internal/mocks"
 	"eticket-api/internal/model"
-	"eticket-api/internal/usecase"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
-func paymentUsecase(t *testing.T) (*usecase.PaymentUsecase, *mocks.MockTripayClient, *mocks.MockBookingRepository, *mocks.MockTicketRepository, *mocks.MockQuotaRepository, *mocks.MockMailer, *mocks.MockTransactor) {
+func paymentUsecase(t *testing.T) (*PaymentUsecase, *mocks.MockTripayClient, *mocks.MockBookingRepository, *mocks.MockTicketRepository, *mocks.MockQuotaRepository, *mocks.MockMailer, *mocks.MockTransactor) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	tripayClient := mocks.NewMockTripayClient(ctrl)
@@ -22,7 +21,7 @@ func paymentUsecase(t *testing.T) (*usecase.PaymentUsecase, *mocks.MockTripayCli
 	quotaRepo := mocks.NewMockQuotaRepository(ctrl)
 	mailer := mocks.NewMockMailer(ctrl)
 	transactor := mocks.NewMockTransactor(ctrl)
-	uc := usecase.NewPaymentUsecase(transactor, tripayClient, bookingRepo, ticketRepo, quotaRepo, mailer)
+	uc := NewPaymentUsecase(transactor, tripayClient, bookingRepo, ticketRepo, quotaRepo, mailer)
 	return uc, tripayClient, bookingRepo, ticketRepo, quotaRepo, mailer, transactor
 }
 

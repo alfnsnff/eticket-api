@@ -1,4 +1,4 @@
-package tests
+package usecase
 
 import (
 	"context"
@@ -6,24 +6,27 @@ import (
 
 	"eticket-api/internal/domain"
 	"eticket-api/internal/mocks"
-	"eticket-api/internal/usecase"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
-func classUsecase(t *testing.T) (*usecase.ClassUsecase, *mocks.MockClassRepository, *mocks.MockTransactor) {
+func scheduleUsecase(t *testing.T) (*ScheduleUsecase, *mocks.MockClaimSessionRepository, *mocks.MockClassRepository, *mocks.MockShipRepository, *mocks.MockScheduleRepository, *mocks.MockTicketRepository, *mocks.MockTransactor) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
-	repo := mocks.NewMockClassRepository(ctrl)
+	claimSessionRepo := mocks.NewMockClaimSessionRepository(ctrl)
+	classRepo := mocks.NewMockClassRepository(ctrl)
+	shipRepo := mocks.NewMockShipRepository(ctrl)
+	scheduleRepo := mocks.NewMockScheduleRepository(ctrl)
+	ticketRepo := mocks.NewMockTicketRepository(ctrl)
 	transactor := mocks.NewMockTransactor(ctrl)
-	uc := usecase.NewClassUsecase(transactor, repo)
-	return uc, repo, transactor
+	uc := NewScheduleUsecase(transactor, claimSessionRepo, classRepo, shipRepo, scheduleRepo, ticketRepo)
+	return uc, claimSessionRepo, classRepo, shipRepo, scheduleRepo, ticketRepo, transactor
 }
 
-func TestClassUsecase_CreateClass(t *testing.T) {
+func TestScheduleUsecase_CreateSchedule(t *testing.T) {
 	t.Parallel()
-	uc, _, transactor := classUsecase(t)
+	uc, _, _, _, _, _, transactor := scheduleUsecase(t)
 	tests := []struct {
 		name string
 		mock func()
@@ -47,7 +50,7 @@ func TestClassUsecase_CreateClass(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mock()
-			err := uc.CreateClass(context.Background(), &domain.Class{})
+			err := uc.CreateSchedule(context.Background(), &domain.Schedule{})
 			if tc.err != nil {
 				require.ErrorIs(t, err, tc.err)
 			} else {
@@ -57,13 +60,13 @@ func TestClassUsecase_CreateClass(t *testing.T) {
 	}
 }
 
-func TestClassUsecase_GetClassByID(t *testing.T) {
+func TestScheduleUsecase_GetScheduleByID(t *testing.T) {
 	t.Parallel()
-	uc, _, transactor := classUsecase(t)
+	uc, _, _, _, _, _, transactor := scheduleUsecase(t)
 	tests := []struct {
 		name string
 		mock func()
-		res  *domain.Class
+		res  *domain.Schedule
 		err  error
 	}{
 		{
@@ -71,7 +74,7 @@ func TestClassUsecase_GetClassByID(t *testing.T) {
 			mock: func() {
 				transactor.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(nil)
 			},
-			res: &domain.Class{},
+			res: &domain.Schedule{},
 			err: nil,
 		},
 		{
@@ -86,7 +89,7 @@ func TestClassUsecase_GetClassByID(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mock()
-			_, err := uc.GetClassByID(context.Background(), 1)
+			_, err := uc.GetScheduleByID(context.Background(), 1)
 			if tc.err != nil {
 				require.ErrorIs(t, err, tc.err)
 			} else {

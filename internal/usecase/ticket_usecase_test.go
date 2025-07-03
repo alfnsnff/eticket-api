@@ -1,4 +1,4 @@
-package tests
+package usecase
 
 import (
 	"context"
@@ -6,24 +6,25 @@ import (
 
 	"eticket-api/internal/domain"
 	"eticket-api/internal/mocks"
-	"eticket-api/internal/usecase"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
-func harborUsecase(t *testing.T) (*usecase.HarborUsecase, *mocks.MockHarborRepository, *mocks.MockTransactor) {
+func ticketUsecase(t *testing.T) (*TicketUsecase, *mocks.MockTicketRepository, *mocks.MockScheduleRepository, *mocks.MockQuotaRepository, *mocks.MockTransactor) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
-	repo := mocks.NewMockHarborRepository(ctrl)
+	ticketRepo := mocks.NewMockTicketRepository(ctrl)
+	scheduleRepo := mocks.NewMockScheduleRepository(ctrl)
+	quotaRepo := mocks.NewMockQuotaRepository(ctrl)
 	transactor := mocks.NewMockTransactor(ctrl)
-	uc := usecase.NewHarborUsecase(transactor, repo)
-	return uc, repo, transactor
+	uc := NewTicketUsecase(transactor, ticketRepo, scheduleRepo, quotaRepo)
+	return uc, ticketRepo, scheduleRepo, quotaRepo, transactor
 }
 
-func TestHarborUsecase_CreateHarbor(t *testing.T) {
+func TestTicketUsecase_CreateTicket(t *testing.T) {
 	t.Parallel()
-	uc, _, transactor := harborUsecase(t)
+	uc, _, _, _, transactor := ticketUsecase(t)
 	tests := []struct {
 		name string
 		mock func()
@@ -47,7 +48,7 @@ func TestHarborUsecase_CreateHarbor(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mock()
-			err := uc.CreateHarbor(context.Background(), &domain.Harbor{})
+			err := uc.CreateTicket(context.Background(), &domain.Ticket{})
 			if tc.err != nil {
 				require.ErrorIs(t, err, tc.err)
 			} else {
@@ -57,13 +58,12 @@ func TestHarborUsecase_CreateHarbor(t *testing.T) {
 	}
 }
 
-func TestHarborUsecase_GetHarborByID(t *testing.T) {
+func TestTicketUsecase_CheckIn(t *testing.T) {
 	t.Parallel()
-	uc, _, transactor := harborUsecase(t)
+	uc, _, _, _, transactor := ticketUsecase(t)
 	tests := []struct {
 		name string
 		mock func()
-		res  *domain.Harbor
 		err  error
 	}{
 		{
@@ -71,22 +71,20 @@ func TestHarborUsecase_GetHarborByID(t *testing.T) {
 			mock: func() {
 				transactor.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(nil)
 			},
-			res: &domain.Harbor{},
 			err: nil,
 		},
 		{
-			name: "not found",
+			name: "repo error",
 			mock: func() {
 				transactor.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(errInternalServErr)
 			},
-			res: nil,
 			err: errInternalServErr,
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mock()
-			_, err := uc.GetHarborByID(context.Background(), 1)
+			err := uc.CheckIn(context.Background(), 1)
 			if tc.err != nil {
 				require.ErrorIs(t, err, tc.err)
 			} else {

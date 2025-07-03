@@ -1,4 +1,4 @@
-package tests
+package usecase
 
 import (
 	"context"
@@ -6,24 +6,23 @@ import (
 
 	"eticket-api/internal/domain"
 	"eticket-api/internal/mocks"
-	"eticket-api/internal/usecase"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
-func userUsecase(t *testing.T) (*usecase.UserUsecase, *mocks.MockUserRepository, *mocks.MockTransactor) {
+func bookingUsecase(t *testing.T) (*BookingUsecase, *mocks.MockBookingRepository, *mocks.MockTransactor) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
-	repo := mocks.NewMockUserRepository(ctrl)
+	repo := mocks.NewMockBookingRepository(ctrl)
 	transactor := mocks.NewMockTransactor(ctrl)
-	uc := usecase.NewUserUsecase(transactor, repo)
+	uc := NewBookingUsecase(transactor, repo)
 	return uc, repo, transactor
 }
 
-func TestUserUsecase_CreateUser(t *testing.T) {
+func TestBookingUsecase_CreateBooking(t *testing.T) {
 	t.Parallel()
-	uc, _, transactor := userUsecase(t)
+	uc, _, transactor := bookingUsecase(t)
 	tests := []struct {
 		name string
 		mock func()
@@ -47,7 +46,7 @@ func TestUserUsecase_CreateUser(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mock()
-			err := uc.CreateUser(context.Background(), &domain.User{})
+			err := uc.CreateBooking(context.Background(), &domain.Booking{})
 			if tc.err != nil {
 				require.ErrorIs(t, err, tc.err)
 			} else {

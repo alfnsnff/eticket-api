@@ -1,4 +1,4 @@
-package tests
+package usecase
 
 import (
 	"context"
@@ -6,18 +6,17 @@ import (
 
 	"eticket-api/internal/domain"
 	"eticket-api/internal/mocks"
-	"eticket-api/internal/usecase"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
-func claimItemUsecase(t *testing.T) (*usecase.ClaimItemUsecase, *mocks.MockClaimItemRepository, *mocks.MockTransactor) {
+func claimItemUsecase(t *testing.T) (*ClaimItemUsecase, *mocks.MockClaimItemRepository, *mocks.MockTransactor) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	repo := mocks.NewMockClaimItemRepository(ctrl)
 	transactor := mocks.NewMockTransactor(ctrl)
-	uc := usecase.NewClaimItemUsecase(transactor, repo)
+	uc := NewClaimItemUsecase(transactor, repo)
 	return uc, repo, transactor
 }
 
