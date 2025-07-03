@@ -45,5 +45,7 @@ jobs:
               -e MAILER_PORT=${{ secrets.MAILER_PORT }} \
               -e MAILER_USERNAME=${{ secrets.MAILER_USERNAME }} \
               -e MAILER_PASSWORD=${{ secrets.MAILER_PASSWORD }} \
-              -e MAILER_FROM=${{ secrets.MAILER_FROM }} \
+              -e BREVO_API_KEY=${{ secrets.BREVO_API_KEY }} \
+              -e BREVO_NAME=${{ secrets.BREVO_NAME }} \
+              -e BREVO_FROM=${{ secrets.BREVO_FROM }} \
               ghcr.io/${{ secrets.GHCR_USERNAME }}/tikethebat:latest

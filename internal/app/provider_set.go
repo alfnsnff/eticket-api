@@ -35,8 +35,11 @@ var CommonSet = wire.NewSet(
 	token.NewJWT,
 	wire.Bind(new(token.TokenUtil), new(*token.JWT)), // ✅ add this
 
-	mailer.NewSMTP,
-	wire.Bind(new(mailer.Mailer), new(*mailer.SMTP)), // ✅ add this
+	// mailer.NewSMTP,
+	// wire.Bind(new(mailer.Mailer), new(*mailer.SMTP)), // ✅ add this
+
+	mailer.NewBrevo,
+	wire.Bind(new(mailer.Mailer), new(*mailer.Brevo)), // ✅ add this
 
 	// ✅ HTTP Client
 	httpclient.NewHTTPClient, // <-- You need this to get *httpclient.HTTP

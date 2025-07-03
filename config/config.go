@@ -15,6 +15,7 @@ type (
 		Token  Token  `mapstructure:"Token"`
 		Tripay Tripay `mapstructure:"tripay"`
 		SMTP   SMTP   `mapstructure:"smtp"`
+		Brevo  BREVO  `mapstructure:"brevo"`
 	}
 
 	Server struct {
@@ -48,6 +49,12 @@ type (
 		Password string `mapstructure:"password"`
 		From     string `mapstructure:"from"`
 	}
+
+	BREVO struct {
+		APIKey string `mapstructure:"api_key"`
+		Name   string `mapstructure:"name"`
+		From   string `mapstructure:"from"`
+	}
 )
 
 func NewConfig() (*Config, error) {
@@ -80,6 +87,10 @@ func NewConfig() (*Config, error) {
 		"smtp.from":     "MAILER_FROM",
 		"smtp.username": "MAILER_USERNAME",
 		"smtp.password": "MAILER_PASSWORD",
+
+		"brevo.api_key": "BREVO_API_KEY",
+		"brevo.name":    "BREVO_NAME",
+		"brevo.from":    "BREVO_FROM",
 	}
 
 	for key, env := range bindEnvs {
