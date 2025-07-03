@@ -11,24 +11,22 @@ export default function () {
   const vuId = __VU;
   const iteration = __ITER;
 
-  group('/schedules', () => {
+  group('Get Schedules', () => {
     const res = http.get(`${BASE_URL}/v1/schedules`, { tags: { name: '/schedules' } });
     const ok = check(res, { 'load schedules success': (r) => r.status === 200 });
     if (!ok) console.error(JSON.stringify({ vu: vuId, iter: iteration, endpoint: 'GET /v1/schedules', status: res.status, body: res.body }));
-    sleep(1);
   });
 
   let selectedSchedule;
-  group('/schedule/:id', () => {
+  group('Get Schedule Quota', () => {
     selectedSchedule = AVAILABLE_SCHEDULES[Math.floor(Math.random() * AVAILABLE_SCHEDULES.length)];
     const res = http.get(`${BASE_URL}/v1/schedule/${selectedSchedule}`, { tags: { name: '/schedule/:id' } });
     const ok = check(res, { 'load class success': (r) => r.status === 200 });
     if (!ok) console.error(JSON.stringify({ vu: vuId, iter: iteration, endpoint: `GET /v1/schedule/${selectedSchedule}`, status: res.status, body: res.body }));
-    sleep(1);
   });
 
   let sessionId;
-  group('/claim/lock', () => {
+  group('Claim Lock', () => {
     const payload = JSON.stringify({ schedule_id: selectedSchedule, items: [{ class_id: CLASS_ID, quantity: 1 }] });
     const res = http.post(`${BASE_URL}/v1/claim/lock`, payload, {
       headers: { 'Content-Type': 'application/json' },
@@ -40,11 +38,10 @@ export default function () {
       return;
     }
     sessionId = JSON.parse(res.body).data.session_id;
-    sleep(0.5);
   });
 
   let orderId;
-  group('/claim/entry', () => {
+  group('Claim Entry', () => {
     const payload = JSON.stringify({
       customer_name: `LoadTest${vuId}${iteration}`,
       id_type: 'ktp',
@@ -65,7 +62,7 @@ export default function () {
 
     const res = http.post(`${BASE_URL}/v1/claim/entry/${sessionId}`, payload, {
       headers: { 'Content-Type': 'application/json' },
-      tags: { name: '/claim/entry' },
+      tags: { name: '/claim/entry/:sessionid' },
     });
     const ok = check(res, { 'claim entry success': (r) => r.status === 200 });
     if (!ok) {
@@ -73,10 +70,15 @@ export default function () {
       return;
     }
     orderId = JSON.parse(res.body).data.order_id;
-    sleep(1);
   });
 
-  group('/payment/callback', () => {
+    group('Get Booking', () => {
+    const res = http.get(`${BASE_URL}/v1/booking/order/${orderId}`, { tags: { name: '/booking/order/:id' } });
+    const ok = check(res, { 'get booking success': (r) => r.status === 200 });
+    if (!ok) console.error(JSON.stringify({ vu: vuId, iter: iteration, endpoint: `GET /v1/booking/order/${orderId}`, status: res.status, body: res.body }));
+  });
+
+  group('Callback Payment', () => {
     const payload = JSON.stringify({
       reference: `LT_${Date.now()}_${vuId}_${iteration}`,
       merchant_ref: orderId,
@@ -92,13 +94,7 @@ export default function () {
     });
     const ok = check(res, { 'payment success': (r) => r.status === 200 });
     if (!ok) console.error(JSON.stringify({ vu: vuId, iter: iteration, endpoint: 'POST /v1/payment/callback', status: res.status, body: res.body }));
-    sleep(1);
   });
 
-  group('6. Get booking', () => {
-    const res = http.get(`${BASE_URL}/v1/booking/order/${orderId}`, { tags: { name: 'get_booking' } });
-    const ok = check(res, { 'get booking success': (r) => r.status === 200 });
-    if (!ok) console.error(JSON.stringify({ vu: vuId, iter: iteration, endpoint: `GET /v1/booking/order/${orderId}`, status: res.status, body: res.body }));
-    sleep(Math.random() * 3 + 2);
-  });
+
 }

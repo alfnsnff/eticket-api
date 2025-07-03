@@ -1,0 +1,670 @@
+{
+  "root_group": {
+    "name": "",
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": [
+      {
+        "groups": [],
+        "checks": [
+            {
+              "name": "load schedules success",
+              "path": "::1. /schedules::load schedules success",
+              "id": "43215ef38d68b311da76ef457c3170e3",
+              "passes": 19,
+              "fails": 0
+            },
+            {
+              "name": "schedules response time OK",
+              "path": "::1. /schedules::schedules response time OK",
+              "id": "ecaa9604b0cc01d787875f533d207aa4",
+              "passes": 19,
+              "fails": 0
+            }
+          ],
+        "name": "1. /schedules",
+        "path": "::1. /schedules",
+        "id": "02dacdbe3b57ffacdce1fe12812ea3e4"
+      },
+      {
+        "name": "2. /schedule/:id",
+        "path": "::2. /schedule/:id",
+        "id": "270af20e5e2a4b2b0e4896b328664e28",
+        "groups": [],
+        "checks": [
+            {
+              "path": "::2. /schedule/:id::load schedule detail success",
+              "id": "d3fb5cf98914331f12cb85ff741db837",
+              "passes": 19,
+              "fails": 0,
+              "name": "load schedule detail success"
+            },
+            {
+              "name": "schedule detail response time OK",
+              "path": "::2. /schedule/:id::schedule detail response time OK",
+              "id": "6f26d8d3a32a7a39500f8a7f8c3b7aa4",
+              "passes": 19,
+              "fails": 0
+            }
+          ]
+      },
+      {
+        "path": "::3. /claim/lock",
+        "id": "79357f7f5bb8206aec49d526b50c83df",
+        "groups": [],
+        "checks": [
+            {
+              "name": "claim lock success",
+              "path": "::3. /claim/lock::claim lock success",
+              "id": "b972ced6388126555285ee8bdb8fac46",
+              "passes": 19,
+              "fails": 0
+            },
+            {
+              "name": "claim lock response time OK",
+              "path": "::3. /claim/lock::claim lock response time OK",
+              "id": "499e9076bc84a689f7f04381ba67a63b",
+              "passes": 19,
+              "fails": 0
+            }
+          ],
+        "name": "3. /claim/lock"
+      },
+      {
+        "name": "4. /claim/entry",
+        "path": "::4. /claim/entry",
+        "id": "d45e421ff19a32196d048d0799248ed7",
+        "groups": [],
+        "checks": [
+            {
+              "id": "ac36f155fed080771aedb3d160da1ee2",
+              "passes": 19,
+              "fails": 0,
+              "name": "claim entry success",
+              "path": "::4. /claim/entry::claim entry success"
+            },
+            {
+              "passes": 19,
+              "fails": 0,
+              "name": "claim entry response time OK",
+              "path": "::4. /claim/entry::claim entry response time OK",
+              "id": "3d1482d8eea9569da702b57ae0ca2860"
+            }
+          ]
+      },
+      {
+        "name": "5. /payment/callback",
+        "path": "::5. /payment/callback",
+        "id": "04be874e32cd0fb48f3e6748a25483a3",
+        "groups": [],
+        "checks": [
+            {
+              "passes": 19,
+              "fails": 0,
+              "name": "payment callback success",
+              "path": "::5. /payment/callback::payment callback success",
+              "id": "176d3f559501b407aa8f58ded7d2410b"
+            },
+            {
+              "name": "payment callback response time OK",
+              "path": "::5. /payment/callback::payment callback response time OK",
+              "id": "71ca3ce95f592feca3a0ff5fecddf7c6",
+              "passes": 19,
+              "fails": 0
+            }
+          ]
+      },
+      {
+        "name": "6. Get booking",
+        "path": "::6. Get booking",
+        "id": "4a338b22719edeaeedf8e0656e027f3a",
+        "groups": [],
+        "checks": [
+            {
+              "name": "get booking success",
+              "path": "::6. Get booking::get booking success",
+              "id": "2acfe7c5864d793457259f7a2586d4a9",
+              "passes": 19,
+              "fails": 0
+            },
+            {
+              "passes": 19,
+              "fails": 0,
+              "name": "get booking response time OK",
+              "path": "::6. Get booking::get booking response time OK",
+              "id": "bc0ed0cdcc60838652a5ba4cbde6c6b8"
+            }
+          ]
+      }
+    ],
+    "checks": []
+  },
+  "options": {
+    "summaryTrendStats": [
+      "avg",
+      "min",
+      "med",
+      "max",
+      "p(90)",
+      "p(95)",
+      "p(99)"
+    ],
+    "summaryTimeUnit": "ms",
+    "noColor": false
+  },
+  "state": {
+    "isStdOutTTY": true,
+    "isStdErrTTY": false,
+    "testRunDurationMs": 14348.0537
+  },
+  "metrics": {
+    "group_duration{group:::4. /claim/entry}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 1161.250452631579,
+        "min": 1152.4081,
+        "med": 1160.5884,
+        "max": 1174.4573,
+        "p(90)": 1169.39076,
+        "p(95)": 1173.2456300000001,
+        "p(99)": 1174.214966
+      },
+      "thresholds": {
+        "p(95)<1100": {
+          "ok": false
+        }
+      }
+    },
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 1,
+        "min": 1,
+        "max": 19
+      }
+    },
+    "group_duration{group:::2. /schedule/:id}": {
+      "thresholds": {
+        "p(95)<600": {
+          "ok": false
+        }
+      },
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "max": 1075.6762,
+        "p(90)": 1061.82736,
+        "p(95)": 1064.83138,
+        "p(99)": 1073.5072360000001,
+        "avg": 1053.3912789473684,
+        "min": 1041.3977,
+        "med": 1051.5376
+      }
+    },
+    "http_req_blocked": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "max": 36.7609,
+        "p(90)": 31.94084,
+        "p(95)": 34.196884999999995,
+        "p(99)": 36.041705,
+        "avg": 5.511885964912281,
+        "min": 0,
+        "med": 0
+      }
+    },
+    "http_req_waiting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "max": 173.5426,
+        "p(90)": 158.34820000000002,
+        "p(95)": 162.12937,
+        "p(99)": 171.53849400000001,
+        "avg": 63.98525087719301,
+        "min": 31.33,
+        "med": 43.4208
+      }
+    },
+    "vus_max": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 20,
+        "min": 20,
+        "max": 20
+      }
+    },
+    "http_req_failed{name:/claim/entry}": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 19
+      },
+      "thresholds": {
+        "rate<0.01": {
+          "ok": true
+        }
+      }
+    },
+    "checks": {
+      "values": {
+        "rate": 1,
+        "passes": 228,
+        "fails": 0
+      },
+      "type": "rate",
+      "contains": "default"
+    },
+    "iteration_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 8605.048763157894,
+        "min": 7001.1735,
+        "med": 8737.1286,
+        "max": 9860.588,
+        "p(90)": 9653.34706,
+        "p(95)": 9826.56449,
+        "p(99)": 9853.783298
+      }
+    },
+    "http_req_duration{name:/schedules}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 40.91800526315789,
+        "min": 32.2304,
+        "med": 38.301,
+        "max": 69.9068,
+        "p(90)": 50.811199999999985,
+        "p(95)": 62.55847999999998,
+        "p(99)": 68.43713600000001
+      },
+      "thresholds": {
+        "p(95)<500": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_duration{expected_response:true}": {
+      "contains": "time",
+      "values": {
+        "avg": 64.34102368421051,
+        "min": 31.4734,
+        "med": 43.423,
+        "max": 173.5426,
+        "p(90)": 158.54209,
+        "p(95)": 162.42918500000002,
+        "p(99)": 172.23932800000003
+      },
+      "type": "trend"
+    },
+    "http_req_failed{name:/schedule/:id}": {
+      "thresholds": {
+        "rate<0.01": {
+          "ok": true
+        }
+      },
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 19
+      }
+    },
+    "http_req_duration{name:/claim/entry}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(99)": 173.419966,
+        "avg": 160.37521052631578,
+        "min": 151.5587,
+        "med": 160.1752,
+        "max": 173.5426,
+        "p(90)": 169.03377999999998,
+        "p(95)": 172.92943
+      },
+      "thresholds": {
+        "p(95)<1000": {
+          "ok": true
+        }
+      }
+    },
+    "group_duration{group:::5. /payment/callback}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 1049.50722,
+        "p(99)": 1054.851924,
+        "avg": 1040.287005263158,
+        "min": 1034.5238,
+        "med": 1039.5232,
+        "max": 1056.1881,
+        "p(90)": 1045.18714
+      },
+      "thresholds": {
+        "p(95)<700": {
+          "ok": false
+        }
+      }
+    },
+    "group_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 1434.1167789473689,
+        "min": 542.8137,
+        "med": 1064.47685,
+        "max": 4957.1553,
+        "p(90)": 3456.60611,
+        "p(95)": 4161.637705,
+        "p(99)": 4913.244718000001
+      }
+    },
+    "group_duration{group:::3. /claim/lock}": {
+      "values": {
+        "avg": 555.3040210526316,
+        "min": 542.8137,
+        "med": 555.4626,
+        "max": 581.0216,
+        "p(90)": 565.27462,
+        "p(95)": 567.00347,
+        "p(99)": 578.217974
+      },
+      "thresholds": {
+        "p(95)<900": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "http_req_duration{name:/payment/callback}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 33.4831,
+        "med": 38.0913,
+        "max": 47.9311,
+        "p(90)": 41.57494,
+        "p(95)": 43.130499999999984,
+        "p(99)": 46.970980000000004,
+        "avg": 38.09334736842106
+      },
+      "thresholds": {
+        "p(95)<600": {
+          "ok": true
+        }
+      }
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 25966,
+        "rate": 1809.7228058186038
+      }
+    },
+    "http_req_duration{name:get_booking}": {
+      "contains": "time",
+      "values": {
+        "min": 31.4734,
+        "med": 36.6352,
+        "max": 108.4522,
+        "p(90)": 42.534299999999995,
+        "p(95)": 49.525689999999855,
+        "p(99)": 96.66689800000003,
+        "avg": 39.77967894736842
+      },
+      "thresholds": {
+        "p(95)<500": {
+          "ok": true
+        }
+      },
+      "type": "trend"
+    },
+    "http_req_tls_handshaking": {
+      "contains": "time",
+      "values": {
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0,
+        "p(99)": 0,
+        "avg": 0,
+        "min": 0,
+        "med": 0
+      },
+      "type": "trend"
+    },
+    "http_req_sending": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.04648421052631579,
+        "min": 0,
+        "med": 0,
+        "max": 0.9959,
+        "p(90)": 0,
+        "p(95)": 0.51491,
+        "p(99)": 0.9568620000000002
+      }
+    },
+    "http_req_failed": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "passes": 0,
+        "fails": 114,
+        "rate": 0
+      },
+      "thresholds": {
+        "rate<0.01": {
+          "ok": true
+        }
+      }
+    },
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 19,
+        "rate": 1.3242214168741229
+      }
+    },
+    "http_req_duration{name:/schedule/:id}": {
+      "contains": "time",
+      "values": {
+        "med": 51.1829,
+        "max": 75.6246,
+        "p(90)": 61.44978,
+        "p(95)": 64.33598999999997,
+        "p(99)": 73.366878,
+        "avg": 52.665494736842106,
+        "min": 40.8376
+      },
+      "thresholds": {
+        "p(95)<500": {
+          "ok": true
+        }
+      },
+      "type": "trend"
+    },
+    "http_req_failed{name:/claim/lock}": {
+      "values": {
+        "passes": 0,
+        "fails": 19,
+        "rate": 0
+      },
+      "thresholds": {
+        "rate<0.01": {
+          "ok": true
+        }
+      },
+      "type": "rate",
+      "contains": "default"
+    },
+    "http_req_failed{name:/payment/callback}": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 19
+      },
+      "thresholds": {
+        "rate<0.01": {
+          "ok": true
+        }
+      }
+    },
+    "http_reqs": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 114,
+        "rate": 7.945328501244737
+      }
+    },
+    "group_duration{group:::6. Get booking}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(99)": 4953.869184,
+        "avg": 3719.8066578947373,
+        "min": 2107.5378,
+        "med": 3874.715,
+        "max": 4957.1553,
+        "p(90)": 4781.02598,
+        "p(95)": 4940.724719999999
+      },
+      "thresholds": {
+        "p(95)<600": {
+          "ok": false
+        }
+      }
+    },
+    "group_duration{group:::1. /schedules}": {
+      "contains": "time",
+      "values": {
+        "med": 1073.7322,
+        "max": 1105.4655,
+        "p(90)": 1084.1232,
+        "p(95)": 1094.84235,
+        "p(99)": 1103.34087,
+        "avg": 1074.6612578947368,
+        "min": 1063.3564
+      },
+      "thresholds": {
+        "p(95)<600": {
+          "ok": false
+        }
+      },
+      "type": "trend"
+    },
+    "http_req_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 158.54209,
+        "p(95)": 162.42918500000002,
+        "p(99)": 172.23932800000003,
+        "avg": 64.34102368421051,
+        "min": 31.4734,
+        "med": 43.423,
+        "max": 173.5426
+      },
+      "thresholds": {
+        "p(95)<1000": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_failed{name:/schedules}": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 19
+      },
+      "thresholds": {
+        "rate<0.01": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_failed{name:get_booking}": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 19
+      },
+      "thresholds": {
+        "rate<0.01": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_duration{name:/claim/lock}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 54.21440526315789,
+        "min": 42.013,
+        "med": 55.0666,
+        "max": 80.2419,
+        "p(90)": 64.91476,
+        "p(95)": 66.61148999999996,
+        "p(99)": 77.51581800000001
+      },
+      "thresholds": {
+        "p(95)<800": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_receiving": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 0,
+        "med": 0,
+        "max": 1.3068,
+        "p(90)": 0.9907,
+        "p(95)": 1.0254,
+        "p(99)": 1.1808850000000002,
+        "avg": 0.3092885964912281
+      }
+    },
+    "http_req_connecting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 0,
+        "max": 36.7609,
+        "p(90)": 31.92254,
+        "p(95)": 34.17075499999999,
+        "p(99)": 35.981177,
+        "avg": 5.486171929824562,
+        "min": 0
+      }
+    },
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 94862,
+        "rate": 6611.489055132265
+      }
+    }
+  }
+}
