@@ -28,7 +28,7 @@ func NewSMTP(cfg *config.Config) *SMTP {
 
 func (m *SMTP) SendAsync(toEmail, subject, body string) {
 	go func() {
-		if err := m.send(toEmail, subject, body); err != nil {
+		if err := m.Send(toEmail, subject, body); err != nil {
 			// Log error here if you have a logger
 			fmt.Printf("failed to send email: %v\n", err)
 		}
@@ -36,7 +36,7 @@ func (m *SMTP) SendAsync(toEmail, subject, body string) {
 }
 
 // send is the actual synchronous email sender (private)
-func (m *SMTP) send(toEmail, subject, body string) error {
+func (m *SMTP) Send(toEmail, subject, body string) error {
 	addr := fmt.Sprintf("%s:%d", m.Host, m.Port)
 
 	encodedSubject := EncodeRFC2047(subject)

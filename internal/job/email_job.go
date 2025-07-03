@@ -31,8 +31,9 @@ func NewEmailJobQueue(mailer mailer.Mailer, log logger.Logger) *EmailJob {
 }
 
 func (q *EmailJob) worker() {
+	q.Log.Info("Worker started") // tambahkan ini
 	for job := range q.Queue {
-		// Kirim email secara async (tapi worker tetap sync per job)
+		q.Log.Info("Sending email", "to", job.To, "subject", job.Subject)
 		q.Mailer.SendAsync(job.To, job.Subject, job.Body)
 	}
 }
@@ -40,4 +41,9 @@ func (q *EmailJob) worker() {
 // Fungsi untuk push job (async)
 func (q *EmailJob) SendAsync(to, subject, body string) {
 	q.Queue <- Email{To: to, Subject: subject, Body: body}
+}
+
+func (q *EmailJob) Send(to, subject, body string) error {
+	q.Queue <- Email{To: to, Subject: subject, Body: body}
+	return nil
 }

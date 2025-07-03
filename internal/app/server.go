@@ -39,7 +39,6 @@ func NewServer(
 	db *gorm.DB,
 	router *http.Router,
 	claimSessionJob *job.ClaimSessionJob,
-	emailJob *job.EmailJob,
 ) (*Server, error) {
 	gin.SetMode(gin.DebugMode)
 	app := gin.Default()

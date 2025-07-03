@@ -33,6 +33,20 @@ func (m *MockMailer) EXPECT() *MockMailerMockRecorder {
 	return m.recorder
 }
 
+// Send mocks base method.
+func (m *MockMailer) Send(to, subject, body string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Send", to, subject, body)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Send indicates an expected call of Send.
+func (mr *MockMailerMockRecorder) Send(to, subject, body interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockMailer)(nil).Send), to, subject, body)
+}
+
 // SendAsync mocks base method.
 func (m *MockMailer) SendAsync(to, subject, body string) {
 	m.ctrl.T.Helper()

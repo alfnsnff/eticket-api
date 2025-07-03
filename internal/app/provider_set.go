@@ -22,7 +22,8 @@ import (
 var CommonSet = wire.NewSet(
 	db.NewPostgres, // returns *gorm.DB
 
-	transact.NewTransactionManager, // returns Transactor
+	transact.NewTransactionManager,
+	wire.Bind(new(transact.Transactor), new(*transact.Gotann)), // ⬅️ ini WAJIB
 
 	enforcer.NewCasbinEnforcer, // returns *casbin.Enforcer
 
@@ -98,7 +99,7 @@ var UsecaseSet = wire.NewSet(
 
 var JobSet = wire.NewSet(
 	job.NewClaimSessionJob,
-	job.NewEmailJobQueue, // <--- tambahkan ini
+	// job.NewEmailJobQueue, // <--- tambahkan ini
 )
 
 var RouterSet = wire.NewSet(
