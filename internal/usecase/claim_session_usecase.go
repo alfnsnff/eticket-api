@@ -323,10 +323,10 @@ func (cd *ClaimSessionUsecase) EntryClaimSession(
 
 		subject := "Your Booking is Confirmed"
 		htmlBody := templates.BookingInvoiceEmail(booking, payment)
-		cd.Mailer.SendAsync(booking.Email, subject, htmlBody)
-		// if err := cd.Mailer.Send(booking.Email, subject, htmlBody); err != nil {
-		// 	return fmt.Errorf("failed to send booking confirmation email: %w", err)
-		// }
+		// cd.Mailer.SendAsync(booking.Email, subject, htmlBody)
+		if err := cd.Mailer.Send(booking.Email, subject, htmlBody); err != nil {
+			return fmt.Errorf("failed to send booking confirmation email: %w", err)
+		}
 		session.Status = enum.ClaimSessionSuccess.String()
 		if err := cd.ClaimSessionRepository.Update(ctx, tx, session); err != nil {
 			return fmt.Errorf("failed to update session: %w", err)
