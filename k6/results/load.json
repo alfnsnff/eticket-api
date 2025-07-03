@@ -1,0 +1,224 @@
+{
+    "metrics": {
+        "data_sent": {
+            "count": 12462513,
+            "rate": 20516.368393525136
+        },
+        "http_req_waiting": {
+            "avg": 868.605996131436,
+            "min": 29.2879,
+            "med": 557.9941,
+            "max": 16800.4511,
+            "p(90)": 2072.5268300000007,
+            "p(95)": 2780.2874449999986
+        },
+        "checks": {
+            "passes": 53769,
+            "fails": 153,
+            "value": 0.9971625681540002
+        },
+        "data_received": {
+            "count": 44862355,
+            "rate": 73854.4948503648
+        },
+        "http_req_duration": {
+            "avg": 868.8215974778291,
+            "min": 29.6072,
+            "med": 558.1197,
+            "max": 16800.4511,
+            "p(90)": 2072.9851200000003,
+            "p(95)": 2780.2874449999986,
+            "thresholds": {
+                "p(95)<1000": true
+            }
+        },
+        "vus_max": {
+            "value": 300,
+            "min": 300,
+            "max": 300
+        },
+        "http_req_sending": {
+            "max": 3.8345,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.008979598308668079,
+            "min": 0,
+            "med": 0
+        },
+        "iteration_duration": {
+            "med": 13090.8287,
+            "max": 30670.8301,
+            "p(90)": 17467.68852,
+            "p(95)": 19005.18071,
+            "avg": 13212.038439946593,
+            "min": 6022.1494
+        },
+        "http_req_connecting": {
+            "avg": 0.17873288639145427,
+            "min": 0,
+            "med": 0,
+            "max": 50.3925,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "group_duration": {
+            "med": 1681.7846,
+            "max": 17301.1245,
+            "p(90)": 4346.72839,
+            "p(95)": 5071.633194999999,
+            "avg": 2201.995772742139,
+            "min": 142.0202
+        },
+        "iterations": {
+            "count": 8987,
+            "rate": 14.79481728545522
+        },
+        "http_reqs": {
+            "count": 53922,
+            "rate": 88.76890371273133
+        },
+        "http_req_tls_handshaking": {
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0
+        },
+        "http_req_failed": {
+            "passes": 153,
+            "fails": 53769,
+            "thresholds": {
+                "rate<0.01": false
+            },
+            "value": 0.0028374318459997772
+        },
+        "vus": {
+            "value": 2,
+            "min": 1,
+            "max": 300
+        },
+        "http_req_duration{expected_response:true}": {
+            "p(95)": 2780.5189799999994,
+            "avg": 869.2330072420816,
+            "min": 30.1141,
+            "med": 558.4334,
+            "max": 16800.4511,
+            "p(90)": 2073.5445600000003
+        },
+        "http_req_blocked": {
+            "med": 0,
+            "max": 50.3925,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.181165522421275,
+            "min": 0
+        },
+        "http_req_receiving": {
+            "avg": 0.20662174808055955,
+            "min": 0,
+            "med": 0,
+            "max": 1.8547,
+            "p(90)": 0.8379900000000001,
+            "p(95)": 0.9869949999999997
+        }
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "/schedules": {
+                "name": "/schedules",
+                "path": "::/schedules",
+                "id": "b492f9ba78474b5735b8904a75a3b479",
+                "groups": {},
+                "checks": {
+                        "load schedules success": {
+                            "passes": 8987,
+                            "fails": 0,
+                            "name": "load schedules success",
+                            "path": "::/schedules::load schedules success",
+                            "id": "aeb5acd0c73c28e099eee6c5dc9d5b5c"
+                        }
+                    }
+            },
+            "/schedule/:id": {
+                "id": "605b3f336528ef6cce5c9fb3f194d269",
+                "groups": {},
+                "checks": {
+                        "load class success": {
+                            "name": "load class success",
+                            "path": "::/schedule/:id::load class success",
+                            "id": "25baf7340134fce28639c5966f0f4d25",
+                            "passes": 8987,
+                            "fails": 0
+                        }
+                    },
+                "name": "/schedule/:id",
+                "path": "::/schedule/:id"
+            },
+            "/claim/lock": {
+                "name": "/claim/lock",
+                "path": "::/claim/lock",
+                "id": "af32de440805a29e81ba46a6efa9c03d",
+                "groups": {},
+                "checks": {
+                        "claim lock success": {
+                            "path": "::/claim/lock::claim lock success",
+                            "id": "0f3c94c1b7d718624b8227e6ddf20cbd",
+                            "passes": 8987,
+                            "fails": 0,
+                            "name": "claim lock success"
+                        }
+                    }
+            },
+            "/claim/entry": {
+                "groups": {},
+                "checks": {
+                        "claim entry success": {
+                            "passes": 8936,
+                            "fails": 51,
+                            "name": "claim entry success",
+                            "path": "::/claim/entry::claim entry success",
+                            "id": "83bc528f1b936dac6f6cac79bc480b7e"
+                        }
+                    },
+                "name": "/claim/entry",
+                "path": "::/claim/entry",
+                "id": "3b973e4ad8167f263552b426cedd203a"
+            },
+            "/payment/callback": {
+                "id": "de048c484c1118d3f547800d79a6d8c6",
+                "groups": {},
+                "checks": {
+                        "payment success": {
+                            "fails": 51,
+                            "name": "payment success",
+                            "path": "::/payment/callback::payment success",
+                            "id": "e047b03f0083c9e0f52c4ea8f1def582",
+                            "passes": 8936
+                        }
+                    },
+                "name": "/payment/callback",
+                "path": "::/payment/callback"
+            },
+            "6. Get booking": {
+                "id": "4a338b22719edeaeedf8e0656e027f3a",
+                "groups": {},
+                "checks": {
+                        "get booking success": {
+                            "fails": 51,
+                            "name": "get booking success",
+                            "path": "::6. Get booking::get booking success",
+                            "id": "2acfe7c5864d793457259f7a2586d4a9",
+                            "passes": 8936
+                        }
+                    },
+                "name": "6. Get booking",
+                "path": "::6. Get booking"
+            }
+        },
+        "checks": {}
+    }
+}
