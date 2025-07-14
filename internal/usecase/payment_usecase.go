@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"eticket-api/internal/client"
+	enum "eticket-api/internal/common/enums"
 	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/mailer"
 	"eticket-api/internal/common/templates"
@@ -134,46 +135,79 @@ func (uc *PaymentUsecase) HandleCallback(ctx context.Context, request *domain.Ca
 		if booking == nil {
 			return errs.ErrNotFound
 		}
+
 		tickets, err := uc.TicketRepository.FindByBookingID(ctx, tx, booking.ID)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve tickets: %w", err)
 		}
-		if len(tickets) == 0 { // Changed from tickets == nil to len(tickets) == 0
+		if len(tickets) == 0 {
 			return errs.ErrNotFound
 		}
 
-		// Handle different payment statuse
+		// ✅ ADD DUPLICATE CALLBACK PROTECTION
+		if booking.Status == enum.BookingPaid.String() && request.Status == "PAID" {
+			// Already processed successful payment, ignore duplicate callback
+			return nil
+		}
+
+		// Handle different payment statuses
 		switch request.Status {
 		case "PAID":
 			// Payment successful
 			if err := uc.HandleSuccessfulPayment(ctx, tx, booking, tickets); err != nil {
-				return err
+				return fmt.Errorf("handle successful payment failed: %w", err)
 			}
 
-		case "FAILED", "EXPIRED", "REFUND":
+		case "UNPAID", "FAILED", "EXPIRED", "REFUND", "CANCELLED":
 			// Payment unsuccessful
 			if err := uc.HandleUnsuccessfulPayment(ctx, tx, booking, tickets, request.Status); err != nil {
-				return err
+				return fmt.Errorf("handle unsuccessful payment failed: %w", err)
 			}
 
 		default:
 			return fmt.Errorf("unknown payment status: %s", request.Status)
 		}
+
 		return nil
 	})
 }
 
 func (uc *PaymentUsecase) HandleSuccessfulPayment(ctx context.Context, tx gotann.Connection, booking *domain.Booking, tickets []*domain.Ticket) error {
+	// Update booking status to PAID
+	booking.Status = enum.BookingPaid.String()
+
+	if err := uc.BookingRepository.Update(ctx, tx, booking); err != nil {
+		return fmt.Errorf("failed to update booking status: %w", err)
+	}
+
 	// Send confirmation email
 	subject := "Your Booking is Confirmed"
 	htmlBody := templates.BookingSuccessEmail(booking, tickets)
 
-	uc.Mailer.Send(booking.Email, subject, htmlBody)
-	return nil
+	// Use SendAsync for better performance
+	uc.Mailer.SendAsync(booking.Email, subject, htmlBody)
 
+	return nil
 }
 
 func (uc *PaymentUsecase) HandleUnsuccessfulPayment(ctx context.Context, tx gotann.Connection, booking *domain.Booking, tickets []*domain.Ticket, status string) error {
+	// Update booking status based on payment status
+	switch status {
+	case "UNPAID":
+		booking.Status = enum.BookingUnpaid.String()
+	case "EXPIRED":
+		booking.Status = enum.BookingExpired.String()
+	case "REFUND":
+		booking.Status = enum.BookingRefund.String()
+	default:
+		booking.Status = "FAILED"
+	}
+
+	// ✅ UPDATE BOOKING STATUS TO DATABASE
+	if err := uc.BookingRepository.Update(ctx, tx, booking); err != nil {
+		return fmt.Errorf("failed to update booking status: %w", err)
+	}
+
 	// Restore quota for each ticket's class
 	restored := make(map[uint]bool)
 	for _, ticket := range tickets {
@@ -203,6 +237,7 @@ func (uc *PaymentUsecase) HandleUnsuccessfulPayment(ctx context.Context, tx gota
 		}
 	}
 
+	// Send notification email
 	subject := "Payment Failed - Booking Not Confirmed"
 	var htmlBody string
 
@@ -213,8 +248,11 @@ func (uc *PaymentUsecase) HandleUnsuccessfulPayment(ctx context.Context, tx gota
 		htmlBody = templates.BookingFailedEmail(booking, "Payment time expired")
 	case "CANCELLED", "REFUND":
 		htmlBody = templates.BookingFailedEmail(booking, "Payment was cancelled or refunded")
+	default:
+		htmlBody = templates.BookingFailedEmail(booking, "Payment was not successful")
 	}
 
-	uc.Mailer.Send(booking.Email, subject, htmlBody)
+	uc.Mailer.SendAsync(booking.Email, subject, htmlBody)
+
 	return nil
 }

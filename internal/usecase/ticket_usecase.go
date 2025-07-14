@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	enum "eticket-api/internal/common/enums"
 	errs "eticket-api/internal/common/errors"
 	"eticket-api/internal/common/transact"
 	"eticket-api/internal/common/utils"
@@ -13,22 +14,23 @@ import (
 type TicketUsecase struct {
 	Transactor         transact.Transactor
 	TicketRepository   domain.TicketRepository
+	BookingRepository  domain.BookingRepository
 	ScheduleRepository domain.ScheduleRepository
 	QuotaRepository    domain.QuotaRepository
 }
 
 func NewTicketUsecase(
-
 	transactor transact.Transactor,
 	ticket_repository domain.TicketRepository,
+	booking_repository domain.BookingRepository,
 	schedule_repository domain.ScheduleRepository,
 	quota_reposiotry domain.QuotaRepository,
 ) *TicketUsecase {
 	return &TicketUsecase{
-
 		Transactor:         transactor,
-		ScheduleRepository: schedule_repository,
 		TicketRepository:   ticket_repository,
+		BookingRepository:  booking_repository,
+		ScheduleRepository: schedule_repository,
 		QuotaRepository:    quota_reposiotry,
 	}
 }
@@ -207,10 +209,25 @@ func (uc *TicketUsecase) CheckIn(ctx context.Context, id uint) error {
 			return errs.ErrNotFound
 		}
 
+		booking, err := uc.BookingRepository.FindByID(ctx, tx, *ticket.BookingID)
+		if err != nil {
+			return fmt.Errorf("failed to find booking: %w", err)
+		}
+		if booking == nil {
+			return errs.ErrNotFound
+		}
+		if booking.Status != enum.BookingPaid.String() {
+			return fmt.Errorf("booking is not paid, cannot check in ticket")
+		}
+
 		ticket.IsCheckedIn = true
 
 		if err := uc.TicketRepository.Update(ctx, tx, ticket); err != nil {
 			return fmt.Errorf("failed to update ticket: %w", err)
+		}
+
+		if err := uc.BookingRepository.Update(ctx, tx, booking); err != nil {
+			return fmt.Errorf("failed to update booking: %w", err)
 		}
 
 		return nil

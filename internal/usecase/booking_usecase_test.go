@@ -14,10 +14,11 @@ import (
 func bookingUsecase(t *testing.T) (*BookingUsecase, *mocks.MockBookingRepository, *mocks.MockTransactor) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
-	repo := mocks.NewMockBookingRepository(ctrl)
+	bookingRepo := mocks.NewMockBookingRepository(ctrl)
+	quotaRepository := mocks.NewMockQuotaRepository(ctrl)
 	transactor := mocks.NewMockTransactor(ctrl)
-	uc := NewBookingUsecase(transactor, repo)
-	return uc, repo, transactor
+	uc := NewBookingUsecase(transactor, bookingRepo, quotaRepository)
+	return uc, bookingRepo, transactor
 }
 
 func TestBookingUsecase_CreateBooking(t *testing.T) {

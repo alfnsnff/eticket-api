@@ -15,10 +15,11 @@ func ticketUsecase(t *testing.T) (*TicketUsecase, *mocks.MockTicketRepository, *
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	ticketRepo := mocks.NewMockTicketRepository(ctrl)
+	bookingRepo := mocks.NewMockBookingRepository(ctrl)
 	scheduleRepo := mocks.NewMockScheduleRepository(ctrl)
 	quotaRepo := mocks.NewMockQuotaRepository(ctrl)
 	transactor := mocks.NewMockTransactor(ctrl)
-	uc := NewTicketUsecase(transactor, ticketRepo, scheduleRepo, quotaRepo)
+	uc := NewTicketUsecase(transactor, ticketRepo, bookingRepo, scheduleRepo, quotaRepo)
 	return uc, ticketRepo, scheduleRepo, quotaRepo, transactor
 }
 

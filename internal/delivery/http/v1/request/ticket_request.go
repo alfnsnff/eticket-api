@@ -137,15 +137,13 @@ func TicketToResponse(ticket *domain.Ticket) *TicketResponse {
 		Type:            ticket.Type,
 		Price:           ticket.Price,
 		Booking: &TicketBooking{
-			ID:             ticket.Booking.ID,
-			OrderID:        ticket.Booking.OrderID, // Unique identifier for the booking
-			CustomerName:   ticket.Booking.CustomerName,
-			CustomerAge:    ticket.Booking.CustomerAge,
-			CUstomerGender: ticket.Booking.CustomerGender,
-			IDType:         ticket.Booking.IDType,
-			IDNumber:       ticket.Booking.IDNumber,
-			PhoneNumber:    ticket.Booking.PhoneNumber, // Changed to string to support leading zeros
-			Email:          ticket.Booking.Email,
+			ID:           ticket.Booking.ID,
+			OrderID:      ticket.Booking.OrderID, // Unique identifier for the booking
+			CustomerName: ticket.Booking.CustomerName,
+			IDType:       ticket.Booking.IDType,
+			IDNumber:     ticket.Booking.IDNumber,
+			PhoneNumber:  ticket.Booking.PhoneNumber, // Changed to string to support leading zeros
+			Email:        ticket.Booking.Email,
 		},
 		CreatedAt: ticket.CreatedAt,
 		UpdatedAt: ticket.UpdatedAt,

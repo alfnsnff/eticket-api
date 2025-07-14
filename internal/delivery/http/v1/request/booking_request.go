@@ -11,10 +11,9 @@ type CreateBookingRequest struct {
 	IDType          string  `json:"id_type" validate:"required"`
 	IDNumber        string  `json:"id_number" validate:"required"`
 	CustomerName    string  `json:"customer_name" validate:"required"`
-	CustomerAge     int     `json:"customer_age" validate:"required,min=0,max=120"`
-	CustomerGender  string  `json:"customer_gender" validate:"required,oneof=male female other"`
 	PhoneNumber     string  `json:"phone_number" validate:"required"`
 	Email           string  `json:"email" validate:"required,email"`
+	Status          string  `json:"status" validate:"required,oneof=paid unpaid expired refunded"`
 	ReferenceNumber *string `json:"reference_number"`
 }
 
@@ -23,13 +22,20 @@ type UpdateBookingRequest struct {
 	OrderID         string  `json:"order_id"`
 	ScheduleID      uint    `json:"schedule_id" validate:"required"`
 	CustomerName    string  `json:"customer_name" validate:"required"`
-	CustomerAge     int     `json:"customer_age" validate:"required,min=0,max=120"`
-	CustomerGender  string  `json:"customer_gender" validate:"required,oneof=male female other"`
 	IDType          string  `json:"id_type" validate:"required"`
 	IDNumber        string  `json:"id_number" validate:"required"`
 	PhoneNumber     string  `json:"phone_number" validate:"required"`
 	Email           string  `json:"email" validate:"required,email"`
+	Status          string  `json:"status" validate:"required,oneof=paid unpaid expired refunded"`
 	ReferenceNumber *string `json:"reference_number"`
+}
+
+type RefundBookingRequest struct {
+	OrderID     string `json:"order_id"`
+	IDType      string `json:"id_type" validate:"required"`
+	IDNumber    string `json:"id_number" validate:"required"`
+	PhoneNumber string `json:"phone_number" validate:"required"`
+	Email       string `json:"email" validate:"required,email"`
 }
 
 type BookingResponse struct {
@@ -37,12 +43,11 @@ type BookingResponse struct {
 	OrderID         string          `json:"order_id"`
 	Schedule        BookingSchedule `json:"schedule"`
 	CustomerName    string          `json:"customer_name"`
-	CustomerAge     int             `json:"customer_age"`
-	CUstomerGender  string          `json:"customer_gender"`
 	IDType          string          `json:"id_type"`
 	IDNumber        string          `json:"id_number"`
 	PhoneNumber     string          `json:"phone_number"`
 	Email           string          `json:"email"`
+	Status          string          `json:"status"`
 	ReferenceNumber *string         `json:"reference_number"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
@@ -137,12 +142,11 @@ func BookingToResponse(booking *domain.Booking) *BookingResponse {
 			ArrivalDatetime:   booking.Schedule.ArrivalDatetime,
 		},
 		CustomerName:    booking.CustomerName,
-		CustomerAge:     booking.CustomerAge,
-		CUstomerGender:  booking.CustomerGender,
 		IDType:          booking.IDType,
 		IDNumber:        booking.IDNumber,
 		PhoneNumber:     booking.PhoneNumber,
 		Email:           booking.Email,
+		Status:          booking.Status,
 		ReferenceNumber: booking.ReferenceNumber,
 		CreatedAt:       booking.CreatedAt,
 		UpdatedAt:       booking.UpdatedAt,
@@ -155,12 +159,11 @@ func BookingFromCreate(request *CreateBookingRequest) *domain.Booking {
 		OrderID:         request.OrderID,
 		ScheduleID:      request.ScheduleID,
 		CustomerName:    request.CustomerName,
-		CustomerAge:     request.CustomerAge,
-		CustomerGender:  request.CustomerGender,
 		IDType:          request.IDType,
 		IDNumber:        request.IDNumber,
 		PhoneNumber:     request.PhoneNumber,
 		Email:           request.Email,
+		Status:          request.Status,
 		ReferenceNumber: request.ReferenceNumber,
 	}
 }
@@ -171,12 +174,11 @@ func BookingFromUpdate(request *UpdateBookingRequest) *domain.Booking {
 		OrderID:         request.OrderID,
 		ScheduleID:      request.ScheduleID,
 		CustomerName:    request.CustomerName,
-		CustomerAge:     request.CustomerAge,
-		CustomerGender:  request.CustomerGender,
 		IDType:          request.IDType,
 		IDNumber:        request.IDNumber,
 		PhoneNumber:     request.PhoneNumber,
 		Email:           request.Email,
+		Status:          request.Status,
 		ReferenceNumber: request.ReferenceNumber,
 	}
 }

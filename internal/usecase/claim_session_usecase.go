@@ -184,8 +184,7 @@ func (cd *ClaimSessionUsecase) EntryClaimSession(
 			PhoneNumber:  request.PhoneNumber,
 			CustomerName: request.CustomerName,
 			Email:        request.Email,
-			Status:       enum.ClaimSessionPending.String(),
-			ExpiresAt:    time.Now().Add(13 * time.Minute), // Set expiration for 13 minutes
+			Status:       enum.BookingUnpaid.String(),
 		}
 		if err := cd.BookingRepository.Insert(ctx, tx, booking); err != nil {
 			if errs.IsUniqueConstraintError(err) {
@@ -338,8 +337,7 @@ func (cd *ClaimSessionUsecase) EntryClaimSession(
 	}
 
 	return &model.TESTReadClaimSessionDataEntryResponse{
-		OrderID:   booking.OrderID,
-		ExpiresAt: booking.ExpiresAt,
+		OrderID: booking.OrderID,
 	}, nil
 }
 

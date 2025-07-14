@@ -39,6 +39,7 @@ func NewBookingController(
 	router.GET("/booking/:id", c.GetBookingByID)
 	router.GET("/booking/order/:id", c.GetBookingByOrderID)
 	router.GET("/booking/payment/callback", c.GetBookingByID)
+	router.POST("/booking/refund", c.RefundBooking)
 
 	protected.POST("/booking/create", c.CreateBooking)
 	protected.PUT("/booking/update/:id", c.UpdateBooking)
@@ -197,6 +198,36 @@ func (c *BookingController) UpdateBooking(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Booking updated successfully", nil))
+}
+
+func (c *BookingController) RefundBooking(ctx *gin.Context) {
+	request := new(requests.RefundBookingRequest)
+	if err := ctx.ShouldBindJSON(request); err != nil {
+		c.Log.WithError(err).Error("failed to bind JSON request body")
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid request body", err.Error()))
+		return
+	}
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("failed to validate request body")
+		errors := validator.ParseErrors(err)
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Validation error", errors))
+		return
+	}
+
+	if err := c.BookingUsecase.RefundBooking(ctx, request.OrderID, request.Email, request.PhoneNumber, request.IDNumber, request.IDType); err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			c.Log.WithField("orderId", request.OrderID).Warn("booking not found")
+			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("booking not found", nil))
+			return
+		}
+
+		c.Log.WithError(err).WithField("orderId", request.OrderID).Error("failed to refund booking")
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to refund booking", err.Error()))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse(nil, "Booking refunded successfully", nil))
 }
 
 func (c *BookingController) DeleteBooking(ctx *gin.Context) {

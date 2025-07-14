@@ -12,15 +12,18 @@ import (
 type BookingUsecase struct {
 	Transactor        transact.Transactor
 	BookingRepository domain.BookingRepository
+	QuotaRepository   domain.QuotaRepository
 }
 
 func NewBookingUsecase(
 	transactor transact.Transactor,
 	booking_repository domain.BookingRepository,
+	quota_repository domain.QuotaRepository,
 ) *BookingUsecase {
 	return &BookingUsecase{
 		Transactor:        transactor,
 		BookingRepository: booking_repository,
+		QuotaRepository:   quota_repository,
 	}
 }
 
@@ -32,8 +35,6 @@ func (uc *BookingUsecase) CreateBooking(ctx context.Context, e *domain.Booking) 
 			IDType:          e.IDType,
 			IDNumber:        e.IDNumber,
 			CustomerName:    e.CustomerName,
-			CustomerAge:     e.CustomerAge,
-			CustomerGender:  e.CustomerGender,
 			PhoneNumber:     e.PhoneNumber,
 			Email:           e.Email,
 			ReferenceNumber: e.ReferenceNumber,
@@ -124,8 +125,6 @@ func (uc *BookingUsecase) UpdateBooking(ctx context.Context, e *domain.Booking) 
 		booking.IDType = e.IDType
 		booking.IDNumber = e.IDNumber
 		booking.CustomerName = e.CustomerName
-		booking.CustomerAge = e.CustomerAge
-		booking.CustomerGender = e.CustomerGender
 		booking.PhoneNumber = e.PhoneNumber
 		booking.Email = e.Email
 		booking.ReferenceNumber = e.ReferenceNumber
@@ -133,6 +132,71 @@ func (uc *BookingUsecase) UpdateBooking(ctx context.Context, e *domain.Booking) 
 		if err := uc.BookingRepository.Update(ctx, tx, booking); err != nil {
 			return fmt.Errorf("failed to update booking: %w", err)
 		}
+		return nil
+	})
+}
+
+func (uc *BookingUsecase) RefundBooking(ctx context.Context, orderId string, email, phoneNumber, IdNumber, IdType string) error {
+	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
+		booking, err := uc.BookingRepository.FindByOrderID(ctx, tx, orderId)
+		if err != nil {
+			return fmt.Errorf("failed to get booking: %w", err)
+		}
+		if booking == nil {
+			return errs.ErrNotFound
+		}
+
+		// Validate customer data without revealing which field is wrong
+		if booking.Email != email ||
+			booking.PhoneNumber != phoneNumber ||
+			booking.IDNumber != IdNumber ||
+			booking.IDType != IdType {
+			return fmt.Errorf("customer information does not match")
+		}
+
+		// Check if booking can be refunded
+		if booking.Status != "PAID" {
+			return fmt.Errorf("booking is not eligible for refund")
+		}
+
+		// Check if tickets exist
+		if len(booking.Tickets) == 0 {
+			return fmt.Errorf("no tickets found for this booking")
+		}
+
+		// Update booking status to refunded
+		booking.Status = "REFUND"
+		if err := uc.BookingRepository.Update(ctx, tx, booking); err != nil {
+			return fmt.Errorf("failed to process refund")
+		}
+
+		restored := make(map[uint]bool)
+		for _, ticket := range booking.Tickets {
+			// Skip if already processed this class
+			if restored[ticket.ClassID] {
+				continue
+			}
+
+			quota, err := uc.QuotaRepository.FindByScheduleIDAndClassID(ctx, tx, booking.ScheduleID, ticket.ClassID)
+			if err == nil && quota != nil {
+				// Count tickets for this class
+				count := 0
+				for _, t := range booking.Tickets {
+					if t.ClassID == ticket.ClassID {
+						count++
+					}
+				}
+
+				quota.Quota += count
+				if err := uc.QuotaRepository.Update(ctx, tx, quota); err != nil {
+					fmt.Printf("Warning: failed to restore quota for class %d: %v\n", ticket.ClassID, err)
+				}
+				restored[ticket.ClassID] = true
+			} else if err != nil {
+				fmt.Printf("Warning: failed to find quota for class %d: %v\n", ticket.ClassID, err)
+			}
+		}
+
 		return nil
 	})
 }
