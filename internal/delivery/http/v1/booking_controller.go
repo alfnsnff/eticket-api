@@ -215,7 +215,7 @@ func (c *BookingController) RefundBooking(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.BookingUsecase.RefundBooking(ctx, request.OrderID, request.Email, request.PhoneNumber, request.IDNumber, request.IDType); err != nil {
+	if err := c.BookingUsecase.RefundBooking(ctx, request.OrderID, request.Email, request.IDNumber, request.IDType); err != nil {
 		if errors.Is(err, errs.ErrNotFound) {
 			c.Log.WithField("orderId", request.OrderID).Warn("booking not found")
 			ctx.JSON(http.StatusNotFound, response.NewErrorResponse("booking not found", nil))
