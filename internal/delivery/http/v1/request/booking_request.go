@@ -31,11 +31,10 @@ type UpdateBookingRequest struct {
 }
 
 type RefundBookingRequest struct {
-	OrderID     string `json:"order_id"`
-	IDType      string `json:"id_type" validate:"required"`
-	IDNumber    string `json:"id_number" validate:"required"`
-	PhoneNumber string `json:"phone_number" validate:"required"`
-	Email       string `json:"email" validate:"required,email"`
+	OrderID  string `json:"order_id"`
+	IDType   string `json:"id_type" validate:"required"`
+	IDNumber string `json:"id_number" validate:"required"`
+	Email    string `json:"email" validate:"required,email"`
 }
 
 type BookingResponse struct {

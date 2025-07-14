@@ -136,7 +136,7 @@ func (uc *BookingUsecase) UpdateBooking(ctx context.Context, e *domain.Booking) 
 	})
 }
 
-func (uc *BookingUsecase) RefundBooking(ctx context.Context, orderId string, email, phoneNumber, IdNumber, IdType string) error {
+func (uc *BookingUsecase) RefundBooking(ctx context.Context, orderId string, email, IdNumber, IdType string) error {
 	return uc.Transactor.Execute(ctx, func(tx gotann.Transaction) error {
 		booking, err := uc.BookingRepository.FindByOrderID(ctx, tx, orderId)
 		if err != nil {
@@ -148,7 +148,6 @@ func (uc *BookingUsecase) RefundBooking(ctx context.Context, orderId string, ema
 
 		// Validate customer data without revealing which field is wrong
 		if booking.Email != email ||
-			booking.PhoneNumber != phoneNumber ||
 			booking.IDNumber != IdNumber ||
 			booking.IDType != IdType {
 			return fmt.Errorf("customer information does not match")
